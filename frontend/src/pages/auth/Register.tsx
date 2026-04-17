@@ -5,6 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthLayout from '@/components/layout/AuthLayout';
 
 const registerSchema = z
   .object({
@@ -29,9 +32,7 @@ export default function Register() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-  });
+  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
 
   const onSubmit = async (data: RegisterForm) => {
     try {
@@ -48,93 +49,83 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="text-2xl font-bold text-primary">FeedGenix</Link>
-          <h1 className="text-2xl font-semibold mt-6 mb-2">Create your account</h1>
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary hover:underline">Sign in</Link>
-          </p>
+    <AuthLayout
+      title="Start translating for free"
+      subtitle={
+        <>
+          Already have an account?{' '}
+          <Link to="/login" className="font-medium text-primary hover:underline">
+            Sign in
+          </Link>
+          {' · '}100 products/month, forever free.
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {error && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="name">Full name</Label>
+          <Input
+            id="name"
+            type="text"
+            autoComplete="name"
+            placeholder="Jane Doe"
+            {...register('name')}
+          />
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-              {error}
-            </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Work email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="jane@company.com"
+            {...register('email')}
+          />
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="8+ characters"
+            {...register('password')}
+          />
+          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password_confirmation">Confirm password</Label>
+          <Input
+            id="password_confirmation"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Repeat password"
+            {...register('password_confirmation')}
+          />
+          {errors.password_confirmation && (
+            <p className="text-xs text-destructive">{errors.password_confirmation.message}</p>
           )}
+        </div>
 
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-1.5">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              {...register('name')}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            />
-            {errors.name && (
-              <p className="text-xs text-destructive mt-1">{errors.name.message}</p>
-            )}
-          </div>
+        <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+          {isSubmitting ? 'Creating account…' : 'Create account'}
+        </Button>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1.5">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              {...register('email')}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1.5">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              {...register('password')}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive mt-1">{errors.password.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="password_confirmation" className="block text-sm font-medium mb-1.5">
-              Confirm Password
-            </label>
-            <input
-              id="password_confirmation"
-              type="password"
-              autoComplete="new-password"
-              {...register('password_confirmation')}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            />
-            {errors.password_confirmation && (
-              <p className="text-xs text-destructive mt-1">{errors.password_confirmation.message}</p>
-            )}
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating account...' : 'Create account'}
-          </Button>
-        </form>
-      </div>
-    </div>
+        <p className="text-center text-xs text-muted-foreground">
+          No credit card required • Cancel anytime
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

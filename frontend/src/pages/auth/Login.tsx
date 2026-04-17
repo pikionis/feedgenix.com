@@ -5,6 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthLayout from '@/components/layout/AuthLayout';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -22,9 +25,7 @@ export default function Login() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-  });
+  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
   const onSubmit = async (data: LoginForm) => {
     try {
@@ -41,61 +42,57 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="text-2xl font-bold text-primary">FeedGenix</Link>
-          <h1 className="text-2xl font-semibold mt-6 mb-2">Sign in to your account</h1>
-          <p className="text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary hover:underline">Sign up</Link>
-          </p>
+    <AuthLayout
+      title="Welcome back"
+      subtitle={
+        <>
+          Don't have an account?{' '}
+          <Link to="/register" className="font-medium text-primary hover:underline">
+            Start free
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {error && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@company.com"
+            {...register('email')}
+          />
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1.5">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              {...register('email')}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
-            )}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
+              Forgot?
+            </Link>
           </div>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            {...register('password')}
+          />
+          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+        </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1.5">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              {...register('password')}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive mt-1">{errors.password.message}</p>
-            )}
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
-          </Button>
-        </form>
-      </div>
-    </div>
+        <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+          {isSubmitting ? 'Signing in…' : 'Sign in'}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

@@ -17,19 +17,20 @@ import ProjectDetail from '@/pages/app/ProjectDetail';
 import NewProject from '@/pages/app/NewProject';
 import Settings from '@/pages/app/Settings';
 
-// Layout
+// Layouts
 import AppLayout from '@/components/layout/AppLayout';
+import MarketingLayout from '@/components/layout/MarketingLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
-  if (isLoading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (isLoading) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
   return <>{children}</>;
 }
 
 function GuestRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
-  if (isLoading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (isLoading) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   if (isAuthenticated) return <Navigate to="/dashboard" />;
   return <>{children}</>;
 }
@@ -44,21 +45,23 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/pricing" element={<Pricing />} />
+        {/* Public marketing site */}
+        <Route element={<MarketingLayout />}>
+          <Route path="/" element={<Landing />} />
+          <Route path="/pricing" element={<Pricing />} />
+        </Route>
 
-        {/* Auth */}
+        {/* Auth (standalone, centered layout) */}
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
-        {/* App (protected) */}
-        <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="projects" element={<Projects />} />
-          <Route path="projects/new" element={<NewProject />} />
-          <Route path="projects/:id" element={<ProjectDetail />} />
-          <Route path="settings" element={<Settings />} />
+        {/* App (protected, sidebar layout) */}
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/new" element={<NewProject />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>
