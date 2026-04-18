@@ -35,4 +35,26 @@ return [
         ],
     ],
 
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'model_mapping' => env('ANTHROPIC_MODEL_MAPPING', 'claude-opus-4-7'),
+        'model_translation' => env('ANTHROPIC_MODEL_TRANSLATION', 'claude-haiku-4-5-20251001'),
+    ],
+
+    'microsoft_translator' => [
+        'key' => env('MICROSOFT_TRANSLATOR_KEY'),
+        'endpoint' => env('MICROSOFT_TRANSLATOR_ENDPOINT', 'https://api.cognitive.microsofttranslator.com'),
+        'region' => env('MICROSOFT_TRANSLATOR_REGION', 'westeurope'),
+    ],
+
+    'deepl' => [
+        'api_key' => env('DEEPL_API_KEY'),
+        'free' => env('DEEPL_API_FREE', true),
+    ],
+
+    'xai' => [
+        'api_key' => env('XAI_API_KEY'),
+        'model' => env('XAI_MODEL', 'grok-3-mini'),
+    ],
+
 ];

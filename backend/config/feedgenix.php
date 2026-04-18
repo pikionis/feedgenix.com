@@ -52,4 +52,14 @@ return [
         'weight', 'width', 'height', 'length', 'depth',
         'dimension', 'poids', 'gewicht',
     ],
+
+    'translation' => [
+        // Hard EUR cap across all paid providers per calendar month.
+        // If total spend crosses this, translation calls throw until the cap is raised.
+        'monthly_cap_eur' => (float) env('FEEDGENIX_TRANSLATION_MONTHLY_CAP', 10.00),
+
+        // Chunk sizes used by RunTranslation.
+        'batch_size' => (int) env('FEEDGENIX_TRANSLATION_BATCH_SIZE', 200),
+        'checkpoint_every' => (int) env('FEEDGENIX_TRANSLATION_CHECKPOINT_EVERY', 1000),
+    ],
 ];
