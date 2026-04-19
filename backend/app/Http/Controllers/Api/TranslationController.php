@@ -56,7 +56,7 @@ class TranslationController extends Controller
 
         $project->update(['status' => 'translating']);
 
-        RunTranslation::dispatch($translationJob);
+        RunTranslation::dispatch($translationJob->id);
 
         return response()->json($translationJob, 201);
     }

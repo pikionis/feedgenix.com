@@ -39,7 +39,7 @@ class UploadController extends Controller
             'status' => 'pending',
         ]);
 
-        ProcessUpload::dispatch($upload);
+        ProcessUpload::dispatch($upload->id);
 
         $project->update(['last_upload_at' => now()]);
 
