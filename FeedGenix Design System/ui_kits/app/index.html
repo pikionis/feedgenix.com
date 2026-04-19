@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FeedGenix — workspace</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  body{margin:0;background:#fff;font-family:var(--font-sans);color:#1F1D2E}
+  .chrome-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid rgba(31,29,46,.1);background:#F1EFE8}
+  .dots{display:flex;gap:6px}.dot{width:10px;height:10px;border-radius:999px}
+  .url{flex:1;background:#fff;border:.5px solid rgba(31,29,46,.1);border-radius:6px;padding:5px 10px;font-family:var(--font-mono);font-size:11px;color:#56536A}
+  .ds{display:grid;grid-template-columns:220px 1fr;min-height:700px}
+  .sb{background:#F1EFE8;padding:18px 14px;border-right:.5px solid rgba(31,29,46,.1);display:flex;flex-direction:column;gap:16px}
+  .sb-top{display:flex;align-items:center;gap:10px;padding:0 6px}
+  .ws{background:#fff;border:.5px solid rgba(31,29,46,.1);border-radius:10px;padding:12px;display:flex;gap:10px;align-items:center}
+  .ws .av{width:28px;height:28px;border-radius:6px;background:#1F1D2E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500}
+  .ws .n{font-size:13px;font-weight:500;line-height:1.2}
+  .ws .p{font-size:11px;color:#56536A;margin-top:1px}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nv{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;color:#56536A;cursor:pointer}
+  .nv:hover{background:rgba(31,29,46,.04)}
+  .nv.active{background:#fff;color:#1F1D2E;font-weight:500;border:.5px solid rgba(31,29,46,.08)}
+  .quota{margin-top:auto;padding:14px;background:#E0E7FF;border-radius:10px}
+  .quota .l{display:flex;justify-content:space-between;font-size:12px;color:#3B3490;font-weight:500;margin-bottom:8px}
+  .quota .bar{height:5px;background:rgba(255,255,255,.7);border-radius:999px;overflow:hidden}
+  .quota .bar b{display:block;width:63%;height:100%;background:#4F46E5}
+  .quota .pct{margin-top:6px;font-size:11px;color:#3B3490}
+  .main{padding:28px 32px}
+  .phd{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+  .phd h1{margin:0;font-size:26px;font-weight:500;letter-spacing:-0.02em}
+  .phd .sub{margin-top:3px;font-size:12.5px;color:#56536A}
+  .phd .sp{flex:1}
+  .btn{font:inherit;font-weight:500;font-size:13px;border-radius:8px;padding:8px 14px;border:.5px solid transparent;cursor:pointer}
+  .btn.p{background:#4F46E5;color:#fff}.btn.s{background:#fff;color:#1F1D2E;border-color:rgba(31,29,46,.14)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+  .st{background:#F1EFE8;border-radius:10px;padding:14px 16px}
+  .st .lbl{font-size:12px;color:#56536A}
+  .st .v{font-size:26px;font-weight:500;letter-spacing:-0.01em;margin:6px 0;line-height:1}
+  .st .d{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#D6F1E8;color:#0B7A63}
+  .table{background:#fff;border:.5px solid rgba(31,29,46,.1);border-radius:10px;overflow:hidden}
+  .tr{display:grid;grid-template-columns:40px 1.4fr 80px 160px 150px;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid rgba(31,29,46,.1)}
+  .tr:first-child{border-top:none;background:#FAFAF7;font-size:11px;color:#7A7790;letter-spacing:.05em;padding:10px 18px}
+  .av{width:32px;height:32px;border-radius:8px;background:#F1EFE8;color:#2E2B42;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500}
+  .fn{font-size:13.5px;font-weight:500}.fl{font-family:var(--font-mono);font-size:11px;color:#7A7790;margin-top:2px}
+  .cnt{font-family:var(--font-mono);font-size:13px}
+  .flags{display:flex;gap:4px;flex-wrap:wrap}
+  .fp{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500}
+  .bd{width:5px;height:5px;border-radius:999px;background:currentColor}
+  .prog2{width:56px;height:4px;background:rgba(195,122,27,.2);border-radius:999px;overflow:hidden}
+  .prog2 b{display:block;width:62%;height:100%;background:#C87A1B}
+  .callout{margin-top:20px;padding:16px 18px;border:1px dashed rgba(79,70,229,.4);border-radius:10px;display:flex;align-items:center;gap:14px;background:#FAFAF7}
+</style></head><body>
+<div class="chrome-bar"><div class="dots"><span class="dot" style="background:#E87E67"></span><span class="dot" style="background:#E9B84A"></span><span class="dot" style="background:#7AB87A"></span></div><div class="url">app.feedgenix.com/workspace/deindeal/feeds</div></div>
+<div class="ds">
+  <aside class="sb">
+    <div class="sb-top"><svg viewBox="0 0 48 48" width="22" height="22"><rect x="6" y="14" width="22" height="3.2" rx="1.6" fill="#4F46E5"/><rect x="6" y="21.4" width="28" height="3.2" rx="1.6" fill="#4F46E5"/><rect x="6" y="28.8" width="15" height="3.2" rx="1.6" fill="#4F46E5"/><circle cx="36.5" cy="15.6" r="3.4" fill="#0F9B7E"/></svg><span style="font-weight:500;letter-spacing:-0.02em">FeedGenix</span></div>
+    <div class="ws"><div class="av">DD</div><div><div class="n">Deindeal AG</div><div class="p">Pro plan</div></div></div>
+    <div class="nav">
+      <div class="nv active">Feeds</div><div class="nv">Jobs</div><div class="nv">Translations</div>
+      <div class="nv">Field mapping</div><div class="nv">Usage</div><div class="nv">API keys</div>
+    </div>
+    <div class="quota"><div class="l"><span>Rows this month</span><span>63%</span></div><div class="bar"><b></b></div><div class="pct">63,214 / 100,000</div></div>
+  </aside>
+  <div class="main">
+    <div class="phd"><div><h1>Feeds</h1><div class="sub">4 active feeds · last sync 8 min ago</div></div><div class="sp"></div><button class="btn s">Import</button><button class="btn p">+ New feed</button></div>
+    <div class="stats">
+      <div class="st"><div class="lbl">Products</div><div class="v">28,411</div><span class="d">↑ 412 this week</span></div>
+      <div class="st"><div class="lbl">Languages</div><div class="v">7</div><span class="d" style="background:#EDEBE3;color:#56536A;font-size:10px">DE·FR·IT·EL·EN·ES·NL</span></div>
+      <div class="st"><div class="lbl">Cache hit rate</div><div class="v">68%</div><span class="d">↑ 4 pts</span></div>
+      <div class="st"><div class="lbl">Cost / 1K rows</div><div class="v">€3.40</div><span class="d">↓ €0.80</span></div>
+    </div>
+    <div class="table">
+      <div class="tr"><div></div><div>FEED</div><div>ROWS</div><div>LANGUAGES</div><div>STATUS</div></div>
+      <div class="tr"><div class="av">DW</div><div><div class="fn">Deindeal winter catalog</div><div class="fl">deindeal-2026-01.csv</div></div><div class="cnt">12,847</div><div class="flags"><span class="fp" style="background:#E7E4FA;color:#3B3490">DE</span><span class="fp" style="background:#DCEAF9;color:#1F4E87">FR</span><span class="fp" style="background:#DFF1E8;color:#0B7A63">IT</span><span class="fp" style="background:#FAE9DC;color:#A35412">EL</span></div><div><span class="badge" style="background:#FAEEDA;color:#A35412"><span class="bd"></span>Translating<div class="prog2"><b></b></div></span></div></div>
+      <div class="tr"><div class="av">ZL</div><div><div class="fn">Zalando swiss assortment</div><div class="fl">zalando-ch-week14.csv</div></div><div class="cnt">4,210</div><div class="flags"><span class="fp" style="background:#E7E4FA;color:#3B3490">DE</span><span class="fp" style="background:#DCEAF9;color:#1F4E87">FR</span></div><div><span class="badge" style="background:#D6F1E8;color:#0B7A63"><span class="bd"></span>Synced</span></div></div>
+      <div class="tr"><div class="av">BO</div><div><div class="fn">Brack outdoor spring</div><div class="fl">brack-spring-26.csv</div></div><div class="cnt">6,921</div><div class="flags"><span class="fp" style="background:#E7E4FA;color:#3B3490">DE</span><span class="fp" style="background:#DCEAF9;color:#1F4E87">FR</span><span class="fp" style="background:#DFF1E8;color:#0B7A63">IT</span></div><div><span class="badge" style="background:#D6F1E8;color:#0B7A63"><span class="bd"></span>Synced</span></div></div>
+      <div class="tr"><div class="av">GL</div><div><div class="fn">Galaxus home & kitchen</div><div class="fl">galaxus-hk-2026.xml</div></div><div class="cnt">4,433</div><div class="flags"><span class="fp" style="background:#E7E4FA;color:#3B3490">DE</span><span class="fp" style="background:#DCEAF9;color:#1F4E87">FR</span><span class="fp" style="background:#DFF1E8;color:#0B7A63">IT</span><span class="fp" style="background:#FAE9DC;color:#A35412">EL</span></div><div><span class="badge" style="background:#EDEBE3;color:#56536A"><span class="bd"></span>Queued</span></div></div>
+    </div>
+    <div class="callout"><div style="flex:1;font-size:13px"><b style="font-weight:500">3,847 rows changed</b> since last sync — ready to re-translate the delta only.</div><button class="btn p">Run delta job</button></div>
+  </div>
+</div>
+</body></html>

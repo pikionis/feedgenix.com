@@ -1,6 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Accordion,
   AccordionContent,
@@ -8,15 +6,19 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 
+/**
+ * Marketing landing page — recomposed against the FeedGenix design system.
+ * Flat, hairline-bordered, no gradients, no shadows. Sand and Mist surfaces
+ * carry the section rhythm instead of imagery.
+ */
+
 export default function Landing() {
   return (
     <>
       <Hero />
-      <FormatSupport />
-      <HowItWorks />
       <Features />
+      <HowItWorks />
       <GoldenRule />
-      <Comparison />
       <PricingPreview />
       <FAQ />
       <FinalCTA />
@@ -25,271 +27,120 @@ export default function Landing() {
 }
 
 /* ───────────────────────── HERO ───────────────────────── */
+
 function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      {/* Subtle gradient mesh */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.08), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 20%, hsl(var(--primary) / 0.05), transparent 60%)',
-        }}
-      />
-      <div className="mx-auto max-w-7xl px-6 pb-20 pt-20 sm:pt-28 lg:pt-32">
-        <div className="mx-auto max-w-3xl text-center">
-          <Badge variant="outline" className="mb-6 rounded-full border-border/60 bg-background/60 px-3 py-1 text-xs font-medium backdrop-blur">
-            <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>
-            Now supporting 30+ languages
-          </Badge>
-          <h1 className="font-heading text-5xl font-semibold tracking-tight text-foreground sm:text-6xl md:text-7xl">
-            Translate your product catalog
-            <br />
-            for every EU market —
-            <br />
-            <span className="relative">
-              <span className="relative z-10 bg-linear-to-r from-primary to-[hsl(166_100%_30%)] bg-clip-text text-transparent">
-                in minutes, not months.
-              </span>
-            </span>
+    <section className="bg-paper">
+      <div className="mx-auto grid max-w-300 grid-cols-1 items-center gap-15 px-10 py-20 lg:grid-cols-2">
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-3 py-1.5 text-[12px] font-medium tracking-[0.03em] text-[#4338CA]">
+            ✦ AI-native feed platform
+          </span>
+          <h1 className="mt-5.5 text-[56px] font-medium leading-[1.05] tracking-[-0.022em] text-ink">
+            Ship your catalog in every language your buyers shop in.
           </h1>
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-muted-foreground">
-            Upload CSV, XLSX, or XML. Our AI translates titles, descriptions, and attributes while
-            keeping your prices, SKUs, and barcodes untouched. Built for Shopify, WooCommerce,
-            Amazon, and any feed-based platform.
+          <p className="mt-4.5 max-w-130 text-[17px] leading-[1.55] text-ink-500">
+            Upload a CSV, let FeedGenix translate 10,000 products into your target markets,
+            and ship a clean feed — with hash-cached pricing that only bills once per unique string.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg" className="h-12 px-6 text-base">
-              <Link to="/register">Start free — 100 products</Link>
-            </Button>
-            <Button asChild size="lg" variant="ghost" className="h-12 px-6 text-base">
-              <a href="#how-it-works">See how it works →</a>
-            </Button>
+          <div className="mt-8 flex flex-wrap gap-2.5">
+            <Link
+              to="/register"
+              className="rounded-lg bg-indigo px-4 py-2.25 text-[14px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600"
+            >
+              Start free — 500 rows
+            </Link>
+            <a
+              href="#how"
+              className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-4 py-2.25 text-[14px] font-medium text-ink transition-colors duration-200 hover:bg-mist"
+            >
+              Watch 2-min demo
+            </a>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            No credit card required • Cancel anytime • GDPR compliant
-          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-5 text-[13px] text-ink-400">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-[#C87A1B]">★</span> 4.8 on G2
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-[#0F9B7E]">
+              <ShieldCheckIcon /> <span className="text-ink-400">SOC 2 type II</span>
+            </span>
+            <span>No credit card</span>
+          </div>
         </div>
 
-        {/* Hero mockup */}
-        <div className="mx-auto mt-16 max-w-5xl">
-          <div className="relative rounded-2xl border border-border/60 bg-card p-1.5 shadow-2xl shadow-primary/5">
-            <div className="rounded-xl bg-linear-to-br from-background to-muted/40 p-8">
-              <HeroMockup />
-            </div>
-          </div>
-        </div>
+        <TerminalPreview />
       </div>
     </section>
   );
 }
 
-function HeroMockup() {
-  const rows = [
-    { src: 'Wireless Bluetooth Headphones', de: 'Kabellose Bluetooth-Kopfhörer', fr: 'Casque Bluetooth sans fil', sku: 'WH-1000', price: '€89.99' },
-    { src: 'Smart Home Thermostat', de: 'Smart Home Thermostat', fr: 'Thermostat domotique', sku: 'TH-2200', price: '€149.00' },
-    { src: 'Ergonomic Office Chair', de: 'Ergonomischer Bürostuhl', fr: 'Chaise de bureau ergonomique', sku: 'CH-550', price: '€299.00' },
-    { src: 'Stainless Steel Water Bottle', de: 'Edelstahl-Trinkflasche', fr: 'Bouteille en acier inoxydable', sku: 'WB-32', price: '€24.50' },
-  ];
+function TerminalPreview() {
   return (
-    <div className="overflow-hidden rounded-lg border border-border/50 bg-background">
-      <div className="border-b border-border/50 bg-muted/40 px-4 py-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-          <span className="ml-3 font-mono text-xs">products_catalog.csv → 4 languages</span>
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-            Completed
-          </span>
-        </div>
+    <div className="overflow-hidden rounded-xl border-[0.5px] border-white/6 bg-ink font-mono text-[13px] leading-[1.6] text-mist">
+      <div className="flex items-center gap-2 border-b-[0.5px] border-white/8 px-3.5 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: '#E87E67' }} />
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: '#E9B84A' }} />
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: '#7AB87A' }} />
+        <span className="ml-auto text-[11px] text-ink-400">translation · live</span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/50 text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-3 text-left font-medium">Source (EN)</th>
-              <th className="px-4 py-3 text-left font-medium">DE</th>
-              <th className="px-4 py-3 text-left font-medium">FR</th>
-              <th className="px-4 py-3 text-left font-medium">SKU</th>
-              <th className="px-4 py-3 text-right font-medium">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-b border-border/30 last:border-0">
-                <td className="px-4 py-3 font-medium text-foreground">{r.src}</td>
-                <td className="px-4 py-3 text-muted-foreground">{r.de}</td>
-                <td className="px-4 py-3 text-muted-foreground">{r.fr}</td>
-                <td className="px-4 py-3 font-mono text-xs text-foreground">
-                  <span className="rounded bg-muted px-1.5 py-0.5">{r.sku}</span>
-                </td>
-                <td className="px-4 py-3 text-right font-mono text-foreground">{r.price}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
-        <span>4 of 2,847 products shown</span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-          SKUs, prices & barcodes protected
-        </span>
-      </div>
+      <pre className="m-0 whitespace-pre p-5 leading-[1.6]">
+        <span className="text-ink-400">$</span> feedgenix translate{' '}
+        <span className="text-[#6EE7C4]">--batch=deindeal.csv</span>
+        {'\n'}
+        <span className="text-ink-400">→</span> reading 4,832 rows
+        {'\n\n'}
+        <span className="text-ink-400">field:</span> <span className="text-[#F1C292]">title_en</span>
+        {'\n'}
+        <span className="text-[#6EE7C4]">{'  "Merino wool sweater"'}</span>
+        {'\n\n'}
+        <span className="text-ink-400">  de</span>  <span className="text-[#A5B4FC]">"Merinowollpullover"</span>
+        {'\n'}
+        <span className="text-ink-400">  fr</span>  <span className="text-[#A5B4FC]">"Pull en laine mérinos"</span>
+        {'\n'}
+        <span className="text-ink-400">  it</span>  <span className="text-[#A5B4FC]">"Maglione in lana merino"</span>
+        {'\n'}
+        <span className="text-ink-400">  el</span>  <span className="text-[#A5B4FC]">"Πουλόβερ από μαλλί merino"</span>
+        {'\n\n'}
+        <span className="text-[#6EE7C4]">✓</span> 4,832 rows · 0.38 ¢/row ·{' '}
+        <span className="text-[#A5B4FC]">cached 61%</span>
+      </pre>
     </div>
   );
 }
 
-/* ──────────────────── FORMAT SUPPORT ──────────────────── */
-function FormatSupport() {
-  const formats = ['CSV', 'XLSX', 'XML', 'JSON', 'TSV'];
-  const platforms = ['Shopify', 'WooCommerce', 'Amazon', 'PrestaShop', 'Magento', 'Etsy'];
-  return (
-    <section id="formats" className="border-y border-border/60 bg-muted/30 py-14">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="grid gap-10 md:grid-cols-2">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Works with every feed format
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {formats.map((f) => (
-                <span
-                  key={f}
-                  className="rounded-md border border-border/60 bg-background px-3 py-1.5 font-mono text-sm font-medium text-foreground shadow-sm"
-                >
-                  .{f.toLowerCase()}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Export-ready for your platform
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {platforms.map((p) => (
-                <span
-                  key={p}
-                  className="rounded-md border border-border/60 bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm"
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ───────────────────── HOW IT WORKS ───────────────────── */
-function HowItWorks() {
-  const steps = [
-    {
-      n: '01',
-      title: 'Upload your feed',
-      desc: 'Drop in any CSV, XLSX, or XML file. We handle messy data, inconsistent columns, and multi-language sources out of the box.',
-    },
-    {
-      n: '02',
-      title: 'AI maps & you review',
-      desc: 'Our AI detects your field structure, flags translatable text, and protects prices, SKUs, and barcodes. Approve the map in seconds.',
-    },
-    {
-      n: '03',
-      title: 'Translate & download',
-      desc: 'Pick your target markets. We translate in parallel using the best provider for each language, cache results, and hand you a clean file ready to import.',
-    },
-  ];
-
-  return (
-    <section id="how-it-works" className="py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">How it works</p>
-          <h2 className="mt-3 font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            From messy feed to<br />market-ready — in 3 steps
-          </h2>
-          <p className="mt-5 text-lg text-muted-foreground">
-            No engineering, no manual column mapping, no broken data.
-          </p>
-        </div>
-        <div className="mt-16 grid gap-8 md:grid-cols-3">
-          {steps.map((s) => (
-            <div
-              key={s.n}
-              className="group relative rounded-2xl border border-border/60 bg-card p-8 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
-            >
-              <div className="font-mono text-sm font-semibold text-primary">{s.n}</div>
-              <h3 className="mt-4 font-heading text-xl font-semibold text-foreground">{s.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ───────────────────── FEATURES ───────────────────── */
-const featureList = [
-  {
-    icon: ShieldIcon,
-    title: 'Golden Rule Protection',
-    desc: 'Prices, stock, SKUs, EAN/UPC barcodes, and dimensions pass through untouched. Built-in safety you can verify.',
-  },
-  {
-    icon: BoltIcon,
-    title: 'Smart provider routing',
-    desc: 'Microsoft, DeepL, and Claude — we pick the best provider per language and stretch every free tier before using paid ones.',
-  },
-  {
-    icon: LayersIcon,
-    title: 'Intelligent cache',
-    desc: 'Re-translate 100k products and pay for 2k. SHA-256 content hashing means we never translate the same line twice.',
-  },
-  {
-    icon: GitBranchIcon,
-    title: 'Change detection',
-    desc: 'Re-upload a feed and only new or changed products are re-translated. Keep costs flat as your catalog grows.',
-  },
-  {
-    icon: GlobeIcon,
-    title: '30+ languages',
-    desc: 'From EU core (DE, FR, IT, ES, NL, PL) to long-tail (CZ, RO, HU, GR, PT). One feed, every market.',
-  },
-  {
-    icon: CodeIcon,
-    title: 'API & webhooks (Pro)',
-    desc: 'Automate the whole pipeline from your CMS. REST API, signed webhooks, and scheduled syncs.',
-  },
-];
+/* ───────────────────────── FEATURES ───────────────────────── */
 
 function Features() {
+  const items = [
+    {
+      icon: <TableIcon />,
+      title: 'Bulk translation at scale',
+      body: 'Up to 10,000 rows per batch. Jobs checkpoint every 1,000 rows so a crashed machine never loses work.',
+    },
+    {
+      icon: <ClockIcon />,
+      title: 'SHA‑256 smart cache',
+      body: 'Every string is hashed. You pay once per unique phrase, across every feed, forever.',
+    },
+    {
+      icon: <ShieldIcon />,
+      title: 'Golden rule protection',
+      body: 'Prices, stock, barcodes, SKUs and dimensions are rejected by the translator. They pass through untouched.',
+    },
+  ];
   return (
-    <section id="features" className="border-t border-border/60 bg-muted/20 py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Features</p>
-          <h2 className="mt-3 font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Everything your feed needs —<br />and nothing it doesn't
-          </h2>
-        </div>
-        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {featureList.map((f) => (
-            <div
-              key={f.title}
-              className="rounded-2xl border border-border/60 bg-card p-7 transition-all hover:border-primary/30 hover:shadow-md"
-            >
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <f.icon />
+    <section id="features" className="bg-sand">
+      <div className="mx-auto max-w-280 px-10 py-20">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          {items.map((f) => (
+            <div key={f.title} className="rounded-xl border-[0.5px] border-ink/8 bg-paper p-7">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-[#4338CA]">
+                {f.icon}
               </div>
-              <h3 className="mt-5 font-heading text-lg font-semibold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{f.desc}</p>
+              <h3 className="mb-2 text-[18px] font-medium tracking-[-0.01em] text-ink">
+                {f.title}
+              </h3>
+              <p className="text-[14px] leading-[1.6] text-ink-500">{f.body}</p>
             </div>
           ))}
         </div>
@@ -298,221 +149,233 @@ function Features() {
   );
 }
 
-/* ───────────────────── GOLDEN RULE ───────────────────── */
+/* ───────────────────────── HOW IT WORKS ───────────────────────── */
+
+function HowItWorks() {
+  const steps = [
+    { n: '01', t: 'Upload CSV',        p: 'Drag-drop any CSV or XML. We parse up to 10K rows in seconds.' },
+    { n: '02', t: 'AI field mapping',  p: 'Claude reads your columns and suggests a mapping. You approve or edit.' },
+    { n: '03', t: 'Review & approve',  p: 'Preview translations in every target language before you commit.' },
+    { n: '04', t: 'Export clean feed', p: 'Download CSV, XLSX, JSON, or push to Shopify via API.' },
+  ];
+  return (
+    <section id="how" className="bg-paper fg-hairline-b">
+      <div className="mx-auto max-w-300 px-10 py-20">
+        <h2 className="mb-10 text-[32px] font-medium tracking-[-0.02em] text-ink">
+          How it works
+        </h2>
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1fr_24px_1fr_24px_1fr_24px_1fr] md:items-center md:gap-0">
+          {steps.map((s, i) => (
+            <Step key={s.n} step={s} showArrow={i < steps.length - 1} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Step({ step, showArrow }: { step: { n: string; t: string; p: string }; showArrow: boolean }) {
+  return (
+    <>
+      <div>
+        <div className="mb-2.5 font-mono text-[12px] tracking-[0.08em] text-ink-400">
+          STEP {step.n}
+        </div>
+        <div className="text-[18px] font-medium tracking-[-0.01em] text-ink">{step.t}</div>
+        <p className="mt-2 text-[13px] leading-[1.55] text-ink-500">{step.p}</p>
+      </div>
+      {showArrow && <div className="hidden text-center text-ink-300 md:block">→</div>}
+    </>
+  );
+}
+
+/* ───────────────────────── GOLDEN RULE ───────────────────────── */
+
 function GoldenRule() {
-  const safe = ['Prices', 'Stock levels', 'SKUs & references', 'EAN / UPC / GTIN', 'Weights & dimensions', 'URLs & image paths'];
-  const translated = ['Product titles', 'Descriptions', 'Bullet points', 'Attribute values', 'Category names', 'Marketing copy'];
-  return (
-    <section className="py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">The Golden Rule</p>
-          <h2 className="mt-3 font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            We translate what's language.<br />Everything else stays exactly as you sent it.
-          </h2>
-          <p className="mt-5 text-lg text-muted-foreground">
-            The #1 reason bulk-translation tools get fired: they change a price, drop a SKU digit, or
-            break a barcode. We don't. Ever.
-          </p>
-        </div>
-        <div className="mx-auto mt-14 grid max-w-4xl gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-border/60 bg-card p-8">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <ShieldIcon />
-              </span>
-              <h3 className="font-heading text-lg font-semibold">Never touched</h3>
-            </div>
-            <ul className="mt-5 space-y-2.5 text-sm">
-              {safe.map((s) => (
-                <li key={s} className="flex items-center gap-2 text-foreground">
-                  <CheckIcon className="h-4 w-4 text-primary" /> {s}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-8">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                <GlobeIcon />
-              </span>
-              <h3 className="font-heading text-lg font-semibold">Translated</h3>
-            </div>
-            <ul className="mt-5 space-y-2.5 text-sm">
-              {translated.map((s) => (
-                <li key={s} className="flex items-center gap-2 text-foreground">
-                  <CheckIcon className="h-4 w-4 text-primary" /> {s}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ───────────────────── COMPARISON ───────────────────── */
-function Comparison() {
-  const rows = [
-    { feature: 'Time to translate 10k products', feedgenix: 'Minutes', translators: '2–6 weeks', gt: '1 hour (manual)', inhouse: '3–6 months' },
-    { feature: 'Cost for 10k products / 5 languages', feedgenix: '€79', translators: '€3k–€8k', gt: 'Free (no structure)', inhouse: '€15k+ dev' },
-    { feature: 'Protects prices, SKUs, barcodes', feedgenix: true, translators: 'Manual', gt: false, inhouse: 'Depends' },
-    { feature: 'Change detection (only retranslate edits)', feedgenix: true, translators: false, gt: false, inhouse: 'Depends' },
-    { feature: 'Multi-format (CSV, XLSX, XML)', feedgenix: true, translators: true, gt: false, inhouse: 'Depends' },
-    { feature: 'No engineering required', feedgenix: true, translators: true, gt: true, inhouse: false },
+  const patterns = [
+    'price', 'prix', 'preis', 'prezzo',
+    'stock', 'quantity', 'qty', 'bestand',
+    'ean', 'upc', 'gtin', 'barcode',
+    'sku', 'ref', 'reference', 'article_number',
+    'weight', 'gewicht', 'poids', 'dimension',
   ];
-
-  const cell = (v: unknown) => {
-    if (v === true) return <CheckIcon className="mx-auto h-5 w-5 text-primary" />;
-    if (v === false) return <XIcon className="mx-auto h-5 w-5 text-muted-foreground/50" />;
-    return <span className="text-sm text-muted-foreground">{v as string}</span>;
-  };
-
   return (
-    <section className="border-t border-border/60 bg-muted/20 py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Why teams switch to FeedGenix
-          </h2>
-        </div>
-        <div className="mx-auto mt-14 max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-card">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/60">
-                <th className="p-5 text-left text-sm font-semibold text-muted-foreground"></th>
-                <th className="p-5 text-center text-sm font-semibold text-primary">FeedGenix</th>
-                <th className="p-5 text-center text-sm font-semibold text-muted-foreground">
-                  Human translators
-                </th>
-                <th className="p-5 text-center text-sm font-semibold text-muted-foreground">
-                  Google Translate
-                </th>
-                <th className="hidden p-5 text-center text-sm font-semibold text-muted-foreground md:table-cell">
-                  In-house build
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i} className="border-b border-border/40 last:border-0">
-                  <td className="p-5 text-sm font-medium text-foreground">{r.feature}</td>
-                  <td className="bg-primary/5 p-5 text-center">{cell(r.feedgenix)}</td>
-                  <td className="p-5 text-center">{cell(r.translators)}</td>
-                  <td className="p-5 text-center">{cell(r.gt)}</td>
-                  <td className="hidden p-5 text-center md:table-cell">{cell(r.inhouse)}</td>
-                </tr>
+    <section className="bg-paper">
+      <div className="mx-auto max-w-300 px-10 py-20">
+        <div className="grid grid-cols-1 items-start gap-12 md:grid-cols-2">
+          <div>
+            <span className="fg-eyebrow">THE GOLDEN RULE</span>
+            <h2 className="mt-3 text-[36px] font-medium leading-[1.1] tracking-[-0.02em] text-ink">
+              Prices, stock and barcodes pass through untouched.
+            </h2>
+            <p className="mt-5 max-w-130 text-[16px] leading-[1.6] text-ink-500">
+              The translator never sees price, stock, SKU, EAN, weight or dimension columns.
+              They're detected by pattern, pinned by schema, and streamed straight to the export.
+              That's not a feature — it's a promise.
+            </p>
+          </div>
+          <div className="rounded-xl border-[0.5px] border-ink/10 bg-mist p-7">
+            <div className="mb-4 text-[12px] font-medium tracking-[0.04em] text-ink-500">
+              PROTECTED BY DEFAULT
+            </div>
+            <ul className="grid grid-cols-2 gap-2">
+              {patterns.map((token) => (
+                <li key={token} className="flex items-center gap-2 font-mono text-[13px] text-ink-700">
+                  <EmeraldCheck /> {token}
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/* ───────────────────── PRICING PREVIEW ───────────────────── */
+/* ───────────────────────── PRICING PREVIEW ───────────────────────── */
+
 function PricingPreview() {
-  const tiers = [
-    { name: 'Free', price: '€0', period: 'forever', feature: '100 products/mo', highlight: false },
-    { name: 'Starter', price: '€29', period: '/mo', feature: '1,000 products/mo', highlight: false },
-    { name: 'Pro', price: '€79', period: '/mo', feature: '10,000 products/mo', highlight: true },
-    { name: 'Enterprise', price: '€199', period: '/mo', feature: 'Unlimited + API', highlight: false },
-  ];
-
   return (
-    <section className="py-24">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Pricing</p>
-          <h2 className="mt-3 font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Predictable pricing.<br />Start free, upgrade when you scale.
-          </h2>
+    <section id="pricing" className="bg-paper fg-hairline-t">
+      <div className="mx-auto max-w-300 px-10 py-20">
+        <h2 className="text-center text-[36px] font-medium tracking-[-0.02em] text-ink">
+          Pricing built around rows, not seats.
+        </h2>
+        <p className="mx-auto mt-1.5 max-w-xl text-center text-[15px] text-ink-500">
+          Every plan includes the Golden Rule, smart cache, and all export formats.
+        </p>
+        <div className="mt-11 grid grid-cols-1 items-start gap-3.5 md:grid-cols-4">
+          <PriceCard
+            name="Free"
+            price="€0"
+            per="500 rows / month"
+            features={['3 target languages', 'CSV export', 'Community support']}
+            cta="Start free"
+          />
+          <PriceCard
+            name="Starter"
+            price="€29"
+            priceSuffix="/mo"
+            per="10,000 rows / month"
+            features={['10 languages', 'XLSX + JSON export', 'Change detection']}
+            cta="Choose Starter"
+          />
+          <PriceCard
+            highlight
+            name="Pro"
+            price="€99"
+            priceSuffix="/mo"
+            per="100,000 rows / month"
+            features={['Unlimited languages', 'API + webhooks', 'Priority routing', '5 team members']}
+            cta="Start Pro trial"
+          />
+          <PriceCard
+            name="Enterprise"
+            price="Custom"
+            per="Unlimited rows"
+            features={['SSO + SOC 2', 'Dedicated success', 'Custom models']}
+            cta="Talk to sales"
+          />
         </div>
-        <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {tiers.map((t) => (
-            <div
-              key={t.name}
-              className={`relative rounded-2xl border p-6 transition-all ${
-                t.highlight
-                  ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
-                  : 'border-border/60 bg-card'
-              }`}
-            >
-              {t.highlight && (
-                <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
-                  Most popular
-                </span>
-              )}
-              <h3 className="font-heading text-lg font-semibold">{t.name}</h3>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="font-heading text-4xl font-bold">{t.price}</span>
-                <span className="text-sm text-muted-foreground">{t.period}</span>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{t.feature}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-10 flex justify-center">
-          <Button asChild variant="outline" size="lg">
-            <Link to="/pricing">Compare all plans →</Link>
-          </Button>
+        <div className="mt-8 text-center">
+          <Link to="/pricing" className="text-[14px] font-medium text-indigo hover:text-indigo-600">
+            Compare all features →
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-/* ───────────────────── FAQ ───────────────────── */
+function PriceCard(props: {
+  name: string;
+  price: string;
+  priceSuffix?: string;
+  per: string;
+  features: string[];
+  cta: string;
+  highlight?: boolean;
+}) {
+  const { name, price, priceSuffix, per, features, cta, highlight } = props;
+  return (
+    <div
+      className={`relative rounded-xl bg-paper ${
+        highlight ? 'border-2 border-indigo p-[27px_23px]' : 'border-[0.5px] border-ink/14 p-[28px_24px]'
+      }`}
+    >
+      {highlight && (
+        <span className="absolute left-1/2 -top-3.5 -translate-x-1/2 rounded-full bg-sand px-3.5 py-1 text-[11px] font-medium tracking-[0.04em] text-[#A35412]">
+          Most popular
+        </span>
+      )}
+      <div className="mb-2.5 text-[12px] font-medium tracking-[0.04em] text-indigo">{name}</div>
+      <div className="text-[40px] font-medium leading-none tracking-[-0.02em] text-ink">
+        {price}
+        {priceSuffix && (
+          <span className="text-[14px] font-normal text-ink-400">{priceSuffix}</span>
+        )}
+      </div>
+      <div className="mt-1.5 min-h-9 text-[13px] text-ink-500">{per}</div>
+      <ul className="mt-5 mb-5.5 space-y-1 text-[13.5px]">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2 py-0.5 text-ink-700">
+            <EmeraldCheck className="mt-1 shrink-0" /> {f}
+          </li>
+        ))}
+      </ul>
+      <button
+        className={`w-full rounded-lg py-2.5 text-[14px] font-medium transition-colors duration-200 ${
+          highlight
+            ? 'bg-indigo text-white hover:bg-indigo-600'
+            : 'border-[0.5px] border-ink/14 bg-paper text-ink hover:bg-mist'
+        }`}
+      >
+        {cta}
+      </button>
+    </div>
+  );
+}
+
+/* ───────────────────────── FAQ ───────────────────────── */
+
 function FAQ() {
   const faqs = [
     {
-      q: 'What file formats do you support?',
-      a: 'CSV, XLSX, XML, JSON, and TSV. Upload whatever your platform exports — we detect encoding, delimiters, and column structure automatically.',
+      q: 'How does the smart cache save me money?',
+      a: "Every source phrase is hashed with SHA-256 against its target language. If the same phrase has been translated before — even for a different feed or customer — we reuse the stored translation instead of paying a provider. Merchants with recurring catalogs see cache hit rates of 60–80%.",
     },
     {
-      q: 'How do you protect my prices and SKUs?',
-      a: 'We run a "Golden Rule" check before and after translation. Fields matching price, stock, barcode, SKU, or dimension patterns are flagged as protected and never sent to any translation model. You can also manually mark any field as protected.',
+      q: 'Which languages are supported?',
+      a: 'All 30+ languages covered by our provider chain: Microsoft Translator, DeepL, Claude Opus, and Grok. European markets (DE, FR, IT, EL, ES, NL, PT) are fully tested end-to-end.',
     },
     {
-      q: 'Which translation providers do you use?',
-      a: 'Microsoft Translator, DeepL, and Anthropic Claude. We route each language to the provider that performs best for it, and we always exhaust free tiers before using paid APIs.',
+      q: 'What file formats can I upload?',
+      a: 'CSV and XML on input. On export: CSV, XLSX, JSON, and direct push to Shopify via API on the Pro plan.',
     },
     {
-      q: 'What happens when I re-upload the same feed?',
-      a: 'We hash every product row. On re-upload, only new or changed rows get re-translated — everything else comes straight from cache. Your second upload usually costs nothing.',
+      q: 'What happens if a translation provider fails?',
+      a: 'The router tries free providers first, then paid fallbacks. A circuit breaker cools down any provider after 5 consecutive failures. If the monthly spend cap is reached, we fail fast rather than silently overspend.',
     },
     {
-      q: 'Can I use this with Shopify / WooCommerce / Amazon?',
-      a: 'Yes. Export from your platform, translate with us, and import the result. The output file matches your input format exactly — same columns, same order, same encoding. Native plugins are on the roadmap.',
-    },
-    {
-      q: 'Is my data safe?',
-      a: 'Your feeds are stored encrypted, scoped to your team, and deleted on request. We do not share or train on your data. GDPR-compliant, EU-hosted.',
-    },
-    {
-      q: 'Do I need a credit card to try it?',
-      a: 'No. The Free plan gives you 100 products/month forever. Upgrade only when you need more.',
+      q: 'Can I review translations before export?',
+      a: 'Yes. Every field mapping is paused for review — you approve or edit the mapping, then preview translations in each target language before committing to the full batch.',
     },
   ];
-
   return (
-    <section id="faq" className="border-t border-border/60 bg-muted/20 py-24">
-      <div className="mx-auto max-w-3xl px-6">
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">FAQ</p>
-          <h2 className="mt-3 font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Questions, answered
-          </h2>
-        </div>
-        <Accordion type="single" collapsible className="mt-12 w-full">
+    <section id="faq" className="bg-mist">
+      <div className="mx-auto max-w-200 px-10 py-20">
+        <h2 className="mb-10 text-center text-[36px] font-medium tracking-[-0.02em] text-ink">
+          Frequently asked questions
+        </h2>
+        <Accordion type="single" collapsible className="divide-y-[0.5px] divide-ink/10">
           {faqs.map((f, i) => (
-            <AccordionItem key={i} value={`item-${i}`} className="border-border/60">
-              <AccordionTrigger className="text-left font-medium text-foreground hover:text-primary">
+            <AccordionItem key={f.q} value={`q-${i}`} className="border-0 py-1">
+              <AccordionTrigger className="py-5 text-left text-[16px] font-medium text-ink hover:no-underline">
                 {f.q}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
+              <AccordionContent className="pb-5 pr-10 text-[15px] leading-[1.6] text-ink-500">
+                {f.a}
+              </AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
@@ -521,59 +384,89 @@ function FAQ() {
   );
 }
 
-/* ───────────────────── FINAL CTA ───────────────────── */
+/* ───────────────────────── FINAL CTA ───────────────────────── */
+
 function FinalCTA() {
   return (
-    <section className="py-24">
-      <div className="mx-auto max-w-5xl px-6">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-linear-to-br from-primary/10 via-background to-background p-12 text-center md:p-16">
-          <div
-            className="pointer-events-none absolute inset-0 -z-10"
-            style={{
-              background:
-                'radial-gradient(ellipse 60% 60% at 50% 0%, hsl(var(--primary) / 0.15), transparent 70%)',
-            }}
-          />
-          <h2 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Stop copy-pasting into Google Translate.
-          </h2>
-          <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">
-            Join sellers shipping across 30+ EU markets without breaking their catalog.
-          </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg" className="h-12 px-6 text-base">
-              <Link to="/register">Start free</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
-              <Link to="/pricing">See pricing</Link>
-            </Button>
-          </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            100 products on the house • No credit card • 5-minute setup
-          </p>
+    <section className="bg-paper">
+      <div className="mx-auto max-w-240 px-10 py-24 text-center">
+        <h2 className="text-[40px] font-medium leading-[1.1] tracking-[-0.02em] text-ink">
+          Start translating your catalog today.
+        </h2>
+        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-[1.6] text-ink-500">
+          500 rows free — no credit card. Translate your first CSV in under 4 minutes.
+        </p>
+        <div className="mt-7 flex flex-wrap justify-center gap-2.5">
+          <Link
+            to="/register"
+            className="rounded-lg bg-indigo px-5 py-2.75 text-[14px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600"
+          >
+            Start free
+          </Link>
+          <Link
+            to="/pricing"
+            className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-5 py-2.75 text-[14px] font-medium text-ink transition-colors duration-200 hover:bg-mist"
+          >
+            See pricing
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-/* ───────────────────── ICONS ───────────────────── */
-function IconBase({ children }: { children: React.ReactNode }) {
+/* ───────────────────────── ICONS ───────────────────────── */
+
+function EmeraldCheck({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-      {children}
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#0F9B7E"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      className={className}
+    >
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
-function ShieldIcon() { return <IconBase><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></IconBase>; }
-function BoltIcon() { return <IconBase><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></IconBase>; }
-function LayersIcon() { return <IconBase><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></IconBase>; }
-function GitBranchIcon() { return <IconBase><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></IconBase>; }
-function GlobeIcon() { return <IconBase><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></IconBase>; }
-function CodeIcon() { return <IconBase><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></IconBase>; }
-function CheckIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>;
+
+function ShieldCheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <path d="m9 12 2 2 4-4" />
+      <path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z" />
+    </svg>
+  );
 }
-function XIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
+
+function TableIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <path d="M3 5v14h18V5z" />
+      <path d="M3 10h18" />
+      <path d="M9 5v14" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
 }

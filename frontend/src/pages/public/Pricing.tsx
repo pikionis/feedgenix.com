@@ -1,131 +1,82 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 type BillingCycle = 'monthly' | 'yearly';
 
-const tiers = [
+/**
+ * Dedicated pricing page — same 4-tier layout as the landing preview,
+ * but with a yearly toggle and an honest feature comparison table below.
+ */
+
+type Tier = {
+  name: string;
+  eyebrow: string;
+  monthly: number | 'custom';
+  yearly: number | 'custom';
+  rowsPerMonth: string;
+  features: string[];
+  cta: string;
+  highlight?: boolean;
+};
+
+const tiers: Tier[] = [
   {
     name: 'Free',
-    tagline: 'Try FeedGenix risk-free.',
+    eyebrow: 'Try it out',
     monthly: 0,
     yearly: 0,
-    limit: '100 products/mo',
+    rowsPerMonth: '500 rows / month',
     features: [
-      '1 target language',
-      '1 team member',
-      'CSV, XLSX, XML upload',
+      '3 target languages',
+      'CSV upload & export',
+      'Community support',
       'Basic field mapping',
-      'CSV export',
     ],
     cta: 'Start free',
-    ctaVariant: 'outline' as const,
-    highlighted: false,
   },
   {
     name: 'Starter',
-    tagline: 'For small sellers going cross-border.',
+    eyebrow: 'For small merchants',
     monthly: 29,
     yearly: 232,
-    limit: '1,000 products/mo',
+    rowsPerMonth: '10,000 rows / month',
     features: [
-      '3 target languages',
-      '2 team members',
-      'Smart AI field mapping',
-      'CSV + XLSX export',
+      '10 target languages',
+      'XLSX + JSON export',
       'Change detection',
-      'Translation cache',
       'Email support',
     ],
-    cta: 'Start free trial',
-    ctaVariant: 'default' as const,
-    highlighted: false,
+    cta: 'Choose Starter',
   },
   {
     name: 'Pro',
-    tagline: 'For growing catalogs across many markets.',
-    monthly: 79,
-    yearly: 632,
-    limit: '10,000 products/mo',
+    eyebrow: 'Most popular',
+    monthly: 99,
+    yearly: 792,
+    rowsPerMonth: '100,000 rows / month',
     features: [
-      '10 target languages',
+      'Unlimited languages',
+      'API + webhooks',
+      'Priority provider routing',
       '5 team members',
-      'CSV, XLSX, XML, JSON export',
-      'Continuous sync',
-      'API access + webhooks',
-      'Golden Rule editor',
-      'Priority email support',
+      'Shopify push',
     ],
-    cta: 'Start free trial',
-    ctaVariant: 'default' as const,
-    highlighted: true,
+    cta: 'Start Pro trial',
+    highlight: true,
   },
   {
     name: 'Enterprise',
-    tagline: 'Unlimited scale, white-glove onboarding.',
-    monthly: 199,
-    yearly: 1592,
-    limit: 'Unlimited products',
+    eyebrow: 'Custom',
+    monthly: 'custom',
+    yearly: 'custom',
+    rowsPerMonth: 'Unlimited rows',
     features: [
-      'Unlimited languages',
-      'Unlimited team members',
-      'All features included',
-      'SSO / SAML',
-      'Dedicated CSM',
-      'Custom integrations',
-      'SLA + 99.9% uptime',
+      'SSO + SCIM',
+      'SOC 2 Type II, DPA',
+      'Dedicated success manager',
+      'Custom models / self-hosted providers',
     ],
-    cta: 'Contact sales',
-    ctaVariant: 'outline' as const,
-    highlighted: false,
-  },
-];
-
-const comparisonGroups = [
-  {
-    title: 'Catalog',
-    rows: [
-      { label: 'Products per month', values: ['100', '1,000', '10,000', 'Unlimited'] },
-      { label: 'Target languages', values: ['1', '3', '10', 'Unlimited'] },
-      { label: 'Team members', values: ['1', '2', '5', 'Unlimited'] },
-    ],
-  },
-  {
-    title: 'Formats',
-    rows: [
-      { label: 'CSV upload & export', values: [true, true, true, true] },
-      { label: 'XLSX export', values: [false, true, true, true] },
-      { label: 'XML export', values: [false, false, true, true] },
-      { label: 'JSON export', values: [false, false, true, true] },
-    ],
-  },
-  {
-    title: 'AI & translation',
-    rows: [
-      { label: 'Smart field mapping', values: [false, true, true, true] },
-      { label: 'Translation cache (SHA-256)', values: [true, true, true, true] },
-      { label: 'Change detection', values: [false, true, true, true] },
-      { label: 'Continuous sync', values: [false, false, true, true] },
-      { label: 'Golden Rule editor', values: [false, false, true, true] },
-    ],
-  },
-  {
-    title: 'Developer',
-    rows: [
-      { label: 'REST API', values: [false, false, true, true] },
-      { label: 'Webhooks', values: [false, false, true, true] },
-      { label: 'Custom integrations', values: [false, false, false, true] },
-    ],
-  },
-  {
-    title: 'Support',
-    rows: [
-      { label: 'Community', values: [true, true, true, true] },
-      { label: 'Email support', values: [false, true, true, true] },
-      { label: 'Priority support', values: [false, false, true, true] },
-      { label: 'Dedicated CSM', values: [false, false, false, true] },
-      { label: 'SLA', values: [false, false, false, true] },
-    ],
+    cta: 'Talk to sales',
   },
 ];
 
@@ -134,238 +85,225 @@ export default function Pricing() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="relative">
-        <div
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{
-            background:
-              'radial-gradient(ellipse 70% 50% at 50% 0%, hsl(var(--primary) / 0.08), transparent 60%)',
-          }}
-        />
-        <div className="mx-auto max-w-7xl px-6 pb-16 pt-20 sm:pt-24">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Pricing</p>
-            <h1 className="mt-3 font-heading text-5xl font-semibold tracking-tight sm:text-6xl">
-              Simple, predictable pricing.
-            </h1>
-            <p className="mt-5 text-lg text-muted-foreground">
-              Pay for products translated, not seats or features. Free forever for the first 100
-              products every month.
-            </p>
-          </div>
-
-          {/* Cycle toggle */}
-          <div className="mt-10 flex justify-center">
-            <div className="inline-flex items-center rounded-full border border-border/60 bg-muted/30 p-1">
-              <button
-                onClick={() => setCycle('monthly')}
-                className={`rounded-full px-5 py-1.5 text-sm font-medium transition-all ${
-                  cycle === 'monthly'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setCycle('yearly')}
-                className={`rounded-full px-5 py-1.5 text-sm font-medium transition-all ${
-                  cycle === 'yearly'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                Yearly
-                <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
-                  −20%
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Tier cards */}
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {tiers.map((tier) => {
-              const price = cycle === 'monthly' ? tier.monthly : Math.round(tier.yearly / 12);
-              return (
-                <div
-                  key={tier.name}
-                  className={`relative flex flex-col rounded-2xl border p-7 transition-all ${
-                    tier.highlighted
-                      ? 'border-primary/60 bg-linear-to-br from-primary/5 to-transparent shadow-xl shadow-primary/10'
-                      : 'border-border/60 bg-card hover:border-border'
-                  }`}
-                >
-                  {tier.highlighted && (
-                    <span className="absolute -top-3 left-7 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm">
-                      Most popular
-                    </span>
-                  )}
-                  <h3 className="font-heading text-xl font-semibold">{tier.name}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{tier.tagline}</p>
-                  <div className="mt-6 flex items-baseline gap-1.5">
-                    <span className="font-heading text-5xl font-bold tracking-tight">
-                      €{price}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {price === 0 ? 'forever' : '/month'}
-                    </span>
-                  </div>
-                  {cycle === 'yearly' && tier.yearly > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Billed €{tier.yearly} yearly
-                    </p>
-                  )}
-                  <p className="mt-4 text-sm font-medium text-foreground">{tier.limit}</p>
-                  <ul className="mt-6 flex-1 space-y-2.5">
-                    {tier.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm text-foreground">
-                        <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    asChild
-                    variant={tier.ctaVariant}
-                    className="mt-8 w-full"
-                    size="lg"
-                  >
-                    <Link to={tier.name === 'Enterprise' ? 'mailto:hello@feedgenix.com' : '/register'}>
-                      {tier.cta}
-                    </Link>
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            All plans include: Golden Rule protection • SHA-256 cached translations • GDPR
-            compliance • EU hosting
+      <section className="bg-paper">
+        <div className="mx-auto max-w-300 px-10 pt-20 pb-6 text-center">
+          <span className="fg-eyebrow">PRICING</span>
+          <h1 className="mx-auto mt-3 max-w-4xl text-[48px] font-medium leading-[1.05] tracking-[-0.02em] text-ink">
+            Pricing built around rows, not seats.
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-[16px] leading-[1.6] text-ink-500">
+            Every plan includes the Golden Rule, hash-cached translations, and all export
+            formats. Scale rows, not headcount.
           </p>
+          <CycleToggle value={cycle} onChange={setCycle} />
         </div>
-      </section>
 
-      {/* Comparison table */}
-      <section className="border-t border-border/60 bg-muted/20 py-20">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-              Compare plans in detail
-            </h2>
-          </div>
-          <div className="mt-12 overflow-hidden rounded-2xl border border-border/60 bg-card">
-            {/* Sticky header */}
-            <div className="hidden grid-cols-5 border-b border-border/60 bg-muted/40 md:grid">
-              <div className="p-5 text-sm font-semibold text-muted-foreground">Features</div>
-              {tiers.map((t) => (
-                <div
-                  key={t.name}
-                  className={`p-5 text-center ${t.highlighted ? 'bg-primary/5' : ''}`}
-                >
-                  <div className="font-heading text-base font-semibold">{t.name}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
-                    €{cycle === 'monthly' ? t.monthly : Math.round(t.yearly / 12)}
-                    {t.monthly > 0 && '/mo'}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* Groups */}
-            {comparisonGroups.map((g) => (
-              <div key={g.title}>
-                <div className="border-b border-border/40 bg-muted/20 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:col-span-5">
-                  {g.title}
-                </div>
-                {g.rows.map((r, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-2 border-b border-border/30 last:border-0 md:grid-cols-5"
-                  >
-                    <div className="p-5 text-sm text-foreground md:col-span-1">{r.label}</div>
-                    {r.values.map((v, j) => (
-                      <div
-                        key={j}
-                        className={`flex items-center justify-center p-5 ${
-                          tiers[j].highlighted ? 'bg-primary/5' : ''
-                        }`}
-                      >
-                        {typeof v === 'boolean' ? (
-                          v ? (
-                            <CheckIcon className="h-5 w-5 text-primary" />
-                          ) : (
-                            <XIcon className="h-5 w-5 text-muted-foreground/40" />
-                          )
-                        ) : (
-                          <span className="text-sm font-medium text-foreground">{v}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+        <div className="mx-auto max-w-300 px-10 pb-20">
+          <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-4">
+            {tiers.map((t) => (
+              <TierCard key={t.name} tier={t} cycle={cycle} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* FAQ lite */}
-      <section className="py-20">
-        <div className="mx-auto max-w-3xl px-6">
-          <h2 className="text-center font-heading text-3xl font-semibold tracking-tight">
-            Pricing questions
-          </h2>
-          <div className="mt-10 space-y-8">
-            <FAQItem
-              q="How is a 'product' counted?"
-              a="One product = one row in your feed, regardless of how many languages you translate it into. Translating a 1,000-product feed into 5 languages counts as 1,000 — not 5,000."
-            />
-            <FAQItem
-              q="What happens if I exceed my monthly limit?"
-              a="You can keep using the app, but new translations pause until the next cycle or an upgrade. We'll email you at 80% usage so there are no surprises."
-            />
-            <FAQItem
-              q="Can I cancel or downgrade anytime?"
-              a="Yes. Cancel in one click — you keep access until the end of your billing period. Downgrades take effect at the next cycle."
-            />
-            <FAQItem
-              q="Do unused products roll over?"
-              a="No, the quota resets each month. But our translation cache means re-translating the same products next month is effectively free."
-            />
-            <FAQItem
-              q="Do you offer discounts for NGOs / education?"
-              a="Yes — 50% off any paid plan. Drop us a line at hello@feedgenix.com with proof of status."
-            />
-          </div>
-        </div>
-      </section>
+      <ComparisonTable />
+      <PricingFAQ />
     </>
   );
 }
 
-function FAQItem({ q, a }: { q: string; a: string }) {
+function CycleToggle({ value, onChange }: { value: BillingCycle; onChange: (v: BillingCycle) => void }) {
   return (
-    <div className="border-b border-border/60 pb-6">
-      <h3 className="font-medium text-foreground">{q}</h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{a}</p>
+    <div className="mt-8 inline-flex items-center gap-1 rounded-full border-[0.5px] border-ink/10 bg-mist p-1">
+      <button
+        onClick={() => onChange('monthly')}
+        className={`rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-200 ${
+          value === 'monthly' ? 'bg-paper text-ink' : 'text-ink-500 hover:text-ink'
+        }`}
+      >
+        Monthly
+      </button>
+      <button
+        onClick={() => onChange('yearly')}
+        className={`rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-200 ${
+          value === 'yearly' ? 'bg-paper text-ink' : 'text-ink-500 hover:text-ink'
+        }`}
+      >
+        Yearly
+        <span className="ml-1.5 rounded-full bg-emerald-brand-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-brand-600">
+          −2 mo
+        </span>
+      </button>
     </div>
   );
 }
 
-function CheckIcon({ className = 'h-4 w-4' }: { className?: string }) {
+function TierCard({ tier, cycle }: { tier: Tier; cycle: BillingCycle }) {
+  const raw = cycle === 'monthly' ? tier.monthly : tier.yearly;
+  const priceLabel =
+    raw === 'custom'
+      ? 'Custom'
+      : raw === 0
+        ? '€0'
+        : `€${cycle === 'yearly' ? Math.round(raw / 12) : raw}`;
+  const suffix = raw === 'custom' ? undefined : '/mo';
+
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
+    <div
+      className={`relative rounded-xl bg-paper ${
+        tier.highlight ? 'border-2 border-indigo p-[27px_23px]' : 'border-[0.5px] border-ink/14 p-[28px_24px]'
+      }`}
+    >
+      {tier.highlight && (
+        <span className="absolute left-1/2 -top-3.5 -translate-x-1/2 rounded-full bg-sand px-3.5 py-1 text-[11px] font-medium tracking-[0.04em] text-[#A35412]">
+          Most popular
+        </span>
+      )}
+      <div className="mb-2.5 text-[12px] font-medium tracking-[0.04em] text-indigo">
+        {tier.name}
+      </div>
+      <div className="text-[40px] font-medium leading-none tracking-[-0.02em] text-ink">
+        {priceLabel}
+        {suffix && <span className="text-[14px] font-normal text-ink-400">{suffix}</span>}
+      </div>
+      <div className="mt-1.5 min-h-9 text-[13px] text-ink-500">
+        {tier.rowsPerMonth}
+        {cycle === 'yearly' && typeof tier.yearly === 'number' && tier.yearly > 0 && (
+          <span className="ml-1 text-ink-400">· €{tier.yearly}/yr</span>
+        )}
+      </div>
+      <ul className="mt-5 mb-5.5 space-y-1 text-[13.5px]">
+        {tier.features.map((f) => (
+          <li key={f} className="flex items-start gap-2 py-0.5 text-ink-700">
+            <EmeraldCheck className="mt-1 shrink-0" /> {f}
+          </li>
+        ))}
+      </ul>
+      <Link
+        to={tier.highlight || tier.name === 'Free' || tier.name === 'Starter' ? '/register' : 'mailto:sales@feedgenix.com'}
+        className={`block w-full rounded-lg py-2.5 text-center text-[14px] font-medium transition-colors duration-200 ${
+          tier.highlight
+            ? 'bg-indigo text-white hover:bg-indigo-600'
+            : 'border-[0.5px] border-ink/14 bg-paper text-ink hover:bg-mist'
+        }`}
+      >
+        {tier.cta}
+      </Link>
+    </div>
   );
 }
-function XIcon({ className = 'h-4 w-4' }: { className?: string }) {
+
+/* ───────────────────────── COMPARISON TABLE ───────────────────────── */
+
+function ComparisonTable() {
+  const rows: Array<{ label: string; values: Array<string | boolean> }> = [
+    { label: 'Rows per month',       values: ['500', '10,000', '100,000', 'Unlimited'] },
+    { label: 'Target languages',     values: ['3', '10', 'Unlimited', 'Unlimited'] },
+    { label: 'Team members',         values: ['1', '3', '5', 'Unlimited'] },
+    { label: 'CSV export',           values: [true, true, true, true] },
+    { label: 'XLSX + JSON export',   values: [false, true, true, true] },
+    { label: 'Change detection',     values: [false, true, true, true] },
+    { label: 'API + webhooks',       values: [false, false, true, true] },
+    { label: 'Shopify push',         values: [false, false, true, true] },
+    { label: 'Priority routing',     values: [false, false, true, true] },
+    { label: 'SSO / SCIM',           values: [false, false, false, true] },
+    { label: 'SOC 2 Type II report', values: [false, false, false, true] },
+    { label: 'Dedicated success',    values: [false, false, false, true] },
+  ];
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
+    <section className="bg-mist">
+      <div className="mx-auto max-w-300 px-10 py-20">
+        <h2 className="mb-8 text-center text-[32px] font-medium tracking-[-0.02em] text-ink">
+          Compare all features
+        </h2>
+        <div className="overflow-hidden rounded-xl border-[0.5px] border-ink/10 bg-paper">
+          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] bg-[#FAFAF7] px-5 py-3 text-[11px] font-medium tracking-[0.05em] text-ink-400">
+            <span>FEATURE</span>
+            {tiers.map((t) => (
+              <span key={t.name} className="text-center">
+                {t.name.toUpperCase()}
+              </span>
+            ))}
+          </div>
+          {rows.map((r) => (
+            <div
+              key={r.label}
+              className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center border-t-[0.5px] border-ink/10 px-5 py-3.5 text-[13.5px]"
+            >
+              <span className="text-ink-700">{r.label}</span>
+              {r.values.map((v, i) => (
+                <span key={i} className="text-center">
+                  {typeof v === 'boolean' ? (
+                    v ? <EmeraldCheck className="inline-block" /> : <span className="text-ink-300">—</span>
+                  ) : (
+                    <span className="text-ink-700">{v}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ───────────────────────── PRICING FAQ ───────────────────────── */
+
+function PricingFAQ() {
+  const items = [
+    {
+      q: 'What counts as a row?',
+      a: 'One product row in your CSV — whichever unique SKU/external_id it carries. We count rows that get translated or re-translated; cached hits do not consume your quota.',
+    },
+    {
+      q: 'Do cache hits count against my monthly rows?',
+      a: "No. If a phrase has been translated before — anywhere in your workspace — we serve it from cache for free. That's the entire point of the Golden Rule plus smart cache combo.",
+    },
+    {
+      q: 'Can I switch plans at any time?',
+      a: 'Yes. Upgrades are prorated within the billing cycle; downgrades take effect at the next renewal. No annual lock-in on Starter and Pro.',
+    },
+    {
+      q: 'What happens if I exceed my row quota?',
+      a: 'We pause new translations and notify you before any overage. You can either wait for the next billing cycle or upgrade in-place.',
+    },
+  ];
+  return (
+    <section className="bg-paper">
+      <div className="mx-auto max-w-200 px-10 py-20">
+        <h2 className="mb-8 text-center text-[32px] font-medium tracking-[-0.02em] text-ink">
+          Pricing questions
+        </h2>
+        <div className="divide-y-[0.5px] divide-ink/10">
+          {items.map((it) => (
+            <div key={it.q} className="py-6">
+              <h3 className="text-[16px] font-medium text-ink">{it.q}</h3>
+              <p className="mt-2 text-[15px] leading-[1.6] text-ink-500">{it.a}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ───────────────────────── ICONS ───────────────────────── */
+
+function EmeraldCheck({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#0F9B7E"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      className={className}
+    >
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }

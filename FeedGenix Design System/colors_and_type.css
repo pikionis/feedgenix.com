@@ -1,0 +1,207 @@
+/* ============================================================
+   FeedGenix — Design Tokens
+   Flat, clean, geometric. Two weights (400 / 500). Light + dark.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* -------- Brand palette -------- */
+  --fg-indigo:   #4F46E5;   /* primary */
+  --fg-indigo-600:#4338CA;
+  --fg-indigo-100:#E0E7FF;
+  --fg-emerald:  #0F9B7E;   /* accent */
+  --fg-emerald-600:#0B7A63;
+  --fg-emerald-100:#D6F1E8;
+  --fg-ink:      #1F1D2E;   /* near-black text */
+  --fg-ink-700:  #2E2B42;
+  --fg-ink-500:  #56536A;
+  --fg-ink-400:  #7A7790;
+  --fg-ink-300:  #A6A3B8;
+  --fg-sand:     #FAEEDA;   /* warm surface */
+  --fg-mist:     #F1EFE8;   /* neutral surface */
+  --fg-paper:    #FFFFFF;
+
+  /* -------- Semantic (light) -------- */
+  --bg-canvas:   #FFFFFF;
+  --bg-surface:  #F1EFE8;   /* mist */
+  --bg-warm:     #FAEEDA;   /* sand */
+  --bg-subtle:   #FAFAF7;
+  --bg-ink:      #1F1D2E;
+  --bg-inverse:  #1F1D2E;
+
+  --fg-text:     #1F1D2E;
+  --fg-text-muted:#56536A;
+  --fg-text-faint:#7A7790;
+  --fg-on-ink:   #FFFFFF;
+  --fg-on-warm:  #1F1D2E;
+
+  --border-hair: rgba(31, 29, 46, 0.10);       /* 0.5px hairline */
+  --border-soft: rgba(31, 29, 46, 0.06);
+  --border-ink:  rgba(31, 29, 46, 0.14);
+  --border-emph: #4F46E5;
+
+  /* -------- Status -------- */
+  --status-success: #0F9B7E;
+  --status-success-bg: #D6F1E8;
+  --status-warn:    #C87A1B;
+  --status-warn-bg: #FAEEDA;
+  --status-queued:  #56536A;
+  --status-queued-bg:#EDEBE3;
+  --status-error:   #C6392A;
+  --status-error-bg:#FCE5E1;
+
+  /* -------- Language flag tones (pill bg + fg) -------- */
+  --lang-de-bg: #E7E4FA; --lang-de-fg: #3B3490;
+  --lang-fr-bg: #DCEAF9; --lang-fr-fg: #1F4E87;
+  --lang-it-bg: #DFF1E8; --lang-it-fg: #0B7A63;
+  --lang-el-bg: #FAE9DC; --lang-el-fg: #A35412;
+  --lang-en-bg: #EDEBE3; --lang-en-fg: #2E2B42;
+
+  /* -------- Block palette (hero mosaic) --------
+     Used for the flip-card mosaic and decorative grid blocks.
+     Saturated but soft; always sit on mist/paper. */
+  --block-emerald: #1FB281;
+  --block-pink:    #F7B8D2;
+  --block-cyan:    #33C6E8;
+  --block-amber:   #F0B54A;
+  --block-indigo:  #4F46E5;
+  --block-ink:     #1F1D2E;
+
+  /* -------- Type system -------- */
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+
+  --tracking-tight: -0.02em;     /* display + wordmark */
+  --tracking-snug:  -0.01em;     /* headings */
+  --tracking-normal: 0;
+  --tracking-wide:  0.04em;      /* eyebrows / pills */
+
+  /* Scale (16 root) */
+  --text-xs:    12px;
+  --text-sm:    13px;
+  --text-base:  15px;
+  --text-md:    17px;
+  --text-lg:    20px;
+  --text-xl:    24px;
+  --text-2xl:   32px;
+  --text-3xl:   44px;
+  --text-4xl:   56px;
+
+  --lh-tight:   1.1;
+  --lh-snug:    1.25;
+  --lh-normal:  1.5;
+  --lh-loose:   1.65;
+
+  /* -------- Spacing (4px base) -------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+  --s-24: 96px;
+
+  /* -------- Radius -------- */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 12px;
+  --r-2xl: 16px;
+  --r-pill: 999px;
+
+  /* -------- Elevation (NONE by default) --------
+     Flat system. These are available only for overlays (menus, toasts).
+     Use rarely. */
+  --elev-0: none;
+  --elev-overlay: 0 1px 2px rgba(31,29,46,0.05), 0 8px 24px rgba(31,29,46,0.08);
+
+  /* -------- Motion -------- */
+  --ease-std:   cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast:   120ms;
+  --dur-med:    200ms;
+  --dur-slow:   320ms;
+}
+
+/* -------- Dark mode overrides -------- */
+:root[data-theme="dark"],
+.theme-dark {
+  --bg-canvas:   #15131F;
+  --bg-surface:  #1F1D2E;
+  --bg-warm:     #2A2438;
+  --bg-subtle:   #19172A;
+  --bg-ink:      #0D0C16;
+  --bg-inverse:  #FFFFFF;
+
+  --fg-text:     #F1EFE8;
+  --fg-text-muted:#A6A3B8;
+  --fg-text-faint:#7A7790;
+  --fg-on-ink:   #F1EFE8;
+  --fg-on-warm:  #F1EFE8;
+
+  --border-hair: rgba(241, 239, 232, 0.10);
+  --border-soft: rgba(241, 239, 232, 0.06);
+  --border-ink:  rgba(241, 239, 232, 0.14);
+
+  --status-success-bg: #133227;
+  --status-warn-bg:    #3A2B17;
+  --status-queued-bg:  #24222F;
+  --status-error-bg:   #3A1F1B;
+
+  --lang-de-bg: #2A2649; --lang-de-fg: #B7AEFA;
+  --lang-fr-bg: #1F324D; --lang-fr-fg: #A8C7F1;
+  --lang-it-bg: #17382D; --lang-it-fg: #8FE0C3;
+  --lang-el-bg: #3A2B17; --lang-el-fg: #F1C292;
+  --lang-en-bg: #24222F; --lang-en-fg: #D5D1E3;
+}
+
+/* ============================================================
+   Semantic element styles
+   ============================================================ */
+
+html, body {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-regular);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  color: var(--fg-text);
+  background: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.fg-display {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-medium);
+  font-size: var(--text-3xl);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-text);
+}
+.fg-h1 { font-weight: var(--fw-medium); font-size: var(--text-2xl); line-height: var(--lh-tight); letter-spacing: var(--tracking-tight); }
+.fg-h2 { font-weight: var(--fw-medium); font-size: var(--text-xl); line-height: var(--lh-snug); letter-spacing: var(--tracking-snug); }
+.fg-h3 { font-weight: var(--fw-medium); font-size: var(--text-lg); line-height: var(--lh-snug); letter-spacing: var(--tracking-snug); }
+.fg-body { font-weight: var(--fw-regular); font-size: var(--text-base); line-height: var(--lh-loose); color: var(--fg-text); }
+.fg-body-muted { font-weight: var(--fw-regular); font-size: var(--text-base); line-height: var(--lh-loose); color: var(--fg-text-muted); }
+.fg-small { font-size: var(--text-sm); line-height: var(--lh-normal); color: var(--fg-text-muted); }
+.fg-caption { font-size: var(--text-xs); line-height: var(--lh-normal); color: var(--fg-text-faint); letter-spacing: var(--tracking-wide); text-transform: none; }
+.fg-eyebrow { font-size: var(--text-xs); line-height: 1; letter-spacing: var(--tracking-wide); color: var(--fg-indigo); font-weight: var(--fw-medium); }
+.fg-mono { font-family: var(--font-mono); font-size: 13px; line-height: var(--lh-normal); }
+
+/* Wordmark (for the logo treatment) */
+.fg-wordmark {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-ink);
+}

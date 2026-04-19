@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FeedGenix — mosaic hero</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1EFE8;font-family:var(--font-sans);color:#1F1D2E}
+  .wrap{max-width:1200px;margin:0 auto}
+
+  /* ---------- NAV ---------- */
+  nav.top{display:flex;align-items:center;gap:30px;padding:22px 40px;background:#F1EFE8}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:500;letter-spacing:-0.02em;font-size:17px}
+  .logo svg{width:22px;height:22px}
+  .nav-links{display:flex;gap:26px;margin-left:20px}
+  .nav-links a{color:#1F1D2E;font-size:14px;text-decoration:none}
+  .nav-links a:hover{color:#56536A}
+  .nav-cta{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .btn{font:inherit;font-size:13.5px;font-weight:500;border-radius:999px;padding:9px 18px;border:.5px solid transparent;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+  .btn.ghost{background:transparent;color:#1F1D2E}
+  .btn.dark{background:#1F1D2E;color:#fff}
+  .btn.indigo{background:#4F46E5;color:#fff}
+  .btn.light{background:#fff;color:#1F1D2E;border-color:rgba(31,29,46,.14)}
+  .btn:hover{opacity:.92}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;padding:40px 40px 80px;overflow:hidden;background:#F1EFE8;min-height:620px}
+  .hero::before{content:"";position:absolute;inset:0;background-image:
+    linear-gradient(rgba(31,29,46,.05) .5px, transparent .5px),
+    linear-gradient(90deg, rgba(31,29,46,.05) .5px, transparent .5px);
+    background-size:40px 40px;pointer-events:none}
+  .hero-inner{position:relative;max-width:1120px;margin:0 auto}
+  .eyebrow-pill{display:inline-flex;align-items:center;gap:6px;background:#fff;border:.5px solid rgba(31,29,46,.14);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:500;margin-bottom:20px;position:relative;z-index:3}
+  .eyebrow-pill .dot{width:6px;height:6px;border-radius:999px;background:#0F9B7E}
+  .hero h1{font-size:96px;line-height:.95;letter-spacing:-0.04em;font-weight:500;margin:0 0 28px;max-width:900px;position:relative;z-index:2}
+  .hero h1 .word{position:relative;display:inline-block;padding:0 4px}
+  .hero h1 .hl-pink{background:#F7B8D2;border-radius:6px}
+  .hero h1 .hl-cyan{background:#33C6E8;border-radius:6px}
+  .hero h1 .hl-amber{background:#F0B54A;border-radius:6px}
+  .hero-sub{font-size:19px;line-height:1.45;color:#56536A;max-width:620px;margin:0 0 14px;position:relative;z-index:2}
+  .hero-claim{font-size:19px;font-weight:500;color:#1F1D2E;margin:0 0 32px;position:relative;z-index:2}
+  .hero-cta{display:flex;gap:14px;align-items:center;position:relative;z-index:2}
+  .btn.hero-primary{background:#1F1D2E;color:#fff;padding:16px 28px;font-size:15px;border-radius:999px}
+  .hero-secondary{color:#1F1D2E;font-size:14px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+
+  /* Mosaic blocks — positioned absolutely around the type */
+  .blk{position:absolute;border-radius:4px;z-index:1}
+  .blk.e{background:#1FB281}.blk.p{background:#F7B8D2}.blk.c{background:#33C6E8}.blk.a{background:#F0B54A}.blk.k{background:#1F1D2E}.blk.i{background:#4F46E5}
+
+  /* Stats below hero */
+  .stat-strip{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;background:#fff;padding:28px 40px;border-top:.5px solid rgba(31,29,46,.1);border-bottom:.5px solid rgba(31,29,46,.1)}
+  .stat-strip .st{text-align:center;padding:4px 20px;border-right:.5px solid rgba(31,29,46,.1)}
+  .stat-strip .st:last-child{border-right:none}
+  .stat-strip .v{font-size:28px;font-weight:500;letter-spacing:-0.02em;color:#1F1D2E}
+  .stat-strip .lbl{font-size:12.5px;color:#56536A;margin-top:4px}
+
+  /* ---------- LOGO STRIP ---------- */
+  .logos{padding:44px 40px;background:#fff;text-align:center}
+  .logos-title{display:inline-flex;align-items:center;gap:14px;font-size:13px;color:#56536A;margin-bottom:26px}
+  .logos-title .g2{display:inline-flex;align-items:center;gap:5px;background:#F1EFE8;border-radius:999px;padding:3px 10px;font-weight:500;color:#1F1D2E;font-size:12px}
+  .logos-title .g2 .star{color:#F0B54A}
+  .logo-row{display:flex;align-items:center;justify-content:space-between;gap:34px;flex-wrap:wrap;max-width:1040px;margin:0 auto;opacity:.62;filter:grayscale(1)}
+  .logo-row span{font-size:17px;font-weight:500;letter-spacing:-0.01em;color:#1F1D2E;white-space:nowrap}
+
+  /* ---------- FLIP GRID (hero-like blocks that flip) ---------- */
+  .flip-section{padding:80px 40px;background:#F1EFE8}
+  .section-head{text-align:center;max-width:720px;margin:0 auto 48px}
+  .section-head .kicker{font-size:12.5px;color:#4F46E5;font-weight:500;letter-spacing:0.04em;margin-bottom:10px;text-transform:uppercase}
+  .section-head h2{font-size:48px;line-height:1.05;letter-spacing:-0.03em;font-weight:500;margin:0 0 14px}
+  .section-head p{font-size:16px;color:#56536A;line-height:1.5;margin:0}
+
+  .flip-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;max-width:1120px;margin:0 auto}
+  .flip-card{perspective:1200px;aspect-ratio:1/1;cursor:pointer}
+  .flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 700ms cubic-bezier(0.2,0.6,0.2,1)}
+  .flip-card.flipped .flip-inner{transform:rotateY(180deg)}
+  .flip-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:10px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+  .flip-back{transform:rotateY(180deg);background:#fff;border:.5px solid rgba(31,29,46,.14)}
+  .flip-face .lang{font-size:10.5px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;opacity:.8}
+  .flip-face .field{font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:6px;font-weight:500}
+  .flip-face .val{font-size:15px;line-height:1.25;font-weight:500;letter-spacing:-0.01em}
+  .flip-face .meta{display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;opacity:.8;font-weight:500}
+
+  /* face colors */
+  .face-e{background:#1FB281;color:#0A3D2B}
+  .face-p{background:#F7B8D2;color:#6B1E3F}
+  .face-c{background:#33C6E8;color:#0D3A47}
+  .face-a{background:#F0B54A;color:#5C3E0E}
+  .face-i{background:#4F46E5;color:#fff}
+  .face-k{background:#1F1D2E;color:#fff}
+  .face-m{background:#FAEEDA;color:#1F1D2E}
+
+  .flip-back .flag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:999px}
+  .flip-back .val{color:#1F1D2E}
+  .flip-back .field{color:#7A7790}
+  .flip-back .ok{color:#0F9B7E;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+
+  /* ---------- TESTIMONIALS (emerald block, Composer-style) ---------- */
+  .testimonials{padding:80px 40px;background:#fff}
+  .test-card{background:#1FB281;border-radius:20px;padding:64px 56px;max-width:1120px;margin:0 auto;position:relative;color:#0A3D2B}
+  .test-grid{display:grid;grid-template-columns:1.1fr 1.4fr 1.1fr;gap:56px;align-items:start}
+  .test-title{font-size:72px;line-height:.95;letter-spacing:-0.03em;font-weight:500;margin:0;position:relative}
+  .test-title .row{display:block}
+  .test-title .box{background:#F7B8D2;padding:0 10px;border-radius:6px;color:#6B1E3F;display:inline-block}
+  .test-title .quote{position:absolute;font-size:40px;color:#F7B8D2;font-weight:500}
+  .test-title .qo{top:-10px;left:-30px}
+  .test-title .qc{bottom:0;right:-30px}
+  .t-quote{font-size:15.5px;line-height:1.45;margin:0 0 14px;color:#0A3D2B}
+  .t-quote b{font-weight:500}
+  .t-attr{font-size:12px;color:rgba(10,61,43,.7);margin-top:10px;letter-spacing:0.04em}
+  .t-dash{width:18px;height:1.5px;background:#F7B8D2;margin-bottom:12px}
+  .t-col{display:flex;flex-direction:column;gap:28px}
+  .t-item .src{font-size:11px;letter-spacing:0.12em;color:rgba(10,61,43,.6);font-weight:500;margin-top:6px}
+  .test-cta{margin-top:48px;display:flex;flex-direction:column;align-items:center;gap:14px}
+  .test-cta .btn{background:#1F1D2E;color:#fff;padding:16px 48px;font-size:15px}
+  .test-cta .disc{font-size:11px;color:rgba(10,61,43,.7);text-align:center;max-width:560px}
+
+  /* ---------- FAQ ---------- */
+  .faq{padding:96px 40px;background:#fff}
+  .faq-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:60px;max-width:1120px;margin:0 auto}
+  .faq h2{font-size:56px;line-height:1;letter-spacing:-0.03em;font-weight:500;margin:0}
+  .faq-list{border-top:.5px solid rgba(31,29,46,.1)}
+  .faq-item{border-bottom:.5px solid rgba(31,29,46,.1);padding:18px 0;cursor:pointer}
+  .faq-q{display:flex;align-items:center;justify-content:space-between;font-size:15px;color:#1F1D2E}
+  .faq-q .chev{color:#A6A3B8;transition:transform 200ms}
+  .faq-item.open .chev{transform:rotate(90deg);color:#4F46E5}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height 280ms cubic-bezier(0.2,0.6,0.2,1);font-size:14px;color:#56536A;line-height:1.6}
+  .faq-item.open .faq-a{max-height:240px;padding-top:14px}
+
+  /* Footer */
+  footer{background:#1F1D2E;color:#A6A3B8;padding:56px 40px 32px}
+  .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;max-width:1120px;margin:0 auto}
+  .foot-brand .logo{color:#fff}
+  .foot-brand p{font-size:13px;line-height:1.6;margin:14px 0 0;max-width:260px}
+  .foot-col h4{font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#fff;margin:0 0 14px;font-weight:500}
+  .foot-col a{display:block;color:#A6A3B8;text-decoration:none;font-size:13.5px;padding:4px 0}
+  .foot-col a:hover{color:#fff}
+  .foot-base{max-width:1120px;margin:48px auto 0;padding-top:24px;border-top:.5px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;font-size:12px;color:#7A7790}
+
+  /* ---------- TERMINAL PREVIEW ---------- */
+  .term-section{padding:80px 40px;background:#fff}
+  .term-wrap{max-width:900px;margin:0 auto}
+  .term{background:#1F1D2E;border-radius:12px;overflow:hidden;font-family:var(--font-mono);font-size:13px;line-height:1.6;color:#F1EFE8;border:.5px solid rgba(255,255,255,.06)}
+  .term .th{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:.5px solid rgba(241,239,232,.08)}
+  .term .th .d{width:10px;height:10px;border-radius:999px}
+  .term .th .t{margin-left:auto;color:#7A7790;font-size:11px}
+  .term .tb{padding:22px 24px;margin:0}
+  .term .dim{color:#7A7790}.term .ind{color:#A5B4FC}.term .em{color:#6EE7C4}.term .yel{color:#F1C292}
+
+  /* ---------- FEATURES ---------- */
+  .features{background:#FAEEDA;padding:96px 40px}
+  .feat-grid{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .feat-card{background:#fff;border:.5px solid rgba(31,29,46,.08);border-radius:12px;padding:32px}
+  .feat-ic{width:44px;height:44px;border-radius:10px;background:#E0E7FF;color:#4338CA;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+  .feat-card h3{margin:0 0 10px;font-size:19px;font-weight:500;letter-spacing:-0.01em}
+  .feat-card p{margin:0;font-size:14px;color:#56536A;line-height:1.6}
+
+  /* ---------- HOW IT WORKS ---------- */
+  .how{padding:96px 40px;background:#fff;border-bottom:.5px solid rgba(31,29,46,.1)}
+  .how-wrap{max-width:1120px;margin:0 auto}
+  .how h2{margin:0 0 48px;font-size:40px;font-weight:500;letter-spacing:-0.02em;text-align:center}
+  .how-g{display:grid;grid-template-columns:1fr 24px 1fr 24px 1fr 24px 1fr;gap:0;align-items:start}
+  .step .n{font-family:var(--font-mono);font-size:11px;color:#7A7790;letter-spacing:.08em;margin-bottom:12px}
+  .step .t{font-size:19px;font-weight:500;letter-spacing:-0.01em}
+  .step .p{margin:10px 0 0;font-size:13.5px;color:#56536A;line-height:1.55}
+  .arr{text-align:center;color:#A6A3B8;padding-top:30px;font-size:18px}
+
+  /* ---------- PRICING ---------- */
+  .pricing{padding:96px 40px;background:#F1EFE8}
+  .pricing-wrap{max-width:1120px;margin:0 auto}
+  .pricing h2{margin:0 0 8px;font-size:40px;font-weight:500;letter-spacing:-0.02em;text-align:center}
+  .pricing .lede{margin:0 0 48px;font-size:15px;color:#56536A;text-align:center}
+  .tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
+  .tier{background:#fff;border:.5px solid rgba(31,29,46,.14);border-radius:12px;padding:28px 24px;position:relative}
+  .tier.pro{border:2px solid #4F46E5;padding:27px 23px}
+  .tier .n{font-size:12px;color:#4F46E5;font-weight:500;letter-spacing:.04em;margin-bottom:10px;text-transform:uppercase}
+  .tier .pr-v{font-size:40px;font-weight:500;letter-spacing:-0.02em;line-height:1}
+  .tier .per{font-size:13px;color:#56536A;margin-top:6px;min-height:36px}
+  .tier ul{list-style:none;margin:20px 0 22px;padding:0;font-size:13.5px}
+  .tier li{display:flex;gap:8px;padding:5px 0;align-items:flex-start}
+  .tier li svg{flex-shrink:0;margin-top:3px}
+  .tier .cta{width:100%;font:inherit;font-weight:500;font-size:14px;padding:11px;border-radius:8px;border:.5px solid rgba(31,29,46,.14);background:#fff;color:#1F1D2E;cursor:pointer}
+  .tier.pro .cta{background:#4F46E5;color:#fff;border-color:transparent}
+  .most{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#FAEEDA;color:#A35412;padding:5px 14px;border-radius:999px;font-size:11px;font-weight:500;letter-spacing:.04em}
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="logo">
+    <svg viewBox="0 0 48 48"><rect x="6" y="14" width="22" height="3.6" rx="1.8" fill="#4F46E5"/><rect x="6" y="22" width="28" height="3.6" rx="1.8" fill="#4F46E5"/><rect x="6" y="30" width="15" height="3.6" rx="1.8" fill="#4F46E5"/><circle cx="36.5" cy="15.8" r="3.6" fill="#0F9B7E"/></svg>
+    FeedGenix
+  </div>
+  <div class="nav-links">
+    <a href="#">Product</a><a href="#">Pricing</a><a href="#">Docs</a><a href="#">Blog</a>
+  </div>
+  <div class="nav-cta">
+    <a href="Auth.html" class="btn ghost">Sign in</a>
+    <a href="Auth.html" class="btn dark">Start free →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <!-- mosaic blocks -->
+    <div class="blk e" style="left:-20px;top:40px;width:90px;height:60px"></div>
+    <div class="blk e" style="left:70px;top:0px;width:280px;height:100px"></div>
+    <div class="blk p" style="left:-40px;top:200px;width:80px;height:28px"></div>
+    <div class="blk e" style="right:40px;top:20px;width:260px;height:130px"></div>
+    <div class="blk c" style="left:330px;top:230px;width:180px;height:50px"></div>
+    <div class="blk p" style="right:80px;top:260px;width:200px;height:80px"></div>
+    <div class="blk a" style="right:-20px;top:230px;width:50px;height:50px"></div>
+    <div class="blk a" style="left:380px;bottom:60px;width:60px;height:40px"></div>
+    <div class="blk c" style="left:260px;bottom:100px;width:40px;height:40px"></div>
+    <div class="blk e" style="right:280px;bottom:80px;width:60px;height:50px"></div>
+    <div class="blk p" style="right:40px;bottom:40px;width:100px;height:50px"></div>
+    <div class="blk i" style="left:-10px;bottom:100px;width:28px;height:28px"></div>
+
+    <div class="eyebrow-pill"><span class="dot"></span>✦ AI-native feed platform</div>
+    <h1>
+      Ship your<br>
+      catalog in every<br>
+      <span class="word hl-pink">language</span> your<br>
+      buyers shop in.
+    </h1>
+    <p class="hero-sub">Upload a CSV. We translate, enrich, and optimize 10,000 products per batch with hash-cached pricing and smart routing across Claude Opus, Grok and free-tier APIs.</p>
+    <p class="hero-claim">Feeds. Shipped better.</p>
+    <div class="hero-cta">
+      <a href="Auth.html" class="btn hero-primary">Start free — 500 rows →</a>
+      <a href="#" class="hero-secondary">▶ Watch 2-min demo</a>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stat-strip">
+  <div class="st"><div class="v">$20B+</div><div class="lbl">catalog value processed</div></div>
+  <div class="st"><div class="v">12M+</div><div class="lbl">rows translated</div></div>
+  <div class="st"><div class="v">2M+</div><div class="lbl">SHA-256 cache hits</div></div>
+  <div class="st"><div class="v">61%</div><div class="lbl">avg cache hit rate</div></div>
+</div>
+
+<!-- Logos -->
+<section class="logos">
+  <div class="logos-title">Trusted by the fastest growing merchants <span class="g2"><span class="star">★</span> 4.8 on G2</span></div>
+  <div class="logo-row">
+    <span>deindeal</span>
+    <span style="font-style:italic">Galaxus</span>
+    <span>BRACK.CH</span>
+    <span>Zalando</span>
+    <span>migros</span>
+    <span>manor</span>
+    <span>digitec</span>
+    <span>LeShop</span>
+  </div>
+</section>
+
+<!-- Flip cards section -->
+<section class="flip-section">
+  <div class="section-head">
+    <div class="kicker">Hover or tap to flip</div>
+    <h2>One source row.<br>Every language your buyers shop in.</h2>
+    <p>FeedGenix keeps your source-of-truth English product, then routes each field to the right model — cached by SHA-256 so nothing translates twice.</p>
+  </div>
+
+  <div class="flip-grid" id="grid">
+    <!-- Card 1: EN -> DE -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-m">
+          <div><div class="field">title_en · source</div><div class="val">Merino wool sweater, ribbed crew neck</div></div>
+          <div class="meta"><span>EN</span><span>#a1f4·cached</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">title · target</div><div class="val">Pullover aus Merinowolle mit geripptem Rundhalsausschnitt</div></div>
+          <div class="meta"><span class="flag" style="background:#E7E4FA;color:#3B3490">DE</span><span class="ok">✓ claude-opus</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Card 2: EN -> FR -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-p">
+          <div><div class="field">description_en</div><div class="val">Lightweight · breathable · machine-washable at 30°C</div></div>
+          <div class="meta"><span>EN</span><span>0.38¢/row</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">description · target</div><div class="val">Léger · respirant · lavable en machine à 30°C</div></div>
+          <div class="meta"><span class="flag" style="background:#DCEAF9;color:#1F4E87">FR</span><span class="ok">✓ cache hit</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Card 3: EN -> IT -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-c">
+          <div><div class="field">category_en</div><div class="val">Men → Outerwear → Knitwear</div></div>
+          <div class="meta"><span>EN</span><span>taxonomy</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">category · target</div><div class="val">Uomo → Abbigliamento → Maglieria</div></div>
+          <div class="meta"><span class="flag" style="background:#DFF1E8;color:#0B7A63">IT</span><span class="ok">✓ grok-4</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Card 4: price PROTECTED -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-k">
+          <div><div class="field" style="color:#A6A3B8">price_chf · golden rule</div><div class="val">CHF 149.00</div></div>
+          <div class="meta" style="color:#F0B54A"><span>🛡 protected</span><span>never translated</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">price_chf · unchanged</div><div class="val">CHF 149.00</div></div>
+          <div class="meta"><span class="flag" style="background:#FAEEDA;color:#A35412">GOLDEN RULE</span><span class="ok">✓ bypassed</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Card 5: EN -> EL -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-a">
+          <div><div class="field">title_en</div><div class="val">Waterproof hiking boot, vibram sole</div></div>
+          <div class="meta"><span>EN</span><span>#c2e9·new</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">title · target</div><div class="val">Αδιάβροχη μπότα πεζοπορίας με σόλα vibram</div></div>
+          <div class="meta"><span class="flag" style="background:#FAE9DC;color:#A35412">EL</span><span class="ok">✓ claude-opus</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Card 6: stock PROTECTED -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-i">
+          <div><div class="field" style="color:#C7C2F6">stock · golden rule</div><div class="val" style="color:#fff">42 units · warehouse-ZRH1</div></div>
+          <div class="meta" style="color:#C7C2F6"><span>🛡 protected</span><span>verbatim</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">stock · unchanged</div><div class="val">42 units · warehouse-ZRH1</div></div>
+          <div class="meta"><span class="flag" style="background:#FAEEDA;color:#A35412">GOLDEN RULE</span><span class="ok">✓ bypassed</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Card 7: EN -> ES -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-e">
+          <div><div class="field">bullet_1</div><div class="val">100% certified organic merino from New Zealand</div></div>
+          <div class="meta"><span>EN</span><span>bullet list</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">bullet_1 · target</div><div class="val">Lana merina 100% orgánica certificada de Nueva Zelanda</div></div>
+          <div class="meta"><span class="flag" style="background:#FAEEDA;color:#A35412">ES</span><span class="ok">✓ cache hit</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Card 8: SKU protected -->
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="flip-face face-p">
+          <div><div class="field">barcode · golden rule</div><div class="val" style="font-family:var(--font-mono);font-size:13px">7612345 678901</div></div>
+          <div class="meta"><span>🛡 protected</span><span>EAN-13</span></div>
+        </div>
+        <div class="flip-face flip-back">
+          <div><div class="field">barcode · unchanged</div><div class="val" style="font-family:var(--font-mono);font-size:13px">7612345 678901</div></div>
+          <div class="meta"><span class="flag" style="background:#FAEEDA;color:#A35412">GOLDEN RULE</span><span class="ok">✓ bypassed</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Terminal live preview -->
+<section class="term-section">
+  <div class="term-wrap">
+    <div class="term">
+      <div class="th"><span class="d" style="background:#E87E67"></span><span class="d" style="background:#E9B84A"></span><span class="d" style="background:#7AB87A"></span><span class="t">translation · live</span></div>
+<pre class="tb"><span class="dim">$</span> feedgenix translate <span class="em">--batch=deindeal.csv</span>
+<span class="dim">→</span> reading 4,832 rows
+
+<span class="dim">field:</span> <span class="yel">title_en</span>
+<span class="em">  "Merino wool sweater"</span>
+
+<span class="dim">  de</span>  <span class="ind">"Merinowollpullover"</span>
+<span class="dim">  fr</span>  <span class="ind">"Pull en laine mérinos"</span>
+<span class="dim">  it</span>  <span class="ind">"Maglione in lana merino"</span>
+<span class="dim">  el</span>  <span class="ind">"Πουλόβερ από μαλλί merino"</span>
+
+<span class="em">✓</span> 4,832 rows · 0.38 ¢/row · <span class="ind">cached 61%</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features">
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M3 5v14h18V5z"/><path d="M3 10h18"/><path d="M9 5v14"/></svg></div><h3>Bulk translation at scale</h3><p>Up to 10,000 rows per batch. Jobs checkpoint every 1,000 rows so a crashed machine never loses work.</p></div>
+    <div class="feat-card"><div class="feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>SHA‑256 smart cache</h3><p>Every string is hashed. You pay once per unique phrase, across every feed, forever.</p></div>
+    <div class="feat-card"><div class="feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z"/><path d="m9 12 2 2 4-4"/></svg></div><h3>Golden rule protection</h3><p>Prices, stock, barcodes, SKUs and dimensions are rejected by the translator. They pass through untouched.</p></div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how">
+  <div class="how-wrap">
+    <h2>How it works</h2>
+    <div class="how-g">
+      <div class="step"><div class="n">STEP 01</div><div class="t">Upload CSV</div><p class="p">Drag-drop any CSV or XML. We parse up to 10K rows in seconds.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="n">STEP 02</div><div class="t">AI field mapping</div><p class="p">Claude reads your columns and suggests a mapping. You approve or edit.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="n">STEP 03</div><div class="t">Review &amp; approve</div><p class="p">Preview translations in every target language before you commit.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="n">STEP 04</div><div class="t">Export clean feed</div><p class="p">Download CSV, XLSX, JSON, or push to Shopify via API.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="pricing">
+  <div class="pricing-wrap">
+    <h2>Pricing built around rows, not seats.</h2>
+    <p class="lede">Every plan includes the Golden Rule, smart cache, and all export formats.</p>
+    <div class="tiers">
+      <div class="tier"><div class="n">Free</div><div class="pr-v">€0</div><div class="per">500 rows / month</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>3 target languages</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>CSV export</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Community support</li></ul>
+        <button class="cta">Start free</button></div>
+      <div class="tier"><div class="n">Starter</div><div class="pr-v">€29<span style="font-size:14px;color:#7A7790;font-weight:400">/mo</span></div><div class="per">10,000 rows / month</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>10 languages</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>XLSX + JSON export</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Change detection</li></ul>
+        <button class="cta">Choose Starter</button></div>
+      <div class="tier pro"><span class="most">Most popular</span><div class="n">Pro</div><div class="pr-v">€99<span style="font-size:14px;color:#7A7790;font-weight:400">/mo</span></div><div class="per">100,000 rows / month</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited languages</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>API + webhooks</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Priority routing</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>5 team members</li></ul>
+        <button class="cta">Start Pro trial</button></div>
+      <div class="tier"><div class="n">Enterprise</div><div class="pr-v">Custom</div><div class="per">Unlimited rows</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>SSO + SOC 2</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated success</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Custom models</li></ul>
+        <button class="cta">Talk to sales</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="testimonials">
+  <div class="test-card">
+    <div class="test-grid">
+      <div class="t-col">
+        <div class="t-item"><div class="t-dash"></div><p class="t-quote">FeedGenix is by far the best feed tool I've come across in a long time.<br><br><b>It's an absolute gamechanger</b> for our cross-border rollout.</p><div class="t-attr">Sofia K. · Head of Catalog, Deindeal</div></div>
+      </div>
+      <div style="display:flex;justify-content:center;align-items:center">
+        <h2 class="test-title">
+          <span class="quote qo">"</span>
+          <span class="row">What</span>
+          <span class="row"><span class="box">people</span></span>
+          <span class="row">are</span>
+          <span class="row"><span class="box">saying</span></span>
+          <span class="quote qc">"</span>
+        </h2>
+      </div>
+      <div class="t-col">
+        <div class="t-item"><div class="t-dash"></div><p class="t-quote">I've been doing e-commerce for 15 years and <i>never</i> seen a feed pipeline this clean. Not even our internal Laravel one.</p><div class="t-attr">Lukas T. · CTO, Brack.ch</div></div>
+      </div>
+    </div>
+
+    <div class="test-grid" style="margin-top:44px">
+      <div class="t-item"><div class="t-dash"></div><p class="t-quote">FeedGenix opens up to any merchant the same level of catalog tooling that top marketplaces hire armies of translators and engineers to build internally.</p><div class="src">ACQUIRED PODCAST</div></div>
+      <div class="t-item"><div class="t-dash"></div><p class="t-quote">Wow, @feedgenix makes it ridiculously simple to ship a 7-language catalog. Saved us a quarter.</p><div class="src">𝕏 @meetnarenjr</div></div>
+      <div class="t-item"><div class="t-dash"></div><p class="t-quote">Most feed tools require you to understand XML schemas and mapping DSLs. The learning curve is brutal. That's not the case at all with FeedGenix.</p><div class="src">MONEY CRASHERS</div></div>
+    </div>
+
+    <div class="test-cta">
+      <a href="Auth.html" class="btn hero-primary">Sign up →</a>
+      <p class="disc">Third-party testimonials may not be representative of the experience of all customers and are not indicative of future results.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="faq-grid">
+    <h2>Frequently<br>asked<br>questions</h2>
+    <div class="faq-list" id="faq">
+      <div class="faq-item open">
+        <div class="faq-q">How do I open a FeedGenix account?<span class="chev">›</span></div>
+        <div class="faq-a">Sign up with your work email, verify with a 6-digit code, then upload your first CSV. The free tier covers 500 rows and 3 languages — no credit card.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What file formats do you support?<span class="chev">›</span></div>
+        <div class="faq-a">CSV (any delimiter), TSV, XML (Google Shopping, Facebook, custom schemas), JSON, and Excel (.xlsx). Up to 10,000 rows per batch on Pro; unlimited on Enterprise.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How does the SHA-256 hash cache work?<span class="chev">›</span></div>
+        <div class="faq-a">Every translatable field is hashed before routing. If we've seen the same source + target pair before, we serve it from cache at 0¢. Typical second-run cache hit rates land at 60–75%.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I protect prices, stock and barcodes from AI edits?<span class="chev">›</span></div>
+        <div class="faq-a">Yes — that's the Golden Rule. Any field tagged as protected is never passed to the model. It's pulled through verbatim, byte-for-byte, into the output feed.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Which AI models do you route across?<span class="chev">›</span></div>
+        <div class="faq-a">Free-tier APIs first (OpenAI free, Google Gemini free, DeepL free), then Claude Opus and Grok for long-tail languages, brand voice, and ambiguous attributes. You can pin any model per language.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Is my catalog data used to train models?<span class="chev">›</span></div>
+        <div class="faq-a">No. We use model providers' zero-retention endpoints where available, and we never train on your data. SOC 2 Type II report available on request.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I use FeedGenix if I'm not based in the EU?<span class="chev">›</span></div>
+        <div class="faq-a">Yes. We serve merchants in 38 countries. EU data stays in Frankfurt; US data in Virginia. Choose your region at workspace setup.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How do I contact support?<span class="chev">›</span></div>
+        <div class="faq-a">Email support@feedgenix.com, or use the in-app chat. Pro plans include a 4-hour response SLA; Enterprise gets a dedicated customer success manager.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-grid">
+    <div class="foot-brand">
+      <div class="logo">
+        <svg viewBox="0 0 48 48"><rect x="6" y="14" width="22" height="3.6" rx="1.8" fill="#fff"/><rect x="6" y="22" width="28" height="3.6" rx="1.8" fill="#fff"/><rect x="6" y="30" width="15" height="3.6" rx="1.8" fill="#fff"/><circle cx="36.5" cy="15.8" r="3.6" fill="#0F9B7E"/></svg>
+        FeedGenix
+      </div>
+      <p>AI-powered product feed intelligence for cross-border merchants. Built in Zürich.</p>
+    </div>
+    <div class="foot-col"><h4>Product</h4><a>Features</a><a>Pricing</a><a>Changelog</a><a>Status</a></div>
+    <div class="foot-col"><h4>Company</h4><a>About</a><a>Customers</a><a>Blog</a><a>Careers</a></div>
+    <div class="foot-col"><h4>Legal</h4><a>Terms</a><a>Privacy</a><a>SOC 2</a><a>DPA</a></div>
+  </div>
+  <div class="foot-base">
+    <span>© 2026 FeedGenix AG · Zürich, Switzerland</span>
+    <span>Made with hash-cached love ·  #a1f4e2</span>
+  </div>
+</footer>
+
+<script>
+  // Flip cards — hover on desktop, click on touch
+  document.querySelectorAll('.flip-card').forEach(c=>{
+    c.addEventListener('mouseenter', ()=>c.classList.add('flipped'));
+    c.addEventListener('mouseleave', ()=>c.classList.remove('flipped'));
+    c.addEventListener('click', ()=>c.classList.toggle('flipped'));
+  });
+  // Auto-rotate the grid to feel alive
+  const cards = [...document.querySelectorAll('.flip-card')];
+  let idx=0;
+  setInterval(()=>{
+    cards.forEach(c=>c.classList.remove('flipped'));
+    cards[idx % cards.length].classList.add('flipped');
+    cards[(idx+3) % cards.length].classList.add('flipped');
+    cards[(idx+5) % cards.length].classList.add('flipped');
+    idx++;
+  }, 2200);
+
+  // FAQ
+  document.querySelectorAll('.faq-item').forEach(i=>{
+    i.querySelector('.faq-q').onclick = ()=>i.classList.toggle('open');
+  });
+</script>
+</body>
+</html>

@@ -1,84 +1,87 @@
 import { Link } from 'react-router-dom';
 import Logo from '@/components/brand/Logo';
 
-const columns = [
+/**
+ * Marketing footer — Ink background with Paper-muted text.
+ * 4 columns: brand + product + company + legal. Copy matches the
+ * voice rules in the design system (calm, Swiss, no exclamations).
+ */
+
+const columns: Array<{ title: string; links: Array<{ label: string; href: string }> }> = [
   {
     title: 'Product',
     links: [
-      { label: 'Features', href: '/#features' },
-      { label: 'How it works', href: '/#how-it-works' },
-      { label: 'Pricing', href: '/pricing' },
-      { label: 'FAQ', href: '/#faq' },
-    ],
-  },
-  {
-    title: 'Formats',
-    links: [
-      { label: 'CSV', href: '/#formats' },
-      { label: 'XLSX', href: '/#formats' },
-      { label: 'XML', href: '/#formats' },
-      { label: 'JSON', href: '/#formats' },
+      { label: 'Features',  href: '/#features' },
+      { label: 'Pricing',   href: '/pricing' },
+      { label: 'Docs',      href: '/#docs' },
+      { label: 'Changelog', href: '/#changelog' },
     ],
   },
   {
     title: 'Company',
     links: [
-      { label: 'About', href: '/about' },
-      { label: 'Contact', href: 'mailto:hello@feedgenix.com' },
-      { label: 'Privacy', href: '/privacy' },
-      { label: 'Terms', href: '/terms' },
+      { label: 'About',    href: '/about' },
+      { label: 'Careers',  href: '/careers' },
+      { label: 'Contact',  href: 'mailto:hello@feedgenix.com' },
+      { label: 'Press',    href: '/press' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { label: 'Terms',    href: '/terms' },
+      { label: 'Privacy',  href: '/privacy' },
+      { label: 'DPA',      href: '/dpa' },
+      { label: 'Security', href: '/security' },
     ],
   },
 ];
 
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-border/60 bg-background">
-      <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <Logo />
-            <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
-              AI-powered feed intelligence for cross-border e-commerce. Translate, enrich, and
-              optimize your product catalog for every market — in minutes, not months.
+    <footer className="mt-10 bg-ink text-ink-300">
+      <div className="mx-auto max-w-300 px-10 pb-7 pt-16">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          <div>
+            <Logo tone="inverse" asStatic />
+            <p className="mt-3 max-w-85 text-[13px] leading-[1.6]">
+              Product feed intelligence for cross-border merchants. Made with care in Zürich.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-8 md:col-span-7">
-            {columns.map((col) => (
-              <div key={col.title}>
-                <h4 className="text-sm font-semibold text-foreground">{col.title}</h4>
-                <ul className="mt-4 space-y-3">
-                  {col.links.map((l) => (
-                    <li key={l.label}>
-                      {l.href.startsWith('mailto:') || l.href.startsWith('http') ? (
-                        <a
-                          href={l.href}
-                          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                          {l.label}
-                        </a>
-                      ) : (
-                        <Link
-                          to={l.href}
-                          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                          {l.label}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+
+          {columns.map((col) => (
+            <div key={col.title}>
+              <h4 className="mb-3 text-[12px] font-medium tracking-[0.04em] text-white">
+                {col.title.toUpperCase()}
+              </h4>
+              <ul className="space-y-1">
+                {col.links.map((l) => (
+                  <li key={l.label}>
+                    {l.href.startsWith('mailto:') || l.href.startsWith('http') ? (
+                      <a
+                        href={l.href}
+                        className="block py-1 text-[13px] text-ink-300 transition-colors duration-200 hover:text-white"
+                      >
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={l.href}
+                        className="block py-1 text-[13px] text-ink-300 transition-colors duration-200 hover:text-white"
+                      >
+                        {l.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-border/60 pt-8 md:flex-row md:items-center">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} FeedGenix. All rights reserved.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Made for sellers who ship across borders.
-          </p>
+
+        <div className="mt-11 flex flex-col items-start justify-between gap-2 border-t border-white/10 pt-5 text-[12px] text-ink-400 md:flex-row md:items-center">
+          <span>© {new Date().getFullYear()} FeedGenix AG · Zürich, Switzerland</span>
+          <span className="font-mono">CH-270.3.012.345-6</span>
         </div>
       </div>
     </footer>

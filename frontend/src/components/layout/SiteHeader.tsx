@@ -1,14 +1,19 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import Logo from '@/components/brand/Logo';
-import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 
-const navLinks = [
-  { to: '/#features', label: 'Features' },
-  { to: '/#how-it-works', label: 'How it works' },
+/**
+ * Marketing top navigation. Non-sticky by design — it scrolls off,
+ * consistent with the FeedGenix "calm, flat" marketing system. No blur,
+ * no shadow, just a hairline bottom border.
+ */
+
+const navLinks: Array<{ to: string; label: string; external?: boolean }> = [
+  { to: '/#features', label: 'Product', external: true },
   { to: '/pricing', label: 'Pricing' },
-  { to: '/#faq', label: 'FAQ' },
+  { to: '/#how', label: 'Docs', external: true },
+  { to: '/#faq', label: 'Blog', external: true },
 ];
 
 export default function SiteHeader() {
@@ -16,91 +21,108 @@ export default function SiteHeader() {
   const { isAuthenticated } = useAuthStore();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <div className="flex items-center gap-10">
-          <Logo size="md" />
-          <nav className="hidden items-center gap-7 md:flex">
-            {navLinks.map((l) =>
-              l.to.startsWith('/#') ? (
-                <a
-                  key={l.to}
-                  href={l.to.slice(1)}
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {l.label}
-                </a>
-              ) : (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors ${
-                      isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                    }`
-                  }
-                >
-                  {l.label}
-                </NavLink>
-              )
-            )}
-          </nav>
-        </div>
+    <header className="w-full fg-hairline-b bg-paper">
+      <div className="mx-auto flex max-w-300 items-center gap-7 px-10 py-5.5">
+        <Logo size="md" />
 
-        <div className="hidden items-center gap-2 md:flex">
+        <nav className="hidden flex-1 items-center gap-7 pl-5 md:flex">
+          {navLinks.map((l) =>
+            l.external ? (
+              <a
+                key={l.to}
+                href={l.to.startsWith('/#') ? l.to.slice(1) : l.to}
+                className="text-[14px] text-ink-500 transition-colors duration-200 hover:text-ink"
+              >
+                {l.label}
+              </a>
+            ) : (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                className={({ isActive }) =>
+                  `text-[14px] transition-colors duration-200 ${
+                    isActive ? 'text-ink' : 'text-ink-500 hover:text-ink'
+                  }`
+                }
+              >
+                {l.label}
+              </NavLink>
+            )
+          )}
+        </nav>
+
+        <div className="hidden items-center gap-2.5 md:flex ml-auto">
           {isAuthenticated ? (
-            <Button asChild size="sm">
-              <Link to="/dashboard">Go to dashboard →</Link>
-            </Button>
+            <Link
+              to="/dashboard"
+              className="rounded-lg bg-indigo px-4 py-2.25 text-[14px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600"
+            >
+              Go to dashboard →
+            </Link>
           ) : (
             <>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/login">Sign in</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link to="/register">Start free</Link>
-              </Button>
+              <Link
+                to="/login"
+                className="rounded-lg px-4 py-2.25 text-[14px] font-medium text-ink transition-colors duration-200 hover:bg-mist"
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/register"
+                className="rounded-lg bg-indigo px-4 py-2.25 text-[14px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600"
+              >
+                Start free
+              </Link>
             </>
           )}
         </div>
 
         <button
           onClick={() => setOpen(!open)}
-          className="md:hidden"
+          className="ml-auto md:hidden"
           aria-label="Toggle menu"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            {open ? <path d="M6 6l12 12M6 18L18 6" /> : <path d="M4 6h16M4 12h16M4 18h16" />}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            {open ? <path d="M6 6l12 12M6 18L18 6" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
           </svg>
         </button>
       </div>
 
       {open && (
-        <div className="border-t border-border/60 bg-background md:hidden">
-          <nav className="flex flex-col gap-1 p-4">
+        <div className="fg-hairline-t bg-paper md:hidden">
+          <nav className="flex flex-col gap-1 px-10 py-4">
             {navLinks.map((l) => (
               <a
                 key={l.to}
-                href={l.to.startsWith('/#') ? l.to.slice(1) : l.to}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                href={l.external && l.to.startsWith('/#') ? l.to.slice(1) : l.to}
+                className="rounded-lg px-3 py-2 text-[14px] text-ink-500 hover:bg-mist hover:text-ink"
                 onClick={() => setOpen(false)}
               >
                 {l.label}
               </a>
             ))}
-            <div className="mt-2 flex flex-col gap-2 border-t border-border/60 pt-4">
+            <div className="mt-2 flex flex-col gap-2 fg-hairline-t pt-4">
               {isAuthenticated ? (
-                <Button asChild>
-                  <Link to="/dashboard">Go to dashboard</Link>
-                </Button>
+                <Link
+                  to="/dashboard"
+                  className="rounded-lg bg-indigo px-4 py-2.5 text-center text-[14px] font-medium text-white"
+                >
+                  Go to dashboard
+                </Link>
               ) : (
                 <>
-                  <Button asChild variant="outline">
-                    <Link to="/login">Sign in</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link to="/register">Start free</Link>
-                  </Button>
+                  <Link
+                    to="/login"
+                    className="rounded-lg fg-hairline px-4 py-2.5 text-center text-[14px] font-medium text-ink"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="rounded-lg bg-indigo px-4 py-2.5 text-center text-[14px] font-medium text-white"
+                  >
+                    Start free
+                  </Link>
                 </>
               )}
             </div>

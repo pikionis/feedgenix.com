@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FeedGenix — marketing</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  body{margin:0;background:#fff;color:#1F1D2E;font-family:var(--font-sans)}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 40px}
+  nav.top{display:flex;align-items:center;gap:30px;padding:22px 0;border-bottom:.5px solid rgba(31,29,46,.1)}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:500;font-size:18px;letter-spacing:-0.02em}
+  .links{display:flex;gap:28px;font-size:14px;color:#56536A;flex:1;margin-left:20px}
+  .links .a{color:#1F1D2E}
+  .act{display:flex;gap:10px}
+  .btn{font:inherit;font-weight:500;font-size:14px;border-radius:8px;padding:9px 16px;border:.5px solid transparent;cursor:pointer;transition:background 200ms}
+  .btn.p{background:#4F46E5;color:#fff}.btn.p:hover{background:#4338CA}
+  .btn.s{background:#fff;color:#1F1D2E;border-color:rgba(31,29,46,.14)}.btn.s:hover{background:#F1EFE8}
+  .btn.g{background:transparent;color:#1F1D2E}.btn.g:hover{background:#F1EFE8}
+
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:60px;padding:80px 0;align-items:center}
+  .eye{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#E0E7FF;color:#4338CA;font-size:12px;font-weight:500;letter-spacing:.03em}
+  h1{margin:22px 0 18px;font-weight:500;font-size:56px;line-height:1.05;letter-spacing:-0.022em}
+  .sub{margin:0 0 32px;color:#56536A;font-size:17px;line-height:1.55;max-width:520px}
+  .ctas{display:flex;gap:10px;margin-bottom:24px}
+  .trust{display:flex;gap:20px;font-size:13px;color:#7A7790;align-items:center;flex-wrap:wrap}
+  .trust .it{display:inline-flex;align-items:center;gap:6px}
+  .trust svg{color:#0F9B7E}
+  .star{color:#C87A1B}
+
+  .term{background:#1F1D2E;border-radius:12px;overflow:hidden;font-family:var(--font-mono);font-size:13px;line-height:1.6;color:#F1EFE8;border:.5px solid rgba(255,255,255,.06)}
+  .th{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:.5px solid rgba(241,239,232,.08)}
+  .th .d{width:10px;height:10px;border-radius:999px}
+  .th .t{margin-left:auto;color:#7A7790;font-size:11px}
+  .tb{padding:18px 20px}
+  .dim{color:#7A7790}.ind{color:#A5B4FC}.em{color:#6EE7C4}.yel{color:#F1C292}
+
+  .feat{background:#FAEEDA;padding:80px 40px;margin:0 -40px}
+  .feat .wrap2{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .f{background:#fff;border:.5px solid rgba(31,29,46,.08);border-radius:12px;padding:28px}
+  .f-ic{width:40px;height:40px;border-radius:10px;background:#E0E7FF;color:#4338CA;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+  .f h3{margin:0 0 8px;font-size:18px;font-weight:500;letter-spacing:-0.01em}
+  .f p{margin:0;font-size:14px;color:#56536A;line-height:1.6}
+
+  .how{padding:80px 0;border-bottom:.5px solid rgba(31,29,46,.1)}
+  .how h2{margin:0 0 40px;font-size:32px;font-weight:500;letter-spacing:-0.02em}
+  .how-g{display:grid;grid-template-columns:1fr 24px 1fr 24px 1fr 24px 1fr;gap:0;align-items:center}
+  .step .n{font-family:var(--font-mono);font-size:12px;color:#7A7790;letter-spacing:.08em;margin-bottom:10px}
+  .step .t{font-size:18px;font-weight:500;letter-spacing:-0.01em}
+  .step .p{margin:8px 0 0;font-size:13px;color:#56536A;line-height:1.55}
+  .arr{text-align:center;color:#A6A3B8}
+
+  .pr{padding:80px 0}
+  .pr h2{margin:0 0 6px;font-size:36px;font-weight:500;letter-spacing:-0.02em;text-align:center}
+  .pr p.lede{margin:0 0 44px;font-size:15px;color:#56536A;text-align:center}
+  .tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
+  .tier{background:#fff;border:.5px solid rgba(31,29,46,.14);border-radius:12px;padding:28px 24px;position:relative}
+  .tier.pro{border:2px solid #4F46E5;padding:27px 23px}
+  .tier .n{font-size:12px;color:#4F46E5;font-weight:500;letter-spacing:.04em;margin-bottom:10px}
+  .tier .pr-v{font-size:40px;font-weight:500;letter-spacing:-0.02em;line-height:1}
+  .tier .per{font-size:13px;color:#56536A;margin-top:6px;min-height:36px}
+  .tier ul{list-style:none;margin:20px 0 22px;padding:0;font-size:13.5px}
+  .tier li{display:flex;gap:8px;padding:5px 0;align-items:flex-start}
+  .tier li svg{flex-shrink:0;margin-top:3px}
+  .tier .cta{width:100%;font:inherit;font-weight:500;font-size:14px;padding:10px;border-radius:8px;border:.5px solid rgba(31,29,46,.14);background:#fff;color:#1F1D2E;cursor:pointer}
+  .tier.pro .cta{background:#4F46E5;color:#fff;border-color:transparent}
+  .most{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#FAEEDA;color:#A35412;padding:5px 14px;border-radius:999px;font-size:11px;font-weight:500;letter-spacing:.04em}
+
+  footer{background:#1F1D2E;color:#A6A3B8;padding:64px 0 28px;margin-top:40px}
+  .ft{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:40px}
+  .ft-logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:500;letter-spacing:-0.02em;font-size:18px;margin-bottom:12px}
+  .ft h4{margin:0 0 12px;color:#fff;font-weight:500;font-size:12px;letter-spacing:.04em}
+  .ft a{display:block;padding:4px 0;color:#A6A3B8;text-decoration:none;font-size:13px}
+  .ft-bot{margin-top:44px;padding-top:20px;border-top:.5px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;font-size:12px;color:#7A7790}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="top">
+    <div class="logo">
+      <svg viewBox="0 0 48 48" width="28" height="28"><rect x="6" y="14" width="22" height="3.2" rx="1.6" fill="#4F46E5"/><rect x="6" y="21.4" width="28" height="3.2" rx="1.6" fill="#4F46E5"/><rect x="6" y="28.8" width="15" height="3.2" rx="1.6" fill="#4F46E5"/><circle cx="36.5" cy="15.6" r="3.4" fill="#0F9B7E"/></svg>
+      FeedGenix
+    </div>
+    <div class="links"><span class="a">Product</span><span>Pricing</span><span>Docs</span><span>Blog</span></div>
+    <div class="act"><button class="btn g">Sign in</button><button class="btn p">Start free</button></div>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <span class="eye">✦ AI-native feed platform</span>
+      <h1>Ship your catalog in every language your buyers shop in.</h1>
+      <p class="sub">Upload a CSV, let FeedGenix translate 10,000 products into your target markets, and ship a clean feed — with hash-cached pricing that only bills once per unique string.</p>
+      <div class="ctas"><button class="btn p">Start free — 500 rows</button><button class="btn s">Watch 2-min demo</button></div>
+      <div class="trust">
+        <span class="it"><span class="star">★</span> 4.8 on G2</span>
+        <span class="it"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 12 2 2 4-4"/><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z"/></svg>SOC 2 type II</span>
+        <span class="it">No credit card</span>
+      </div>
+    </div>
+    <div class="term">
+      <div class="th"><span class="d" style="background:#E87E67"></span><span class="d" style="background:#E9B84A"></span><span class="d" style="background:#7AB87A"></span><span class="t">translation · live</span></div>
+<pre class="tb" style="margin:0"><span class="dim">$</span> feedgenix translate <span class="em">--batch=deindeal.csv</span>
+<span class="dim">→</span> reading 4,832 rows
+
+<span class="dim">field:</span> <span class="yel">title_en</span>
+<span class="em">  "Merino wool sweater"</span>
+
+<span class="dim">  de</span>  <span class="ind">"Merinowollpullover"</span>
+<span class="dim">  fr</span>  <span class="ind">"Pull en laine mérinos"</span>
+<span class="dim">  it</span>  <span class="ind">"Maglione in lana merino"</span>
+<span class="dim">  el</span>  <span class="ind">"Πουλόβερ από μαλλί merino"</span>
+
+<span class="em">✓</span> 4,832 rows · 0.38 ¢/row · <span class="ind">cached 61%</span></pre>
+    </div>
+  </section>
+</div>
+
+<section class="feat">
+  <div class="wrap2">
+    <div class="f"><div class="f-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M3 5v14h18V5z"/><path d="M3 10h18"/><path d="M9 5v14"/></svg></div><h3>Bulk translation at scale</h3><p>Up to 10,000 rows per batch. Jobs checkpoint every 1,000 rows so a crashed machine never loses work.</p></div>
+    <div class="f"><div class="f-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>SHA‑256 smart cache</h3><p>Every string is hashed. You pay once per unique phrase, across every feed, forever.</p></div>
+    <div class="f"><div class="f-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6z"/><path d="m9 12 2 2 4-4"/></svg></div><h3>Golden rule protection</h3><p>Prices, stock, barcodes, SKUs and dimensions are rejected by the translator. They pass through untouched.</p></div>
+  </div>
+</section>
+
+<div class="wrap">
+  <section class="how">
+    <h2>How it works</h2>
+    <div class="how-g">
+      <div class="step"><div class="n">STEP 01</div><div class="t">Upload CSV</div><p class="p">Drag-drop any CSV or XML. We parse up to 10K rows in seconds.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="n">STEP 02</div><div class="t">AI field mapping</div><p class="p">Claude reads your columns and suggests a mapping. You approve or edit.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="n">STEP 03</div><div class="t">Review &amp; approve</div><p class="p">Preview translations in every target language before you commit.</p></div>
+      <div class="arr">→</div>
+      <div class="step"><div class="n">STEP 04</div><div class="t">Export clean feed</div><p class="p">Download CSV, XLSX, JSON, or push to Shopify via API.</p></div>
+    </div>
+  </section>
+
+  <section class="pr">
+    <h2>Pricing built around rows, not seats.</h2>
+    <p class="lede">Every plan includes the Golden Rule, smart cache, and all export formats.</p>
+    <div class="tiers">
+      <div class="tier"><div class="n">Free</div><div class="pr-v">€0</div><div class="per">500 rows / month</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>3 target languages</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>CSV export</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Community support</li></ul>
+        <button class="cta">Start free</button></div>
+      <div class="tier"><div class="n">Starter</div><div class="pr-v">€29<span style="font-size:14px;color:#7A7790;font-weight:400">/mo</span></div><div class="per">10,000 rows / month</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>10 languages</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>XLSX + JSON export</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Change detection</li></ul>
+        <button class="cta">Choose Starter</button></div>
+      <div class="tier pro"><span class="most">Most popular</span><div class="n">Pro</div><div class="pr-v">€99<span style="font-size:14px;color:#7A7790;font-weight:400">/mo</span></div><div class="per">100,000 rows / month</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited languages</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>API + webhooks</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Priority routing</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>5 team members</li></ul>
+        <button class="cta">Start Pro trial</button></div>
+      <div class="tier"><div class="n">Enterprise</div><div class="pr-v">Custom</div><div class="per">Unlimited rows</div>
+        <ul><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>SSO + SOC 2</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated success</li><li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F9B7E" stroke-width="2.25" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Custom models</li></ul>
+        <button class="cta">Talk to sales</button></div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="ft">
+      <div>
+        <div class="ft-logo"><svg viewBox="0 0 48 48" width="24" height="24"><rect x="6" y="14" width="22" height="3.2" rx="1.6" fill="#fff"/><rect x="6" y="21.4" width="28" height="3.2" rx="1.6" fill="#fff"/><rect x="6" y="28.8" width="15" height="3.2" rx="1.6" fill="#fff"/><circle cx="36.5" cy="15.6" r="3.4" fill="#0F9B7E"/></svg>FeedGenix</div>
+        <p style="margin:0;font-size:13px;line-height:1.6;max-width:340px">Product feed intelligence for cross-border merchants. Made with care in Zürich.</p>
+      </div>
+      <div><h4>PRODUCT</h4><a>Features</a><a>Pricing</a><a>Docs</a><a>Changelog</a></div>
+      <div><h4>COMPANY</h4><a>About</a><a>Careers</a><a>Contact</a><a>Press</a></div>
+      <div><h4>LEGAL</h4><a>Terms</a><a>Privacy</a><a>DPA</a><a>Security</a></div>
+    </div>
+    <div class="ft-bot"><span>© 2026 FeedGenix AG · Zürich, Switzerland</span><span>CH-270.3.012.345-6</span></div>
+  </div>
+</footer>
+</body></html>

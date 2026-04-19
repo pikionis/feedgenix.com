@@ -4,10 +4,14 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/layout/AuthLayout';
+import {
+  Field,
+  OAuthButton,
+  PasswordInput,
+  Separator,
+  TextInput,
+} from '@/components/auth/form';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -20,6 +24,7 @@ export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
   const [error, setError] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
 
   const {
     register,
@@ -44,54 +49,91 @@ export default function Login() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle={
+      subtitle="Sign in to your FeedGenix workspace."
+      crumbs={{
+        left: 'Sign in',
+        right: (
+          <>
+            New here?{' '}
+            <Link to="/register" className="font-medium text-indigo hover:text-indigo-600">
+              Create an account
+            </Link>
+          </>
+        ),
+      }}
+      footer={
         <>
-          Don't have an account?{' '}
-          <Link to="/register" className="font-medium text-primary hover:underline">
-            Start free
+          Having trouble?{' '}
+          <a
+            href="mailto:support@feedgenix.com"
+            className="font-medium text-indigo hover:text-indigo-600"
+          >
+            Email support
+          </a>{' '}
+          ·{' '}
+          <Link to="/sso" className="font-medium text-indigo hover:text-indigo-600">
+            Use SSO
           </Link>
         </>
       }
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="mb-4.5 grid grid-cols-2 gap-2.5">
+        <OAuthButton provider="google" label="Continue with Google" />
+        <OAuthButton provider="apple" label="Continue with Apple" />
+      </div>
+      <Separator />
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          <div className="rounded-lg border-[0.5px] border-[#C6392A]/30 bg-[#FCE5E1] px-3 py-2.5 text-[13px] text-[#C6392A]">
             {error}
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
+        <Field label="Work email" error={errors.email?.message}>
+          <TextInput
             type="email"
             autoComplete="email"
             placeholder="you@company.com"
             {...register('email')}
           />
-          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-        </div>
+        </Field>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
-              Forgot?
-            </Link>
-          </div>
-          <Input
-            id="password"
-            type="password"
+        <Field
+          label={
+            <div className="flex items-center justify-between">
+              <span>Password</span>
+              <Link
+                to="/forgot-password"
+                className="text-[12px] font-medium text-indigo hover:text-indigo-600"
+              >
+                Forgot?
+              </Link>
+            </div>
+          }
+          error={errors.password?.message}
+        >
+          <PasswordInput
+            visible={showPwd}
+            onToggle={() => setShowPwd((v) => !v)}
+            placeholder="••••••••••"
             autoComplete="current-password"
-            placeholder="••••••••"
             {...register('password')}
           />
-          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
-        </div>
+        </Field>
 
-        <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+        <label className="my-1.5 flex cursor-pointer items-start gap-2.5 text-[13px] text-ink-500">
+          <input type="checkbox" defaultChecked className="mt-0.5 accent-[#4F46E5]" />
+          <span>Keep me signed in on this device for 30 days</span>
+        </label>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="mt-2 w-full rounded-lg bg-indigo py-3 text-[14px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+        >
           {isSubmitting ? 'Signing in…' : 'Sign in'}
-        </Button>
+        </button>
       </form>
     </AuthLayout>
   );

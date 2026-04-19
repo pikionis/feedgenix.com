@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+body{margin:0;padding:24px;background:#fff;font-family:var(--font-sans)}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.sw{border:.5px solid rgba(31,29,46,.1);border-radius:10px;padding:14px 14px 12px;min-height:72px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500}
+.name{color:#1F1D2E;font-weight:500;font-size:12px;display:block;margin-top:12px}
+.hex{color:#7A7790;font-family:var(--font-mono);font-size:10px;display:block;margin-top:2px}
+.dot{width:6px;height:6px;border-radius:999px;background:currentColor}
+</style></head><body>
+<div class="row">
+  <div class="sw"><span class="pill" style="background:#D6F1E8;color:#0B7A63"><span class="dot"></span>Synced</span><span class="name">Success</span><span class="hex">bg D6F1E8 · fg 0B7A63</span></div>
+  <div class="sw"><span class="pill" style="background:#FAEEDA;color:#A35412"><span class="dot"></span>Translating</span><span class="name">Warn</span><span class="hex">bg FAEEDA · fg A35412</span></div>
+  <div class="sw"><span class="pill" style="background:#EDEBE3;color:#56536A"><span class="dot"></span>Queued</span><span class="name">Queued</span><span class="hex">bg EDEBE3 · fg 56536A</span></div>
+  <div class="sw"><span class="pill" style="background:#FCE5E1;color:#C6392A"><span class="dot"></span>Failed</span><span class="name">Error</span><span class="hex">bg FCE5E1 · fg C6392A</span></div>
+</div>
+</body></html>
