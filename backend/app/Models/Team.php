@@ -21,10 +21,15 @@ class Team extends Model
         'name',
         'owner_id',
         'slug',
-        'stripe_customer_id',
         'plan',
         'products_used_this_month',
         'billing_cycle_reset_at',
+        // Cashier-managed columns — need to be fillable so webhook handlers
+        // and our own SubscriptionController can write them.
+        'stripe_id',
+        'pm_type',
+        'pm_last_four',
+        'trial_ends_at',
     ];
 
     /**
