@@ -4,26 +4,28 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/app/PageHeader';
+import { Field, TextInput } from '@/components/auth/form';
 
-const languages = [
+const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'de', label: 'German' },
   { code: 'fr', label: 'French' },
-  { code: 'es', label: 'Spanish' },
   { code: 'it', label: 'Italian' },
+  { code: 'es', label: 'Spanish' },
   { code: 'nl', label: 'Dutch' },
   { code: 'pt', label: 'Portuguese' },
   { code: 'pl', label: 'Polish' },
+  { code: 'el', label: 'Greek' },
   { code: 'sv', label: 'Swedish' },
   { code: 'da', label: 'Danish' },
 ];
 
 const projectSchema = z.object({
-  name: z.string().min(1, 'Project name is required').max(255),
+  name: z.string().min(1, 'Feed name is required').max(255),
   description: z.string().max(1000).optional(),
-  source_language: z.string().min(1, 'Please select a source language'),
-  target_languages: z.array(z.string()).min(1, 'Select at least one target language'),
+  source_language: z.string().min(1, 'Pick the source language'),
+  target_languages: z.array(z.string()).min(1, 'Pick at least one target language'),
 });
 
 type ProjectForm = z.infer<typeof projectSchema>;
@@ -41,19 +43,16 @@ export default function NewProject() {
     formState: { errors, isSubmitting },
   } = useForm<ProjectForm>({
     resolver: zodResolver(projectSchema),
-    defaultValues: {
-      target_languages: [],
-    },
+    defaultValues: { target_languages: [] },
   });
 
-  const selectedTargets = watch('target_languages');
+  const selectedTargets = watch('target_languages') ?? [];
   const sourceLanguage = watch('source_language');
 
   const toggleTarget = (code: string) => {
-    const current = selectedTargets || [];
-    const updated = current.includes(code)
-      ? current.filter((c) => c !== code)
-      : [...current, code];
+    const updated = selectedTargets.includes(code)
+      ? selectedTargets.filter((c) => c !== code)
+      : [...selectedTargets, code];
     setValue('target_languages', updated, { shouldValidate: true });
   };
 
@@ -62,112 +61,113 @@ export default function NewProject() {
       setError('');
       const project = await createProject(data);
       navigate(`/projects/${project.id}`);
-    } catch {
-      setError('Failed to create project. Please try again.');
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      setError(message ?? 'Failed to create the feed. Please try again.');
     }
   };
 
   return (
-    <div className="max-w-2xl">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link to="/projects" className="hover:text-foreground">Projects</Link>
-        <span>/</span>
-        <span className="text-foreground">New Project</span>
-      </div>
+    <div className="mx-auto max-w-2xl">
+      <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-2 text-[12px] text-ink-500">
+        <Link to="/projects" className="hover:text-ink">Feeds</Link>
+        <span aria-hidden>/</span>
+        <span className="text-ink">New feed</span>
+      </nav>
 
-      <h1 className="text-2xl font-bold mb-6">Create New Project</h1>
+      <PageHeader
+        title="Create a new feed"
+        subtitle="Upload comes next — first we set the language plan."
+      />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {error && (
-          <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          <div
+            role="alert"
+            className="rounded-lg border-[0.5px] border-[#C6392A]/30 bg-[#FCE5E1] px-3 py-2.5 text-[13px] text-[#C6392A]"
+          >
             {error}
           </div>
         )}
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-1.5">
-            Project Name
-          </label>
-          <input
-            id="name"
-            type="text"
-            placeholder="e.g., Summer Collection DE+FR"
+        <Field label="Feed name" error={errors.name?.message}>
+          <TextInput
+            placeholder="e.g., Autumn/winter 2026"
+            autoComplete="off"
             {...register('name')}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
           />
-          {errors.name && (
-            <p className="text-xs text-destructive mt-1">{errors.name.message}</p>
-          )}
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium mb-1.5">
-            Description (optional)
-          </label>
+        <Field label="Description (optional)">
           <textarea
-            id="description"
             rows={3}
-            placeholder="Brief description of this project..."
+            placeholder="Short note — channel, region, anything the next operator should know."
+            className="fg-input resize-none"
             {...register('description')}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary resize-none"
           />
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="source_language" className="block text-sm font-medium mb-1.5">
-            Source Language
-          </label>
+        <Field label="Source language" error={errors.source_language?.message}>
           <select
-            id="source_language"
+            className="fg-input"
             {...register('source_language')}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            defaultValue=""
           >
-            <option value="">Select source language...</option>
-            {languages.map((lang) => (
+            <option value="" disabled>
+              Select the language the source CSV is in…
+            </option>
+            {LANGUAGES.map((lang) => (
               <option key={lang.code} value={lang.code}>
                 {lang.label}
               </option>
             ))}
           </select>
-          {errors.source_language && (
-            <p className="text-xs text-destructive mt-1">{errors.source_language.message}</p>
-          )}
-        </div>
+        </Field>
 
-        <div>
-          <label className="block text-sm font-medium mb-1.5">Target Languages</label>
+        <Field
+          label="Target languages"
+          error={errors.target_languages?.message}
+          hint="Tap the languages you want to ship — you can change these later."
+        >
           <div className="flex flex-wrap gap-2">
-            {languages
-              .filter((lang) => lang.code !== sourceLanguage)
-              .map((lang) => {
-                const isSelected = selectedTargets?.includes(lang.code);
-                return (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    onClick={() => toggleTarget(lang.code)}
-                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                      isSelected
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:border-primary/50'
-                    }`}
-                  >
-                    {lang.label}
-                  </button>
-                );
-              })}
+            {LANGUAGES.filter((l) => l.code !== sourceLanguage).map((lang) => {
+              const isSelected = selectedTargets.includes(lang.code);
+              return (
+                <button
+                  key={lang.code}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => toggleTarget(lang.code)}
+                  className={[
+                    'rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors duration-200',
+                    isSelected
+                      ? 'bg-indigo text-white'
+                      : 'border-[0.5px] border-ink/14 bg-paper text-ink hover:bg-mist',
+                  ].join(' ')}
+                >
+                  {lang.label}
+                </button>
+              );
+            })}
           </div>
-          {errors.target_languages && (
-            <p className="text-xs text-destructive mt-1">{errors.target_languages.message}</p>
-          )}
-        </div>
+        </Field>
 
-        <div className="flex items-center gap-3 pt-4">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Project'}
-          </Button>
-          <Link to="/projects">
-            <Button variant="outline" type="button">Cancel</Button>
+        <div className="flex items-center gap-2 pt-2">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded-lg bg-indigo px-4 py-2.25 text-[14px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? 'Creating…' : 'Create feed →'}
+          </button>
+          <Link
+            to="/projects"
+            className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-4 py-2.25 text-[14px] font-medium text-ink transition-colors duration-200 hover:bg-mist"
+          >
+            Cancel
           </Link>
         </div>
       </form>

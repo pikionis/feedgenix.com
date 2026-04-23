@@ -18,13 +18,16 @@ export function Field({
   hint?: string;
   children: ReactNode;
 }) {
+  // Wrapping children inside <label> gives implicit label↔input association
+  // without each caller having to thread htmlFor/id pairs. Screen readers and
+  // Testing Library's `getByLabelText` both pick it up for free.
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[12px] font-medium text-ink">{label}</label>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[12px] font-medium text-ink">{label}</span>
       {children}
-      {error && <p className="mt-0.5 text-[12px] text-[#C6392A]">{error}</p>}
+      {error && <span className="mt-0.5 text-[12px] text-[#C6392A]">{error}</span>}
       {hint && !error && <span className="mt-0.5 text-[11.5px] text-ink-400">{hint}</span>}
-    </div>
+    </label>
   );
 }
 
@@ -99,7 +102,7 @@ export function OAuthButton({
  *  0=empty, 1=weak (red), 2=ok (amber), 3=good (emerald), 4=strong (emerald). */
 export function PasswordStrength({ score }: { score: 0 | 1 | 2 | 3 | 4 }) {
   return (
-    <div className="mt-2 flex h-[3px] gap-1 overflow-hidden rounded-full">
+    <div className="mt-2 flex h-0.75 gap-1 overflow-hidden rounded-full">
       {[0, 1, 2, 3].map((i) => (
         <span
           key={i}
