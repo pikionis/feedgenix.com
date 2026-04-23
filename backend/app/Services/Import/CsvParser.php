@@ -95,7 +95,10 @@ class CsvParser
      */
     private function sniff(string $path): array
     {
-        $fp = fopen($path, 'rb');
+        if (!is_file($path) || !is_readable($path)) {
+            throw new RuntimeException("Cannot open CSV at {$path}");
+        }
+        $fp = @fopen($path, 'rb');
         if ($fp === false) {
             throw new RuntimeException("Cannot open CSV at {$path}");
         }
@@ -155,7 +158,10 @@ class CsvParser
     /** @return resource */
     private function openHandle(string $path, string $encoding)
     {
-        $fp = fopen($path, 'rb');
+        if (!is_file($path) || !is_readable($path)) {
+            throw new RuntimeException("Cannot open CSV at {$path}");
+        }
+        $fp = @fopen($path, 'rb');
         if ($fp === false) {
             throw new RuntimeException("Cannot open CSV at {$path}");
         }
