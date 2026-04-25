@@ -1,7 +1,17 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { useAuthStore } from '@/stores/authStore';
+import { useSubscriptionStore, type Plan } from '@/stores/subscriptionStore';
 
 type BillingCycle = 'monthly' | 'yearly';
+
+/** Tier name → internal plan id. */
+const TIER_TO_PLAN: Record<string, Plan> = {
+  Free: 'free',
+  Starter: 'starter',
+  Pro: 'pro',
+  Enterprise: 'enterprise',
+};
 
 /**
  * Dedicated pricing page — same 4-tier layout as the landing preview,
@@ -82,6 +92,7 @@ const tiers: Tier[] = [
 
 export default function Pricing() {
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
+  const checkoutError = useSubscriptionStore((s) => s.error);
 
   return (
     <>
@@ -99,6 +110,14 @@ export default function Pricing() {
         </div>
 
         <div className="mx-auto max-w-300 px-10 pb-20">
+          {checkoutError && (
+            <div
+              role="alert"
+              className="mb-4 rounded-lg border-[0.5px] border-[#C6392A]/30 bg-[#FCE5E1] px-3 py-2.5 text-[13px] text-[#C6392A]"
+            >
+              {checkoutError}
+            </div>
+          )}
           <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-4">
             {tiers.map((t) => (
               <TierCard key={t.name} tier={t} cycle={cycle} />
@@ -139,7 +158,48 @@ function CycleToggle({ value, onChange }: { value: BillingCycle; onChange: (v: B
   );
 }
 
+/**
+ * Side-effect indirection so tests can swap window.location.assign.
+ * We can't stub `window.location` reliably in jsdom without breaking
+ * other navigation, so we route every Stripe redirect through this wrapper.
+ */
+export const externalRedirect: { go: (url: string) => void } = {
+  go: (url: string) => {
+    window.location.assign(url);
+  },
+};
+
 function TierCard({ tier, cycle }: { tier: Tier; cycle: BillingCycle }) {
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const checkout = useSubscriptionStore((s) => s.checkout);
+  const isStartingCheckout = useSubscriptionStore((s) => s.isStartingCheckout);
+  const error = useSubscriptionStore((s) => s.error);
+  const plan = TIER_TO_PLAN[tier.name];
+  const isEnterprise = plan === 'enterprise';
+  const isFree = plan === 'free';
+  const isPaid = plan === 'starter' || plan === 'pro';
+
+  async function handleCta(e: React.MouseEvent) {
+    if (isFree || isEnterprise) {
+      // Let the underlying anchor handle navigation/mailto.
+      return;
+    }
+    e.preventDefault();
+    if (!isAuthenticated) {
+      // Carry the chosen plan + cycle into the registration flow so the
+      // user lands back here with their selection preserved.
+      navigate(`/register?plan=${plan}&cycle=${cycle}`);
+      return;
+    }
+    try {
+      const url = await checkout(plan as Exclude<Plan, 'free'>, cycle);
+      externalRedirect.go(url);
+    } catch {
+      // Error already in subscriptionStore.error and rendered below.
+    }
+  }
+
   const raw = cycle === 'monthly' ? tier.monthly : tier.yearly;
   const priceLabel =
     raw === 'custom'
@@ -181,14 +241,24 @@ function TierCard({ tier, cycle }: { tier: Tier; cycle: BillingCycle }) {
         ))}
       </ul>
       <Link
-        to={tier.highlight || tier.name === 'Free' || tier.name === 'Starter' ? '/register' : 'mailto:sales@feedgenix.com'}
+        to={
+          isEnterprise
+            ? 'mailto:sales@feedgenix.com'
+            : isFree
+              ? '/register'
+              : isAuthenticated
+                ? '#'                                  // handler does the work
+                : `/register?plan=${plan}&cycle=${cycle}`
+        }
+        onClick={handleCta}
         className={`block w-full rounded-lg py-2.5 text-center text-[14px] font-medium transition-colors duration-200 ${
           tier.highlight
             ? 'bg-indigo text-white hover:bg-indigo-600'
             : 'border-[0.5px] border-ink/14 bg-paper text-ink hover:bg-mist'
-        }`}
+        } ${isPaid && isStartingCheckout ? 'pointer-events-none opacity-70' : ''}`}
+        aria-busy={isPaid && isStartingCheckout}
       >
-        {tier.cta}
+        {isPaid && isStartingCheckout ? 'Starting checkout…' : tier.cta}
       </Link>
     </div>
   );
