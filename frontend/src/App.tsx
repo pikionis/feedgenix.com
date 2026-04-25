@@ -17,6 +17,7 @@ import ProjectDetail from '@/pages/app/ProjectDetail';
 import MappingReview from '@/pages/app/MappingReview';
 import NewProject from '@/pages/app/NewProject';
 import Settings from '@/pages/app/Settings';
+import Billing from '@/pages/app/Billing';
 
 // Layouts
 import AppLayout from '@/components/layout/AppLayout';
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/:id/mapping" element={<MappingReview />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/billing" element={<Billing />} />
         </Route>
       </Routes>
     </BrowserRouter>
