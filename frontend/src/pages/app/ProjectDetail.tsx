@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useProjectStore } from '@/stores/projectStore';
 import { useUploadStore } from '@/stores/uploadStore';
+import { useTranslationJobStore } from '@/stores/translationJobStore';
 import PageHeader from '@/components/app/PageHeader';
 import UploadDropzone from '@/components/app/UploadDropzone';
 
@@ -19,15 +20,51 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentProject, isLoading, fetchProject } = useProjectStore();
   const { upload, isUploading, progress, error: uploadError, reset: resetUpload } = useUploadStore();
+  const {
+    job: translationJob,
+    progressPct,
+    isStarting: isStartingTranslation,
+    error: translationError,
+    start: startTranslation,
+    refresh: refreshTranslation,
+    startPolling,
+    stopPolling,
+    reset: resetTranslation,
+  } = useTranslationJobStore();
 
   useEffect(() => {
     if (id) void fetchProject(Number(id));
   }, [id, fetchProject]);
 
   useEffect(() => {
-    // Clear any stale upload state when navigating to a different project.
+    // Clear any stale per-project state when the route changes.
     resetUpload();
-  }, [id, resetUpload]);
+    resetTranslation();
+  }, [id, resetUpload, resetTranslation]);
+
+  // One-shot fetch of the latest translation job whenever the project loads,
+  // so revisiting a feed mid-translation immediately shows current progress.
+  useEffect(() => {
+    if (!currentProject) return;
+    void refreshTranslation(currentProject.id);
+  }, [currentProject?.id, refreshTranslation]);
+
+  // Live-poll while the project is actively translating.
+  useEffect(() => {
+    if (!currentProject) return;
+    if (currentProject.status === 'translating') {
+      startPolling(currentProject.id);
+      return () => stopPolling();
+    }
+  }, [currentProject?.id, currentProject?.status, startPolling, stopPolling]);
+
+  // When polling sees the job finish, refresh the project so the pipeline
+  // ticks over to "completed" without the user reloading.
+  useEffect(() => {
+    if (translationJob?.status === 'completed' && currentProject?.status !== 'completed') {
+      void fetchProject(Number(id));
+    }
+  }, [translationJob?.status, currentProject?.status, id, fetchProject]);
 
   const handleUpload = async (file: File) => {
     if (!currentProject) return;
@@ -38,6 +75,16 @@ export default function ProjectDetail() {
       await fetchProject(currentProject.id);
     } catch {
       // Error already surfaced via the store; no further action here.
+    }
+  };
+
+  const handleStartTranslation = async () => {
+    if (!currentProject) return;
+    try {
+      await startTranslation(currentProject.id);
+      await fetchProject(currentProject.id);
+    } catch {
+      // surfaced via translationError
     }
   };
 
@@ -140,13 +187,14 @@ export default function ProjectDetail() {
           title="Translate"
           body="Queue a translation job. Paid providers only run when free tiers are exhausted."
           cta={
-            <button
-              type="button"
-              disabled={!['review', 'translating', 'completed'].includes(status)}
-              className="rounded-lg bg-indigo px-3.5 py-2 text-[13px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-ink-300"
-            >
-              {status === 'translating' ? 'Translating…' : 'Start translation'}
-            </button>
+            <TranslateCta
+              status={status}
+              isStarting={isStartingTranslation}
+              onStart={handleStartTranslation}
+              progressPct={progressPct}
+              job={translationJob}
+              error={translationError}
+            />
           }
         />
 
@@ -177,6 +225,101 @@ export default function ProjectDetail() {
 
 function isDraftOrError(status: string): boolean {
   return status === 'draft' || status === 'error';
+}
+
+function TranslateCta({
+  status,
+  isStarting,
+  onStart,
+  progressPct,
+  job,
+  error,
+}: {
+  status: string;
+  isStarting: boolean;
+  onStart: () => void;
+  progressPct: number;
+  job: import('@/stores/translationJobStore').TranslationJob | null;
+  error: string | null;
+}) {
+  // Three visual states:
+  //   1) review (or error retry): show a primary "Start translation" button.
+  //   2) translating: show progress bar + counters.
+  //   3) completed: show a green check + summary.
+  if (status === 'translating' || job?.status === 'processing' || job?.status === 'queued') {
+    const pct = Math.max(0, Math.min(100, Math.round(progressPct)));
+    return (
+      <div data-testid="translation-progress">
+        <div className="mb-1.5 flex items-center justify-between text-[12px] font-medium text-ink">
+          <span>{job?.status === 'queued' ? 'Queued — starting up…' : 'Translating…'}</span>
+          <span>{pct}%</span>
+        </div>
+        <div
+          className="h-1.5 overflow-hidden rounded-full bg-mist"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div className="h-full transition-[width] duration-200" style={{ width: `${pct}%`, background: '#4F46E5' }} />
+        </div>
+        {job && job.total_translations > 0 && (
+          <p className="mt-1.5 text-[11.5px] text-ink-500">
+            {job.completed_translations.toLocaleString('en-US')} / {job.total_translations.toLocaleString('en-US')} translations
+            {job.cached_translations > 0 && (
+              <> · {Math.round((job.cached_translations / Math.max(1, job.completed_translations)) * 100)}% cached</>
+            )}
+            {job.failed_translations > 0 && (
+              <> · <span style={{ color: '#C6392A' }}>{job.failed_translations} failed</span></>
+            )}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (status === 'completed' || job?.status === 'completed') {
+    return (
+      <div className="flex items-center gap-2 text-[13px] text-[#0B7A63]">
+        <span aria-hidden>✓</span>
+        <span>
+          Translated {job?.completed_translations.toLocaleString('en-US') ?? 'all'} cells
+          {job && job.cached_translations > 0 && (
+            <> · {Math.round((job.cached_translations / Math.max(1, job.completed_translations)) * 100)}% cached</>
+          )}
+        </span>
+      </div>
+    );
+  }
+
+  if (job?.status === 'failed' || error) {
+    return (
+      <div>
+        <p role="alert" className="mb-2 text-[12.5px] font-medium" style={{ color: '#C6392A' }}>
+          {job?.error_message ?? error ?? 'Translation failed.'}
+        </p>
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={status !== 'review' || isStarting}
+          className="rounded-lg bg-indigo px-3.5 py-2 text-[13px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-ink-300"
+        >
+          {isStarting ? 'Starting…' : 'Try again'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onStart}
+      disabled={status !== 'review' || isStarting}
+      className="rounded-lg bg-indigo px-3.5 py-2 text-[13px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-ink-300"
+    >
+      {isStarting ? 'Starting…' : 'Start translation'}
+    </button>
+  );
 }
 
 function Pipeline({ currentStep }: { currentStep: number }) {

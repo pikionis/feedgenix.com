@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ProjectDetail from './ProjectDetail';
 import { useProjectStore } from '@/stores/projectStore';
 import { useUploadStore } from '@/stores/uploadStore';
+import { useTranslationJobStore, type TranslationJob } from '@/stores/translationJobStore';
 
 type Project = NonNullable<ReturnType<typeof useProjectStore.getState>['currentProject']>;
 
@@ -47,6 +48,18 @@ describe('ProjectDetail', () => {
       progress: 0,
       error: null,
       upload: vi.fn().mockResolvedValue(undefined),
+      reset: vi.fn(),
+    });
+    useTranslationJobStore.setState({
+      job: null,
+      progressPct: 0,
+      isStarting: false,
+      isPolling: false,
+      error: null,
+      start: vi.fn().mockResolvedValue(undefined),
+      refresh: vi.fn().mockResolvedValue(undefined),
+      startPolling: vi.fn(),
+      stopPolling: vi.fn(),
       reset: vi.fn(),
     });
   });
@@ -190,5 +203,125 @@ describe('ProjectDetail', () => {
     renderAt('1');
 
     expect(reset).toHaveBeenCalled();
+  });
+
+  // ─── Translation integration ────────────────────────────────────────────
+
+  function fakeJob(overrides: Partial<TranslationJob> = {}): TranslationJob {
+    return {
+      id: 1,
+      project_id: 42,
+      team_id: 10,
+      status: 'queued',
+      total_products: 100,
+      processed_products: 0,
+      total_translations: 200,
+      completed_translations: 0,
+      cached_translations: 0,
+      failed_translations: 0,
+      estimated_cost: 0,
+      actual_cost: 0,
+      started_at: null,
+      completed_at: null,
+      error_message: null,
+      ...overrides,
+    };
+  }
+
+  it('shows the "Start translation" button when status is review and no job exists', () => {
+    setProject({ status: 'review' });
+    renderAt('42');
+    const btn = screen.getByRole('button', { name: 'Start translation' });
+    expect(btn).not.toBeDisabled();
+  });
+
+  it('disables "Start translation" when status is still draft or mapping', () => {
+    setProject({ status: 'mapping' });
+    renderAt('42');
+    expect(screen.getByRole('button', { name: 'Start translation' })).toBeDisabled();
+  });
+
+  it('calls start(projectId) and then refetches the project on click', async () => {
+    const user = userEvent.setup();
+    const start = vi.fn().mockResolvedValue(undefined);
+    const fetchProject = vi.fn().mockResolvedValue(undefined);
+    useTranslationJobStore.setState({ start });
+    useProjectStore.setState({ fetchProject });
+
+    setProject({ id: 7, status: 'review' });
+    renderAt('7');
+
+    await user.click(screen.getByRole('button', { name: 'Start translation' }));
+
+    await waitFor(() => expect(start).toHaveBeenCalledWith(7));
+    await waitFor(() => expect(fetchProject).toHaveBeenCalledWith(7));
+  });
+
+  it('shows the live progress bar while translating, with cached/failed counters', () => {
+    useTranslationJobStore.setState({
+      job: fakeJob({
+        status: 'processing',
+        completed_translations: 120,
+        total_translations: 200,
+        cached_translations: 60,
+        failed_translations: 3,
+      }),
+      progressPct: 60,
+    });
+    setProject({ status: 'translating' });
+    renderAt('42');
+
+    const card = screen.getByTestId('translation-progress');
+    expect(card.querySelector('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '60');
+    expect(card).toHaveTextContent('120 / 200 translations');
+    expect(card).toHaveTextContent(/50% cached/);
+    expect(card).toHaveTextContent(/3 failed/);
+  });
+
+  it('starts the live poll when status flips to translating, and stops it on unmount', () => {
+    const startPolling = vi.fn();
+    const stopPolling = vi.fn();
+    useTranslationJobStore.setState({ startPolling, stopPolling });
+
+    setProject({ id: 9, status: 'translating' });
+    const { unmount } = renderAt('9');
+
+    expect(startPolling).toHaveBeenCalledWith(9);
+
+    unmount();
+    expect(stopPolling).toHaveBeenCalled();
+  });
+
+  it('does NOT poll when the project is just sitting at "review"', () => {
+    const startPolling = vi.fn();
+    useTranslationJobStore.setState({ startPolling });
+
+    setProject({ status: 'review' });
+    renderAt('42');
+
+    expect(startPolling).not.toHaveBeenCalled();
+  });
+
+  it('shows the completed summary once status reaches completed', () => {
+    useTranslationJobStore.setState({
+      job: fakeJob({ status: 'completed', completed_translations: 200, cached_translations: 130 }),
+      progressPct: 100,
+    });
+    setProject({ status: 'completed' });
+    renderAt('42');
+
+    expect(screen.getByText(/Translated 200 cells/)).toBeInTheDocument();
+    expect(screen.getByText(/65% cached/)).toBeInTheDocument();
+  });
+
+  it('shows the job error_message and a "Try again" button when the job failed', () => {
+    useTranslationJobStore.setState({
+      job: fakeJob({ status: 'failed', error_message: 'Monthly translation cap reached.' }),
+    });
+    setProject({ status: 'review' });   // user can retry from review
+    renderAt('42');
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Monthly translation cap reached.');
+    expect(screen.getByRole('button', { name: 'Try again' })).not.toBeDisabled();
   });
 });
