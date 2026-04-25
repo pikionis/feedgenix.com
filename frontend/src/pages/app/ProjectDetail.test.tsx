@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ProjectDetail from './ProjectDetail';
 import { useProjectStore } from '@/stores/projectStore';
+import { useUploadStore } from '@/stores/uploadStore';
 
 type Project = NonNullable<ReturnType<typeof useProjectStore.getState>['currentProject']>;
 
@@ -39,6 +41,13 @@ describe('ProjectDetail', () => {
       currentProject: null,
       isLoading: false,
       fetchProject: vi.fn().mockResolvedValue(undefined),
+    });
+    useUploadStore.setState({
+      isUploading: false,
+      progress: 0,
+      error: null,
+      upload: vi.fn().mockResolvedValue(undefined),
+      reset: vi.fn(),
     });
   });
 
@@ -112,5 +121,74 @@ describe('ProjectDetail', () => {
     renderAt('42');
     // Both the dl and the subtitle should gracefully render "—".
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+  });
+
+  // ─── Upload integration ─────────────────────────────────────────────────
+
+  it('shows the upload dropzone in the Upload section when status is draft', () => {
+    setProject({ status: 'draft' });
+    renderAt('42');
+    expect(screen.getByRole('button', { name: 'Upload CSV file' })).toBeInTheDocument();
+    expect(screen.queryByText('Catalog already ingested. Re-upload coming soon.')).not.toBeInTheDocument();
+  });
+
+  it('shows the upload dropzone again when status is "error" (so the user can retry)', () => {
+    setProject({ status: 'error' });
+    renderAt('42');
+    expect(screen.getByRole('button', { name: 'Upload CSV file' })).toBeInTheDocument();
+  });
+
+  it('replaces the dropzone with a "ingested" hint once the catalog is past upload', () => {
+    setProject({ status: 'review' });
+    renderAt('42');
+    expect(screen.queryByRole('button', { name: 'Upload CSV file' })).not.toBeInTheDocument();
+    expect(screen.getByText(/already ingested/i)).toBeInTheDocument();
+  });
+
+  it('calls upload(projectId, file) and refetches the project on success', async () => {
+    const user = userEvent.setup();
+    const upload = vi.fn().mockResolvedValue(undefined);
+    const fetchProject = vi.fn().mockResolvedValue(undefined);
+    useUploadStore.setState({ upload });
+    useProjectStore.setState({ fetchProject });
+
+    setProject({ id: 7, status: 'draft' });
+    renderAt('7');
+
+    const csv = new File(['sku,title\nA,B'], 'p.csv', { type: 'text/csv' });
+    await user.upload(screen.getByLabelText('CSV file'), csv);
+
+    await waitFor(() => expect(upload).toHaveBeenCalledWith(7, csv));
+    // Refetch is awaited after upload — this proves the page recovers state
+    // automatically once ProcessUpload promotes the project to 'mapping'.
+    await waitFor(() => expect(fetchProject).toHaveBeenCalledWith(7));
+  });
+
+  it('shows the dropzone progress bar when an upload is mid-flight', () => {
+    useUploadStore.setState({ isUploading: true, progress: 73 });
+    setProject({ status: 'draft' });
+    renderAt('42');
+
+    const bar = screen.getByRole('progressbar');
+    expect(bar).toHaveAttribute('aria-valuenow', '73');
+  });
+
+  it('surfaces an upload error from the store inline under the dropzone', () => {
+    useUploadStore.setState({ error: 'The file must be a CSV.' });
+    setProject({ status: 'draft' });
+    renderAt('42');
+
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts.some((a) => a.textContent?.includes('The file must be a CSV.'))).toBe(true);
+  });
+
+  it('clears stale upload state when the project id changes', () => {
+    const reset = vi.fn();
+    useUploadStore.setState({ reset });
+    setProject({ id: 1, status: 'draft' });
+
+    renderAt('1');
+
+    expect(reset).toHaveBeenCalled();
   });
 });

@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useProjectStore } from '@/stores/projectStore';
+import { useUploadStore } from '@/stores/uploadStore';
 import PageHeader from '@/components/app/PageHeader';
+import UploadDropzone from '@/components/app/UploadDropzone';
 
 const PIPELINE = [
   { key: 'draft',       label: 'Upload' },
@@ -16,10 +18,28 @@ type StepKey = (typeof PIPELINE)[number]['key'];
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentProject, isLoading, fetchProject } = useProjectStore();
+  const { upload, isUploading, progress, error: uploadError, reset: resetUpload } = useUploadStore();
 
   useEffect(() => {
     if (id) void fetchProject(Number(id));
   }, [id, fetchProject]);
+
+  useEffect(() => {
+    // Clear any stale upload state when navigating to a different project.
+    resetUpload();
+  }, [id, resetUpload]);
+
+  const handleUpload = async (file: File) => {
+    if (!currentProject) return;
+    try {
+      await upload(currentProject.id, file);
+      // Refetch so the page transitions out of 'draft' once ProcessUpload
+      // has run and updated the project status.
+      await fetchProject(currentProject.id);
+    } catch {
+      // Error already surfaced via the store; no further action here.
+    }
+  };
 
   if (isLoading || !currentProject) {
     return (
@@ -76,15 +96,20 @@ export default function ProjectDetail() {
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard
           title="Upload"
-          body="Upload a CSV with your product catalog. We sniff the delimiter and sample the file automatically."
+          body="Drop a CSV with your product catalog. We sniff the delimiter and sample the file automatically — no schema config required."
           cta={
-            <button
-              type="button"
-              disabled
-              className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-3.5 py-2 text-[13px] font-medium text-ink-500"
-            >
-              Upload CSV (coming soon)
-            </button>
+            isDraftOrError(status) ? (
+              <UploadDropzone
+                onFile={handleUpload}
+                uploading={isUploading}
+                progress={progress}
+                error={uploadError}
+              />
+            ) : (
+              <p className="text-[12.5px] text-ink-500">
+                Catalog already ingested. Re-upload coming soon.
+              </p>
+            )
           }
         />
 
@@ -139,6 +164,10 @@ export default function ProjectDetail() {
       </dl>
     </div>
   );
+}
+
+function isDraftOrError(status: string): boolean {
+  return status === 'draft' || status === 'error';
 }
 
 function Pipeline({ currentStep }: { currentStep: number }) {
