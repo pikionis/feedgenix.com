@@ -201,15 +201,7 @@ export default function ProjectDetail() {
         <SectionCard
           title="Export"
           body="Download a clean CSV with translated fields merged in. Protected columns pass through untouched."
-          cta={
-            <button
-              type="button"
-              disabled={status !== 'completed'}
-              className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-3.5 py-2 text-[13px] font-medium text-ink transition-colors duration-200 hover:bg-mist disabled:text-ink-400 disabled:hover:bg-paper"
-            >
-              Download export
-            </button>
-          }
+          cta={<ExportCta projectId={currentProject.id} status={status} />}
         />
       </div>
 
@@ -225,6 +217,52 @@ export default function ProjectDetail() {
 
 function isDraftOrError(status: string): boolean {
   return status === 'draft' || status === 'error';
+}
+
+/**
+ * Export CTA: a real <a> tag pointing at the Laravel streaming endpoint when
+ * the project is completed; a disabled button otherwise. We rely on the
+ * backend's `Content-Disposition: attachment` header to trigger the browser
+ * save dialog — works cross-origin too, where the `download` attribute is
+ * ignored.
+ */
+function ExportCta({ projectId, status }: { projectId: number; status: string }) {
+  if (status !== 'completed') {
+    return (
+      <button
+        type="button"
+        disabled
+        className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-3.5 py-2 text-[13px] font-medium text-ink-400"
+        aria-label="Download export"
+      >
+        Download export
+      </button>
+    );
+  }
+
+  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return (
+    <a
+      href={`${apiBase}/api/projects/${projectId}/export`}
+      // `download` is a hint for same-origin; for cross-origin the backend's
+      // attachment header is what actually fires the save dialog.
+      download
+      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo px-3.5 py-2 text-[13px] font-medium text-white transition-colors duration-200 hover:bg-indigo-600"
+      aria-label="Download CSV export"
+    >
+      <DownloadIcon /> Download CSV
+    </a>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3v12" />
+      <path d="m6 11 6 6 6-6" />
+      <path d="M5 21h14" />
+    </svg>
+  );
 }
 
 function TranslateCta({

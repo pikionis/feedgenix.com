@@ -115,10 +115,22 @@ describe('ProjectDetail', () => {
     expect(screen.getByRole('button', { name: /Download export/ })).toBeDisabled();
   });
 
-  it('enables the download button once status is completed', () => {
+  it('replaces the disabled button with a real download link once status is completed', () => {
     setProject({ status: 'completed' });
     renderAt('42');
-    expect(screen.getByRole('button', { name: /Download export/ })).not.toBeDisabled();
+    const link = screen.getByRole('link', { name: /Download CSV export/ });
+    expect(link).toBeInTheDocument();
+    expect(link.getAttribute('href') ?? '').toMatch(/\/api\/projects\/42\/export$/);
+    expect(link).toHaveAttribute('download');
+  });
+
+  it('does not render the download link for any non-completed status', () => {
+    for (const status of ['draft', 'mapping', 'review', 'translating', 'error'] as const) {
+      setProject({ status });
+      const view = renderAt('42');
+      expect(screen.queryByRole('link', { name: /Download CSV export/ })).not.toBeInTheDocument();
+      view.unmount();
+    }
   });
 
 
