@@ -117,13 +117,22 @@ export default function ProjectDetail() {
           title="Field mapping"
           body="Review the AI mapping, confirm which columns get translated, and approve before running."
           cta={
-            <button
-              type="button"
-              disabled={currentStep < 1}
-              className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-3.5 py-2 text-[13px] font-medium text-ink transition-colors duration-200 hover:bg-mist disabled:text-ink-400 disabled:hover:bg-paper"
-            >
-              Review mapping
-            </button>
+            currentStep < 1 ? (
+              <button
+                type="button"
+                disabled
+                className="rounded-lg border-[0.5px] border-ink/14 bg-paper px-3.5 py-2 text-[13px] font-medium text-ink-400"
+              >
+                Review mapping
+              </button>
+            ) : (
+              <Link
+                to={`/projects/${currentProject.id}/mapping`}
+                className="inline-block rounded-lg border-[0.5px] border-ink/14 bg-paper px-3.5 py-2 text-[13px] font-medium text-ink transition-colors duration-200 hover:bg-mist"
+              >
+                Review mapping →
+              </Link>
+            )
           }
         />
 

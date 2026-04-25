@@ -14,6 +14,7 @@ import Register from '@/pages/auth/Register';
 import Dashboard from '@/pages/app/Dashboard';
 import Projects from '@/pages/app/Projects';
 import ProjectDetail from '@/pages/app/ProjectDetail';
+import MappingReview from '@/pages/app/MappingReview';
 import NewProject from '@/pages/app/NewProject';
 import Settings from '@/pages/app/Settings';
 
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/new" element={<NewProject />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/projects/:id/mapping" element={<MappingReview />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
