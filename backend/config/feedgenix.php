@@ -83,7 +83,6 @@ return [
                 'translation_memory',     // fuzzy matching beyond exact-hash cache
                 'change_detection',
                 'cost_forecasting',
-                'platform_push',          // 1 connector (Shopify / WooCommerce / Channable)
                 'approval_workflow',
                 'audit_log',
                 'api_access',

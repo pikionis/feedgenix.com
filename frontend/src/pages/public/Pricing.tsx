@@ -81,7 +81,6 @@ const tiers: Tier[] = [
       '10 team members',
       'Unlimited glossary',
       'Translation memory (fuzzy matching)',
-      '1 platform connector (Shopify / WooCommerce / Channable)',
       'Approval workflow + audit log',
       'API access + webhooks',
       'Priority routing · 4-hour SLA',
@@ -97,7 +96,6 @@ const tiers: Tier[] = [
     rowsPerMonth: 'Unlimited products',
     features: [
       'Unlimited languages + team members',
-      'All platform connectors',
       'Custom fine-tuned model',
       'SOC 2 Type II + DPA + EU residency',
       'SSO + SCIM',
@@ -297,18 +295,24 @@ function TierCard({ tier, cycle }: { tier: Tier; cycle: BillingCycle }) {
 
 function ComparisonTable() {
   const rows: Array<{ label: string; values: Array<string | boolean> }> = [
-    { label: 'Rows per month',       values: ['500', '10,000', '100,000', 'Unlimited'] },
-    { label: 'Target languages',     values: ['3', '10', 'Unlimited', 'Unlimited'] },
-    { label: 'Team members',         values: ['1', '3', '5', 'Unlimited'] },
+    { label: 'Products / month',     values: ['500', '10,000', '50,000', 'Unlimited'] },
+    { label: 'Target languages',     values: ['1', '4', '7', 'Unlimited'] },
+    { label: 'Team members',         values: ['1', '3', '10', 'Unlimited'] },
+    { label: 'SHA-256 smart cache',  values: [true, true, true, true] },
+    { label: 'Golden Rule',          values: [true, true, true, true] },
     { label: 'CSV export',           values: [true, true, true, true] },
     { label: 'XLSX + JSON export',   values: [false, true, true, true] },
     { label: 'Change detection',     values: [false, true, true, true] },
+    { label: 'Glossary / brand lock', values: [false, '50 terms', 'Unlimited', 'Unlimited'] },
+    { label: 'Translation memory (fuzzy)', values: [false, false, true, true] },
+    { label: 'Cost forecasting',     values: [false, true, true, true] },
+    { label: 'Approval workflow + audit log', values: [false, false, true, true] },
     { label: 'API + webhooks',       values: [false, false, true, true] },
-    { label: 'Shopify push',         values: [false, false, true, true] },
     { label: 'Priority routing',     values: [false, false, true, true] },
-    { label: 'SSO / SCIM',           values: [false, false, false, true] },
-    { label: 'SOC 2 Type II report', values: [false, false, false, true] },
-    { label: 'Dedicated success',    values: [false, false, false, true] },
+    { label: 'Custom fine-tuned model', values: [false, false, false, true] },
+    { label: 'SSO + SCIM',           values: [false, false, false, true] },
+    { label: 'SOC 2 Type II + DPA',  values: [false, false, false, true] },
+    { label: 'Dedicated success manager', values: [false, false, false, true] },
   ];
   return (
     <section className="bg-mist">
