@@ -103,6 +103,12 @@ class RunTranslation implements ShouldQueue
         $costTotal = (float) ($job->actual_cost ?? 0);
         $sinceCheckpoint = 0;
 
+        // Pass-through pricing rule: a product only counts against the team's
+        // monthly quota if at least one of its translations needed an AI call
+        // this run. Products served entirely from cache are free.
+        // Set keys are product ids → true.
+        $billableProductIds = [];
+
         try {
             foreach (array_chunk($productIds, $batchSize) as $chunkIds) {
                 $products = Product::whereIn('id', $chunkIds)->get(['id', 'source_data'])->keyBy('id');
@@ -159,7 +165,7 @@ class RunTranslation implements ShouldQueue
                             $fieldType,
                         );
 
-                        DB::transaction(function () use ($batch, $toTranslate, $toTranslateProducts, $field, $targetLang, $cache) {
+                        DB::transaction(function () use ($batch, $toTranslate, $toTranslateProducts, $field, $targetLang, $cache, &$billableProductIds) {
                             foreach ($batch['results'] as $i => $result) {
                                 $cache->put(
                                     productId: $toTranslateProducts[$i],
@@ -170,6 +176,11 @@ class RunTranslation implements ShouldQueue
                                     provider: (string) $result['provider'],
                                     isCached: (bool) $result['cached'],
                                 );
+                                // Mark the product billable iff this specific
+                                // translation needed an AI call (cache miss).
+                                if (!(bool) $result['cached']) {
+                                    $billableProductIds[$toTranslateProducts[$i]] = true;
+                                }
                             }
                         });
 
@@ -210,15 +221,21 @@ class RunTranslation implements ShouldQueue
 
         $project->update(['status' => 'completed']);
 
-        $this->incrementTeamUsage($team, $processed);
+        // Charge the quota only for products that actually consumed an AI
+        // call this run. Cache-only products are free under pass-through pricing.
+        $billableCount = count($billableProductIds);
+        $this->incrementTeamUsage($team, $billableCount);
 
         UsageLog::create([
             'team_id' => $team->id,
             'action' => 'translation',
-            'quantity' => $processed,
+            // `quantity` reflects what we charged for, not what we processed.
+            'quantity' => $billableCount,
             'metadata' => [
                 'project_id' => $project->id,
                 'translation_job_id' => $job->id,
+                'products_processed' => $processed,
+                'products_billable' => $billableCount,
                 'translations' => $completed,
                 'cached' => $cached,
                 'cost_eur' => round($costTotal, 4),
@@ -230,7 +247,8 @@ class RunTranslation implements ShouldQueue
 
         Log::info("RunTranslation completed", [
             'translation_job_id' => $job->id,
-            'products' => $processed,
+            'products_processed' => $processed,
+            'products_billable' => $billableCount,
             'translations' => $completed,
             'cached' => $cached,
             'cost_eur' => round($costTotal, 4),

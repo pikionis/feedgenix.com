@@ -69,7 +69,7 @@ class SubscriptionControllerTest extends TestCase
                 'products_used_this_month' => 0,
                 'subscription' => null,
             ])
-            ->assertJsonPath('tier.products_per_month', 100);
+            ->assertJsonPath('tier.products_per_month', 500);
     }
 
     #[Test]
@@ -83,7 +83,7 @@ class SubscriptionControllerTest extends TestCase
             ->assertJsonPath('plan', 'starter')
             ->assertJsonPath('products_used_this_month', 423)
             ->assertJsonPath('subscription.stripe_status', 'active')
-            ->assertJsonPath('tier.products_per_month', 1000)
+            ->assertJsonPath('tier.products_per_month', 10_000)
             ->assertJsonStructure(['tier' => ['features', 'team_members', 'target_languages']]);
     }
 
@@ -94,7 +94,7 @@ class SubscriptionControllerTest extends TestCase
 
         $this->getJson('/api/subscription')
             ->assertOk()
-            ->assertJsonPath('tier.products_per_month', 100);   // free-tier default
+            ->assertJsonPath('tier.products_per_month', 500);   // free-tier default
     }
 
     #[Test]

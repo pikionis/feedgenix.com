@@ -29,18 +29,27 @@ type Tier = {
   highlight?: boolean;
 };
 
+/**
+ * Tiers under the **pass-through** pricing model:
+ *  - Subscription pays for the platform (cache, golden rule, glossary, TM,
+ *    integrations, support).
+ *  - Translation cost is billed at-cost — whatever the AI providers charge.
+ *  - "rows / month" caps billable products only; cache-only products are free.
+ */
 const tiers: Tier[] = [
   {
     name: 'Free',
     eyebrow: 'Try it out',
     monthly: 0,
     yearly: 0,
-    rowsPerMonth: '500 rows / month',
+    rowsPerMonth: '500 products / month',
     features: [
-      '3 target languages',
-      'CSV upload & export',
+      '1 target language',
+      '1 team member',
+      'CSV upload + export',
+      'SHA-256 smart cache',
+      'Golden Rule protection',
       'Community support',
-      'Basic field mapping',
     ],
     cta: 'Start free',
   },
@@ -49,11 +58,14 @@ const tiers: Tier[] = [
     eyebrow: 'For small merchants',
     monthly: 29,
     yearly: 232,
-    rowsPerMonth: '10,000 rows / month',
+    rowsPerMonth: '10,000 products / month',
     features: [
-      '10 target languages',
+      '4 target languages',
+      '3 team members',
       'XLSX + JSON export',
-      'Change detection',
+      'Glossary (50 terms) — brand + term lock',
+      'Change detection (delta-only re-runs)',
+      'Cost forecasting dashboard',
       'Email support',
     ],
     cta: 'Choose Starter',
@@ -61,15 +73,18 @@ const tiers: Tier[] = [
   {
     name: 'Pro',
     eyebrow: 'Most popular',
-    monthly: 99,
-    yearly: 792,
-    rowsPerMonth: '100,000 rows / month',
+    monthly: 79,
+    yearly: 632,
+    rowsPerMonth: '50,000 products / month',
     features: [
-      'Unlimited languages',
-      'API + webhooks',
-      'Priority provider routing',
-      '5 team members',
-      'Shopify push',
+      '7 target languages',
+      '10 team members',
+      'Unlimited glossary',
+      'Translation memory (fuzzy matching)',
+      '1 platform connector (Shopify / WooCommerce / Channable)',
+      'Approval workflow + audit log',
+      'API access + webhooks',
+      'Priority routing · 4-hour SLA',
     ],
     cta: 'Start Pro trial',
     highlight: true,
@@ -79,12 +94,14 @@ const tiers: Tier[] = [
     eyebrow: 'Custom',
     monthly: 'custom',
     yearly: 'custom',
-    rowsPerMonth: 'Unlimited rows',
+    rowsPerMonth: 'Unlimited products',
     features: [
+      'Unlimited languages + team members',
+      'All platform connectors',
+      'Custom fine-tuned model',
+      'SOC 2 Type II + DPA + EU residency',
       'SSO + SCIM',
-      'SOC 2 Type II, DPA',
       'Dedicated success manager',
-      'Custom models / self-hosted providers',
     ],
     cta: 'Talk to sales',
   },
@@ -100,13 +117,25 @@ export default function Pricing() {
         <div className="mx-auto max-w-300 px-10 pt-20 pb-6 text-center">
           <span className="fg-eyebrow">PRICING</span>
           <h1 className="mx-auto mt-3 max-w-4xl text-[48px] font-medium leading-[1.05] tracking-[-0.02em] text-ink">
-            Pricing built around rows, not seats.
+            Pay for software. Pay translation cost at-cost.
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-[16px] leading-[1.6] text-ink-500">
-            Every plan includes the Golden Rule, hash-cached translations, and all export
-            formats. Scale rows, not headcount.
+          <p className="mx-auto mt-4 max-w-2xl text-[16px] leading-[1.6] text-ink-500">
+            Subscription gives you the platform — smart cache, glossary,
+            integrations, support. Translation work is billed{' '}
+            <strong className="font-medium text-ink">at-cost</strong> by the AI agent
+            we route to: Claude Opus for quality-critical fields, Grok for bulk.
+            No markup, ever — itemised on every invoice.
           </p>
           <CycleToggle value={cycle} onChange={setCycle} />
+        </div>
+
+        <div className="mx-auto max-w-300 px-10 pb-2 text-center">
+          <span
+            className="inline-flex items-center gap-2 rounded-full border-[0.5px] border-ink/14 bg-mist px-3.5 py-1.5 text-[12.5px] text-ink-500"
+            data-testid="passthrough-badge"
+          >
+            <EmeraldDot /> Pass-through translation cost · cache hits free · no markup
+          </span>
         </div>
 
         <div className="mx-auto max-w-300 px-10 pb-20">
@@ -360,6 +389,10 @@ function PricingFAQ() {
 }
 
 /* ───────────────────────── ICONS ───────────────────────── */
+
+function EmeraldDot() {
+  return <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: '#0F9B7E' }} />;
+}
 
 function EmeraldCheck({ className = '' }: { className?: string }) {
   return (

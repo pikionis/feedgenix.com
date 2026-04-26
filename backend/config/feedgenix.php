@@ -1,46 +1,106 @@
 <?php
 
+/**
+ * FeedGenix tier definitions.
+ *
+ * Pricing model is **pass-through translation cost + subscription**:
+ *  - The merchant's card is billed for the actual AI provider cost their
+ *    catalogue incurred this month (no markup — cost-at-cost).
+ *  - The subscription pays for the platform itself (cache, golden rule,
+ *    routing, mapping AI, glossary, TM, integrations, support).
+ *
+ * Quota counting rules:
+ *  - "products_per_month" counts billable products only.
+ *  - A product is billable when at least one of its translations needed an AI
+ *    call this run; products served entirely from cache do not count.
+ *  - "target_languages" caps how many target languages a project can have.
+ *  - "team_members" caps seats in the workspace.
+ *
+ * Feature flags drive both UI gates and the CheckFeature middleware.
+ * Enterprise has the `*` wildcard which grants every feature, current and
+ * future. New features added to tiers should be opt-in for tiers below.
+ */
+
 return [
     'tiers' => [
         'free' => [
-            'products_per_month' => 100,
+            'price_monthly' => 0,
+            'price_yearly' => 0,
+            'products_per_month' => 500,
             'target_languages' => 1,
             'team_members' => 1,
-            'features' => ['csv_upload', 'basic_mapping', 'csv_export'],
+            'features' => [
+                'csv_upload',
+                'csv_export',
+                'smart_cache',
+                'golden_rule',
+                'basic_mapping',
+            ],
         ],
+
         'starter' => [
-            'price_monthly' => 2900,
-            'price_yearly' => 27840,
+            'price_monthly' => 2900,    // €29
+            'price_yearly' => 27840,    // €232 (10× monthly = 2 months free)
             'stripe_monthly_id' => env('STRIPE_STARTER_MONTHLY'),
             'stripe_yearly_id' => env('STRIPE_STARTER_YEARLY'),
-            'products_per_month' => 1000,
-            'target_languages' => 3,
-            'team_members' => 2,
-            'features' => ['csv_upload', 'smart_mapping', 'csv_export',
-                          'xlsx_export', 'change_detection'],
+            'products_per_month' => 10_000,
+            'target_languages' => 4,
+            'team_members' => 3,
+            'features' => [
+                'csv_upload',
+                'csv_export',
+                'xlsx_export',
+                'json_export',
+                'smart_cache',
+                'golden_rule',
+                'smart_mapping',
+                'glossary_basic',         // up to 50 terms
+                'change_detection',
+                'cost_forecasting',
+                'email_support',
+            ],
         ],
+
         'pro' => [
-            'price_monthly' => 7900,
-            'price_yearly' => 75840,
+            'price_monthly' => 7900,    // €79
+            'price_yearly' => 75840,    // €632 (10× monthly = 2 months free)
             'stripe_monthly_id' => env('STRIPE_PRO_MONTHLY'),
             'stripe_yearly_id' => env('STRIPE_PRO_YEARLY'),
-            'products_per_month' => 10000,
-            'target_languages' => 10,
-            'team_members' => 5,
-            'features' => ['csv_upload', 'smart_mapping', 'csv_export',
-                          'xlsx_export', 'json_export', 'xml_export',
-                          'change_detection', 'continuous_sync',
-                          'api_access', 'priority_support'],
+            'products_per_month' => 50_000,
+            'target_languages' => 7,
+            'team_members' => 10,
+            'features' => [
+                'csv_upload',
+                'csv_export',
+                'xlsx_export',
+                'json_export',
+                'xml_export',
+                'smart_cache',
+                'golden_rule',
+                'smart_mapping',
+                'glossary_basic',
+                'glossary_unlimited',
+                'translation_memory',     // fuzzy matching beyond exact-hash cache
+                'change_detection',
+                'cost_forecasting',
+                'platform_push',          // 1 connector (Shopify / WooCommerce / Channable)
+                'approval_workflow',
+                'audit_log',
+                'api_access',
+                'webhooks',
+                'priority_support',       // 4-hour SLA
+            ],
         ],
+
         'enterprise' => [
-            'price_monthly' => 19900,
-            'price_yearly' => 191040,
+            'price_monthly' => null,    // custom — set per contract
+            'price_yearly' => null,
             'stripe_monthly_id' => env('STRIPE_ENTERPRISE_MONTHLY'),
             'stripe_yearly_id' => env('STRIPE_ENTERPRISE_YEARLY'),
             'products_per_month' => PHP_INT_MAX,
             'target_languages' => PHP_INT_MAX,
             'team_members' => PHP_INT_MAX,
-            'features' => ['*'],
+            'features' => ['*'],        // wildcard — grants everything
         ],
     ],
 

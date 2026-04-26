@@ -40,6 +40,8 @@ class ProjectController extends Controller
             'target_languages.*' => ['string', 'max:10'],
         ]);
 
+        $this->ensureTargetLanguagesWithinTier($team, $validated['target_languages'] ?? []);
+
         $project = $team->projects()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
@@ -86,9 +88,43 @@ class ProjectController extends Controller
             'target_languages.*' => ['string', 'max:10'],
         ]);
 
+        if (array_key_exists('target_languages', $validated)) {
+            $this->ensureTargetLanguagesWithinTier($team, $validated['target_languages'] ?? []);
+        }
+
         $project->update($validated);
 
         return response()->json($project);
+    }
+
+    /**
+     * Reject the request when the merchant tries to set more target languages
+     * than their plan allows. Returns a 422 with a Laravel-shaped error so
+     * the frontend can render it the same way as any other validation error.
+     */
+    private function ensureTargetLanguagesWithinTier(\App\Models\Team $team, array $targetLanguages): void
+    {
+        $plan = $team->plan ?? 'free';
+        $limit = (int) (config("feedgenix.tiers.{$plan}.target_languages")
+            ?? config('feedgenix.tiers.free.target_languages'));
+
+        // PHP_INT_MAX in config means unlimited (Enterprise).
+        if ($limit >= PHP_INT_MAX) {
+            return;
+        }
+
+        if (count($targetLanguages) > $limit) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'target_languages' => [
+                    sprintf(
+                        'Your %s plan supports up to %d target language%s. Upgrade to add more.',
+                        $plan,
+                        $limit,
+                        $limit === 1 ? '' : 's',
+                    ),
+                ],
+            ]);
+        }
     }
 
     /**

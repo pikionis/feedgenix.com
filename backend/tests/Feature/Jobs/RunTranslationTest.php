@@ -221,6 +221,112 @@ class RunTranslationTest extends TestCase
         $this->assertSame('translation', $log->action);
         $this->assertSame(2, $log->quantity);
         $this->assertSame($ctx['project']->id, $log->metadata['project_id']);
+        // The log should differentiate processed vs billable so finance can
+        // see how much cache helped — even when they happen to match.
+        $this->assertSame(2, $log->metadata['products_processed']);
+        $this->assertSame(2, $log->metadata['products_billable']);
+    }
+
+    #[Test]
+    public function products_served_entirely_from_cache_do_not_count_against_quota(): void
+    {
+        // Seed: 2 products × 2 fields × 2 langs = 8 cells. Pre-fill the cache
+        // so EVERY router lookup is a hit — no AI calls happen.
+        $ctx = $this->seedFixture();
+        $cache = new TranslationCache();
+
+        // Seed cache via a separate "cache donor" project under the same team
+        // so hits resolve via the team-scoped query in TranslationCache::getBatch.
+        // Put the donor in a SEPARATE project (same team) so it doesn't get
+        // included in the product set the job iterates over.
+        $donorProject = \App\Models\Project::create([
+            'team_id' => $ctx['team']->id,
+            'name' => 'Donor',
+            'status' => 'completed',
+        ]);
+        $donor = Product::create([
+            'project_id' => $donorProject->id,
+            'external_id' => 'donor',
+            'row_number' => 1,
+            'source_data' => [],
+            'content_hash' => hash('sha256', 'donor-' . uniqid()),
+        ]);
+        foreach ($ctx['products'] as $p) {
+            foreach (['title', 'description'] as $field) {
+                foreach (['de', 'fr'] as $lang) {
+                    $cache->put(
+                        productId: $donor->id,
+                        fieldName: $field,
+                        sourceText: $p->source_data[$field],
+                        targetLanguage: $lang,
+                        translatedText: "[{$lang}] {$p->source_data[$field]}",
+                        provider: 'seed',
+                    );
+                }
+            }
+        }
+
+        (new RunTranslation($ctx['job']->id))->handle($this->fakeRouter(), $cache);
+
+        $ctx['job']->refresh();
+        $this->assertSame('completed', $ctx['job']->status);
+
+        // Team usage MUST stay at zero — no AI was called for any product.
+        $ctx['team']->refresh();
+        $this->assertSame(0, $ctx['team']->products_used_this_month);
+
+        // The usage log should clearly separate processed (2) from billable (0).
+        $log = UsageLog::where('team_id', $ctx['team']->id)->first();
+        $this->assertSame(0, $log->quantity);
+        $this->assertSame(2, $log->metadata['products_processed']);
+        $this->assertSame(0, $log->metadata['products_billable']);
+        $this->assertGreaterThan(0, $log->metadata['cached']);
+    }
+
+    #[Test]
+    public function only_products_with_at_least_one_ai_translation_are_billable(): void
+    {
+        // 2 products × 2 fields × 2 langs = 8 cells. Pre-fill the cache for
+        // product[0] only — so product[1] still needs AI calls. After the run,
+        // exactly 1 billable product, not 2.
+        $ctx = $this->seedFixture();
+        $cache = new TranslationCache();
+
+        $donorProject = \App\Models\Project::create([
+            'team_id' => $ctx['team']->id,
+            'name' => 'Donor mixed',
+            'status' => 'completed',
+        ]);
+        $donor = Product::create([
+            'project_id' => $donorProject->id,
+            'external_id' => 'donor-mixed',
+            'row_number' => 1,
+            'source_data' => [],
+            'content_hash' => hash('sha256', 'donor-mixed-' . uniqid()),
+        ]);
+        $p0 = $ctx['products'][0];
+        foreach (['title', 'description'] as $field) {
+            foreach (['de', 'fr'] as $lang) {
+                $cache->put(
+                    productId: $donor->id,
+                    fieldName: $field,
+                    sourceText: $p0->source_data[$field],
+                    targetLanguage: $lang,
+                    translatedText: "[{$lang}] {$p0->source_data[$field]}",
+                    provider: 'seed',
+                );
+            }
+        }
+
+        (new RunTranslation($ctx['job']->id))->handle($this->fakeRouter(), $cache);
+
+        $ctx['team']->refresh();
+        $this->assertSame(1, $ctx['team']->products_used_this_month, 'Only product[1] needed AI');
+
+        $log = UsageLog::where('team_id', $ctx['team']->id)->first();
+        $this->assertSame(1, $log->quantity);
+        $this->assertSame(1, $log->metadata['products_billable']);
+        $this->assertSame(2, $log->metadata['products_processed']);
     }
 
     #[Test]

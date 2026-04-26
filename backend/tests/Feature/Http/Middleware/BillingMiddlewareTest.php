@@ -104,30 +104,31 @@ class BillingMiddlewareTest extends TestCase
     #[Test]
     public function check_usage_lets_a_team_within_its_quota_through(): void
     {
-        $this->actAs('starter', ['products_used_this_month' => 500]);  // limit is 1000
+        // Starter cap is 10,000 products / month under the new pricing model.
+        $this->actAs('starter', ['products_used_this_month' => 5_000]);
         $this->getJson('/test/usage')->assertOk();
     }
 
     #[Test]
     public function check_usage_returns_429_when_the_monthly_quota_is_reached(): void
     {
-        $this->actAs('starter', ['products_used_this_month' => 1000]);  // at limit
+        $this->actAs('starter', ['products_used_this_month' => 10_000]);  // at limit
         $this->getJson('/test/usage')
             ->assertStatus(429)
-            ->assertJson(['message' => 'Monthly product limit reached (1000/1000). Please upgrade your plan.']);
+            ->assertJson(['message' => 'Monthly product limit reached (10000/10000). Please upgrade your plan.']);
     }
 
     #[Test]
     public function check_usage_returns_429_when_the_monthly_quota_is_exceeded(): void
     {
-        $this->actAs('starter', ['products_used_this_month' => 2_000]);
+        $this->actAs('starter', ['products_used_this_month' => 20_000]);
         $this->getJson('/test/usage')->assertStatus(429);
     }
 
     #[Test]
-    public function check_usage_on_free_tier_caps_at_100_products_per_config(): void
+    public function check_usage_on_free_tier_caps_at_500_products_per_config(): void
     {
-        $this->actAs('free', ['products_used_this_month' => 100]);
+        $this->actAs('free', ['products_used_this_month' => 500]);
         $this->getJson('/test/usage')->assertStatus(429);
     }
 

@@ -38,7 +38,7 @@ class CheckSubscription
             abort(403, 'No active subscription found. Please subscribe to a plan.');
         }
 
-        if ($subscription->cancelled() && ! $subscription->onGracePeriod()) {
+        if ($subscription->canceled() && ! $subscription->onGracePeriod()) {
             abort(403, 'Your subscription has expired. Please renew to continue.');
         }
 

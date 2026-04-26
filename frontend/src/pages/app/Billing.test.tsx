@@ -10,12 +10,12 @@ function fakeInfo(overrides: Partial<SubscriptionInfo> = {}): SubscriptionInfo {
   return {
     plan: 'starter',
     tier: {
-      products_per_month: 1000,
-      target_languages: 3,
-      team_members: 2,
-      features: ['csv_upload', 'smart_mapping', 'csv_export'],
+      products_per_month: 10_000,
+      target_languages: 4,
+      team_members: 3,
+      features: ['csv_upload', 'smart_mapping', 'csv_export', 'glossary_basic'],
     },
-    products_used_this_month: 423,
+    products_used_this_month: 4_200,
     subscription: {
       stripe_status: 'active',
       ends_at: null,
@@ -80,15 +80,19 @@ describe('Billing', () => {
     renderBilling();
     expect(screen.getByText('Starter plan')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText('1,000')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('10,000')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
   });
 
   it('shows the QuotaWidget tied to current usage', () => {
     useSubscriptionStore.setState({
-      info: fakeInfo({ products_used_this_month: 423, tier: { products_per_month: 1000, target_languages: 3, team_members: 2, features: [] } }),
+      info: fakeInfo({
+        products_used_this_month: 4_200,
+        tier: { products_per_month: 10_000, target_languages: 4, team_members: 3, features: [] },
+      }),
     });
     renderBilling();
+    // 4,200 / 10,000 = 42%
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
   });
 

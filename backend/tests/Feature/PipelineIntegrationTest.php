@@ -64,7 +64,7 @@ class PipelineIntegrationTest extends TestCase
         FakeProvider::$callCount = [];
     }
 
-    private function actingAsTeamMember(string $plan = 'free'): User
+    private function actingAsTeamMember(string $plan = 'starter'): User
     {
         $team = Team::create([
             'name' => 'Acme',
@@ -73,6 +73,19 @@ class PipelineIntegrationTest extends TestCase
             'plan' => $plan,
             'products_used_this_month' => 0,
         ]);
+
+        // Paid tiers must have an active subscription record for CheckSubscription
+        // to let them through. Attach one locally — no Stripe call needed.
+        if ($plan !== 'free') {
+            \Laravel\Cashier\Subscription::create([
+                'team_id' => $team->id,
+                'type' => 'default',
+                'stripe_id' => 'sub_test_' . uniqid(),
+                'stripe_status' => 'active',
+                'stripe_price' => 'price_test',
+                'quantity' => 1,
+            ]);
+        }
 
         $user = User::create([
             'name' => 'Operator',

@@ -96,6 +96,35 @@ describe('Pricing CTAs', () => {
     await waitFor(() => expect(externalRedirect.go).toHaveBeenCalledWith('https://checkout.stripe.com/cs_test_99'));
   });
 
+  it('renders the pass-through transparency badge', () => {
+    renderPricing();
+    expect(screen.getByTestId('passthrough-badge')).toHaveTextContent(/Pass-through translation cost/);
+    expect(screen.getByTestId('passthrough-badge')).toHaveTextContent(/no markup/);
+  });
+
+  it('shows the new tier headline copy explaining the pricing model', () => {
+    renderPricing();
+    expect(
+      screen.getByRole('heading', { level: 1, name: /Pay for software/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('reflects the new tier capacities (Free 500 / Starter 10K / Pro 50K)', () => {
+    renderPricing();
+    expect(screen.getByText('500 products / month')).toBeInTheDocument();
+    expect(screen.getByText('10,000 products / month')).toBeInTheDocument();
+    expect(screen.getByText('50,000 products / month')).toBeInTheDocument();
+    expect(screen.getByText('Unlimited products')).toBeInTheDocument();
+  });
+
+  it('lists language caps consistent with the new tier model', () => {
+    renderPricing();
+    expect(screen.getByText('1 target language')).toBeInTheDocument();
+    expect(screen.getByText('4 target languages')).toBeInTheDocument();
+    expect(screen.getByText('7 target languages')).toBeInTheDocument();
+    expect(screen.getByText(/Unlimited languages/)).toBeInTheDocument();
+  });
+
   it('Free tier always goes to /register, even when logged in', async () => {
     const user = userEvent.setup();
     useAuthStore.setState({
