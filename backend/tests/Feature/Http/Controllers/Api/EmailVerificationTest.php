@@ -8,7 +8,7 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Auth\Notifications\VerifyEmail as VerifyEmailNotification;
+use App\Notifications\VerifyEmailNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
@@ -248,6 +248,34 @@ class EmailVerificationTest extends TestCase
     public function unauthenticated_resend_request_is_rejected(): void
     {
         $this->postJson('/api/email/verification-notification')->assertStatus(401);
+    }
+
+    #[Test]
+    public function verification_email_uses_the_feedgenix_branded_subject_and_body(): void
+    {
+        Notification::fake();
+        $user = $this->makeUser(verified: false);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/email/verification-notification')->assertOk();
+
+        Notification::assertSentTo(
+            $user,
+            \App\Notifications\VerifyEmailNotification::class,
+            function (\App\Notifications\VerifyEmailNotification $notification) use ($user) {
+                $mail = $notification->toMail($user);
+                $this->assertStringContainsString('FeedGenix', $mail->subject);
+                $this->assertStringContainsString('7-day trial', $mail->subject);
+                // Body lines should explain the trial + the 60-minute expiry.
+                $body = implode(' ', array_merge(
+                    (array) $mail->introLines,
+                    (array) $mail->outroLines,
+                ));
+                $this->assertStringContainsString('7-day trial', $body);
+                $this->assertStringContainsString('60 minutes', $body);
+                return true;
+            },
+        );
     }
 
     // ─── /api/email/status ─────────────────────────────────────────────────
