@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -48,11 +49,19 @@ class AuthController extends Controller
         $user->update(['team_id' => $team->id]);
         $user->refresh();
 
+        // Fires the Registered event → SendEmailVerificationNotification
+        // listener → ships the signed-link email. The user can log in
+        // immediately, but routes behind the `verified` middleware
+        // (upload, translate, subscription/create) stay locked until they
+        // click the link.
+        event(new Registered($user));
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'user' => $user->load('team'),
             'token' => $token,
+            'email_verification_required' => true,
         ], 201);
     }
 

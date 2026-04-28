@@ -94,6 +94,10 @@ class PipelineIntegrationTest extends TestCase
             'team_id' => $team->id,
             'role' => 'owner',
         ]);
+        // The pipeline tests run end-to-end through routes that require a
+        // verified email. markEmailAsVerified() persists email_verified_at
+        // bypassing $fillable (which intentionally excludes it).
+        $user->markEmailAsVerified();
 
         Sanctum::actingAs($user);
         return $user;
