@@ -22,8 +22,38 @@
  */
 
 return [
+    /**
+     * Trial period: every new merchant gets 7 days on Starter with severely
+     * restricted limits ("just enough to see the env"). The card goes on file
+     * at signup via Stripe Checkout (`trial_period_days=7`); Stripe charges
+     * automatically on day 8 and the trial flips into a normal Starter
+     * subscription.
+     *
+     * No permanent free tier is advertised. The 'free' tier in `tiers` below
+     * exists only as a defensive fallback for merchants whose subscription
+     * lapsed without renewal — they keep read-only access but cannot translate.
+     */
+    'trial' => [
+        'duration_days' => 7,
+        'limits' => [
+            'products_per_month' => 20,
+            'target_languages' => 1,
+            'team_members' => 1,
+            'features' => [
+                'csv_upload',
+                'csv_export',
+                'smart_cache',
+                'golden_rule',
+                'basic_mapping',
+            ],
+        ],
+    ],
+
     'tiers' => [
         'free' => [
+            // Legacy fallback only — never advertised.
+            // Applied to teams whose paid subscription has fully expired and
+            // who haven't picked a new plan yet. Read-only-ish access.
             'price_monthly' => 0,
             'price_yearly' => 0,
             'products_per_month' => 500,

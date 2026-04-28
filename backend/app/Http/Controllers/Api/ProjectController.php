@@ -104,9 +104,8 @@ class ProjectController extends Controller
      */
     private function ensureTargetLanguagesWithinTier(\App\Models\Team $team, array $targetLanguages): void
     {
-        $plan = $team->plan ?? 'free';
-        $limit = (int) (config("feedgenix.tiers.{$plan}.target_languages")
-            ?? config('feedgenix.tiers.free.target_languages'));
+        $limits = $team->effectiveLimits();
+        $limit = (int) ($limits['target_languages'] ?? 0);
 
         // PHP_INT_MAX in config means unlimited (Enterprise).
         if ($limit >= PHP_INT_MAX) {
@@ -114,11 +113,12 @@ class ProjectController extends Controller
         }
 
         if (count($targetLanguages) > $limit) {
+            $context = $team->isOnTrial() ? 'trial' : ((string) ($team->plan ?? 'plan') . ' plan');
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'target_languages' => [
                     sprintf(
-                        'Your %s plan supports up to %d target language%s. Upgrade to add more.',
-                        $plan,
+                        'Your %s supports up to %d target language%s. Upgrade to add more.',
+                        $context,
                         $limit,
                         $limit === 1 ? '' : 's',
                     ),

@@ -11,11 +11,15 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckFeature
 {
     /**
-     * Check if the team's current plan includes the requested feature.
+     * Reject requests for features outside the team's effective feature set.
      *
      * Usage in routes: ->middleware('check.feature:smart_mapping')
      *
-     * Enterprise plans with ['*'] have access to all features.
+     * Effective features come from Team::effectiveLimits() so trial users see
+     * the trial feature list (typically a strict subset of the underlying
+     * plan's features) rather than the plan's full set.
+     *
+     * Enterprise plans with ['*'] grant every feature, current and future.
      */
     public function handle(Request $request, Closure $next, string $feature): Response
     {
@@ -25,17 +29,16 @@ class CheckFeature
             abort(403, 'Team context is required.');
         }
 
-        $plan = $team->plan ?? 'free';
-        $tierConfig = config("feedgenix.tiers.{$plan}", config('feedgenix.tiers.free'));
-        $allowedFeatures = $tierConfig['features'] ?? [];
+        $limits = $team->effectiveLimits();
+        $allowedFeatures = (array) ($limits['features'] ?? []);
 
-        // Enterprise wildcard: ['*'] grants access to everything
         if (in_array('*', $allowedFeatures, true)) {
             return $next($request);
         }
 
         if (! in_array($feature, $allowedFeatures, true)) {
-            abort(403, "Your {$plan} plan does not include the '{$feature}' feature. Please upgrade.");
+            $context = $team->isOnTrial() ? 'trial' : ((string) ($team->plan ?? 'plan') . ' plan');
+            abort(403, "Your {$context} does not include the '{$feature}' feature. Please upgrade.");
         }
 
         return $next($request);

@@ -22,16 +22,23 @@ class SubscriptionController extends Controller
         $tierConfig = config("feedgenix.tiers.{$plan}", config('feedgenix.tiers.free'));
 
         $subscription = $team->subscription();
+        $onTrial = $team->isOnTrial();
 
         return response()->json([
             'plan' => $plan,
             'tier' => $tierConfig,
+            // Limits the user actually feels right now — trial overlay or
+            // the underlying plan's tier. Prefer this in the UI over `tier`.
+            'effective_limits' => $team->effectiveLimits(),
             'products_used_this_month' => $team->products_used_this_month,
+            'on_trial' => $onTrial,
+            'trial_days_remaining' => $team->trialDaysRemaining(),
             'subscription' => $subscription ? [
                 'stripe_status' => $subscription->stripe_status,
                 'ends_at' => $subscription->ends_at,
                 'trial_ends_at' => $subscription->trial_ends_at,
                 'on_grace_period' => $subscription->onGracePeriod(),
+                'on_trial' => $onTrial,
             ] : null,
         ]);
     }

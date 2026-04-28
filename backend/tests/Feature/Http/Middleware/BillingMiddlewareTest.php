@@ -115,7 +115,7 @@ class BillingMiddlewareTest extends TestCase
         $this->actAs('starter', ['products_used_this_month' => 10_000]);  // at limit
         $this->getJson('/test/usage')
             ->assertStatus(429)
-            ->assertJson(['message' => 'Monthly product limit reached (10000/10000). Please upgrade your plan.']);
+            ->assertJson(['message' => 'Monthly product limit reached (10000/10000). Upgrade your starter plan to continue translating.']);
     }
 
     #[Test]
@@ -173,5 +173,70 @@ class BillingMiddlewareTest extends TestCase
         // An unknown plan falls back to the "free" tier list per middleware default.
         $this->actAs('mystery');
         $this->getJson('/test/feature/mapping')->assertForbidden();
+    }
+
+    // ─── Trial-aware behavior ────────────────────────────────────────────
+
+    private function attachTrial(\App\Models\Team $team, ?\DateTimeInterface $trialEndsAt = null): void
+    {
+        \Laravel\Cashier\Subscription::create([
+            'team_id' => $team->id,
+            'type' => 'default',
+            'stripe_id' => 'sub_' . uniqid(),
+            'stripe_status' => 'trialing',
+            'stripe_price' => 'price_test',
+            'quantity' => 1,
+            'trial_ends_at' => $trialEndsAt ?? now()->addDays(5),
+        ]);
+    }
+
+    #[Test]
+    public function trial_caps_usage_at_20_products_even_for_a_starter_subscriber(): void
+    {
+        $user = $this->actAs('starter', ['products_used_this_month' => 20]);
+        $this->attachTrial($user->team);
+        // 20 products is the trial cap — at limit, request is blocked even
+        // though the underlying Starter plan would allow 10K.
+        $this->getJson('/test/usage')
+            ->assertStatus(429)
+            ->assertJson(['message' => 'Monthly product limit reached (20/20). Upgrade your trial to continue translating.']);
+    }
+
+    #[Test]
+    public function trial_users_below_the_20_product_cap_pass_through(): void
+    {
+        $user = $this->actAs('starter', ['products_used_this_month' => 19]);
+        $this->attachTrial($user->team);
+        $this->getJson('/test/usage')->assertOk();
+    }
+
+    #[Test]
+    public function trial_features_block_smart_mapping_even_for_starter_subscribers(): void
+    {
+        // Starter normally has smart_mapping; the trial overlay does NOT.
+        // Until the trial ends, the user is gated.
+        $user = $this->actAs('starter');
+        $this->attachTrial($user->team);
+        $this->getJson('/test/feature/mapping')
+            ->assertForbidden()
+            ->assertJson(['message' => "Your trial does not include the 'smart_mapping' feature. Please upgrade."]);
+    }
+
+    #[Test]
+    public function once_trial_ends_starter_features_kick_in(): void
+    {
+        $user = $this->actAs('starter');
+        \Laravel\Cashier\Subscription::create([
+            'team_id' => $user->team->id,
+            'type' => 'default',
+            'stripe_id' => 'sub_' . uniqid(),
+            'stripe_status' => 'active',                 // post-trial
+            'stripe_price' => 'price_test',
+            'quantity' => 1,
+            'trial_ends_at' => now()->subDay(),         // trial ended yesterday
+        ]);
+
+        // smart_mapping is included in the Starter feature list.
+        $this->getJson('/test/feature/mapping')->assertOk();
     }
 }

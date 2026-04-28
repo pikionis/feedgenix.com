@@ -11,10 +11,13 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckUsageLimit
 {
     /**
-     * Check if the team has exceeded their monthly product usage limit.
+     * Reject requests when the team has hit its monthly billable-product cap.
      *
-     * Compares team.products_used_this_month against the plan's products_per_month.
-     * Returns 429 (Too Many Requests) if the limit is exceeded.
+     * Limits are resolved through Team::effectiveLimits() so trial users see
+     * the trial cap (currently 20 products) instead of the underlying plan's
+     * cap. Cache-only products do NOT count against this limit — RunTranslation
+     * only increments products_used_this_month for products that actually
+     * consumed an AI call.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -24,14 +27,13 @@ class CheckUsageLimit
             abort(403, 'Team context is required.');
         }
 
-        $plan = $team->plan ?? 'free';
-        $tierConfig = config("feedgenix.tiers.{$plan}", config('feedgenix.tiers.free'));
-        $limit = $tierConfig['products_per_month'] ?? 0;
-
-        $used = $team->products_used_this_month ?? 0;
+        $limits = $team->effectiveLimits();
+        $limit = (int) ($limits['products_per_month'] ?? 0);
+        $used = (int) ($team->products_used_this_month ?? 0);
 
         if ($used >= $limit) {
-            abort(429, "Monthly product limit reached ({$used}/{$limit}). Please upgrade your plan.");
+            $context = $team->isOnTrial() ? 'trial' : ((string) ($team->plan ?? 'plan') . ' plan');
+            abort(429, "Monthly product limit reached ({$used}/{$limit}). Upgrade your {$context} to continue translating.");
         }
 
         return $next($request);

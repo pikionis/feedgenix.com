@@ -92,4 +92,50 @@ class Team extends Model
     {
         return $this->hasMany(ApiKey::class);
     }
+
+    /**
+     * True while the team's active subscription is still in its Stripe
+     * trial window. New merchants get 7 days; trial limits apply during
+     * that window, normal tier limits apply afterwards.
+     */
+    public function isOnTrial(): bool
+    {
+        $subscription = $this->subscription();
+        return $subscription !== null && $subscription->onTrial();
+    }
+
+    /**
+     * Calendar days remaining in the active trial. Returns 0 if not on trial.
+     * Useful for the "X days left" banner in the UI.
+     */
+    public function trialDaysRemaining(): int
+    {
+        $subscription = $this->subscription();
+        if (!$subscription || !$subscription->onTrial() || !$subscription->trial_ends_at) {
+            return 0;
+        }
+        // ceil() so a partial day still reads as "1 day left", not "0".
+        return max(0, (int) ceil(now()->diffInDays($subscription->trial_ends_at, false)));
+    }
+
+    /**
+     * Resolve the limits + features that apply to this team RIGHT NOW.
+     * Trial overlays its own limits on top of the underlying plan;
+     * once trial ends, the plan's tier kicks in.
+     *
+     * @return array{
+     *   products_per_month: int,
+     *   target_languages: int,
+     *   team_members: int,
+     *   features: list<string>,
+     * }
+     */
+    public function effectiveLimits(): array
+    {
+        if ($this->isOnTrial()) {
+            return (array) config('feedgenix.trial.limits');
+        }
+        $plan = $this->plan ?? 'free';
+        return (array) (config("feedgenix.tiers.{$plan}") ?? config('feedgenix.tiers.free'));
+    }
 }
