@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/app/Sidebar';
+import EmailVerificationBanner from '@/components/app/EmailVerificationBanner';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -25,9 +26,12 @@ export default function AppLayout() {
         rowsLimit={limit}
         onSignOut={() => void logout()}
       />
-      <main className="flex-1 overflow-auto p-8">
-        <Outlet />
-      </main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <EmailVerificationBanner />
+        <main className="flex-1 overflow-auto p-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

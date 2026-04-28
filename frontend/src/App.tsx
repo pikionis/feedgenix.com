@@ -9,6 +9,9 @@ import Pricing from '@/pages/public/Pricing';
 // Auth pages
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
+import EmailVerifyPending from '@/pages/auth/EmailVerifyPending';
+import EmailVerified from '@/pages/auth/EmailVerified';
+import EmailVerifyFailed from '@/pages/auth/EmailVerifyFailed';
 
 // App pages
 import Dashboard from '@/pages/app/Dashboard';
@@ -56,6 +59,12 @@ export default function App() {
         {/* Auth (standalone, centered layout) */}
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+
+        {/* Email verification — pending requires auth, the result pages don't
+            (the user might land on /email/verified from a different browser). */}
+        <Route path="/email/pending" element={<ProtectedRoute><EmailVerifyPending /></ProtectedRoute>} />
+        <Route path="/email/verified" element={<EmailVerified />} />
+        <Route path="/email/verify-failed" element={<EmailVerifyFailed />} />
 
         {/* App (protected, sidebar layout) */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

@@ -50,7 +50,9 @@ export default function Register() {
       setError('');
       const name = `${data.first_name.trim()} ${data.last_name.trim()}`.trim();
       await registerUser(name, data.email, data.password, data.password);
-      navigate('/dashboard');
+      // Land the user on the "Check your inbox" page; they can't translate
+      // until they verify email anyway.
+      navigate('/email/pending');
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'response' in err
