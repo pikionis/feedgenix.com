@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+@import './styles/tokens.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Tailwind theme mapped onto the FeedGenix tokens (styles/tokens.css). */
+@theme inline {
+  --color-background: var(--bg-canvas);
+  --color-foreground: var(--fg-text);
+  --color-surface: var(--bg-surface);
+  --color-warm: var(--bg-warm);
+  --color-subtle: var(--bg-subtle);
+  --color-ink: var(--bg-ink);
+  --color-muted-foreground: var(--fg-text-muted);
+  --color-faint: var(--fg-text-faint);
+  --color-on-ink: var(--fg-on-ink);
+  --color-primary: var(--fg-indigo);
+  --color-primary-hover: var(--fg-indigo-600);
+  --color-primary-foreground: var(--fg-paper);
+  --color-accent: var(--fg-emerald);
+  --color-accent-hover: var(--fg-emerald-600);
+  --color-hairline: var(--border-hair);
+  --color-success: var(--status-success);
+  --color-success-bg: var(--status-success-bg);
+  --color-warn: var(--status-warn);
+  --color-warn-bg: var(--status-warn-bg);
+  --color-queued: var(--status-queued);
+  --color-queued-bg: var(--status-queued-bg);
+  --color-error: var(--status-error);
+  --color-error-bg: var(--status-error-bg);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+}
+
+@theme {
+  /* One typeface, two weights (400 / 500); JetBrains Mono for SKUs, keys and code. */
+  --font-sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale from the design system (16px root). */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 17px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 44px;
+  --text-4xl: 56px;
+}
+
+@layer base {
+  html,
+  body {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    font-size: var(--text-base);
+    line-height: 1.5;
+    color: var(--fg-text);
+    background: var(--bg-canvas);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--fg-indigo);
+    outline-offset: 2px;
+  }
+}

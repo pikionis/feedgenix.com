@@ -1,0 +1,7 @@
+build
+.react-router
+node_modules
+playwright-report
+test-results
+# Generated from the backend (composer api:export); its shape is owned by Scramble.
+openapi.json

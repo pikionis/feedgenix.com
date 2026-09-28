@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="440" height="96">
+  <rect x="6" y="14" width="22" height="3.2" rx="1.6" fill="#4F46E5"></rect>
+  <rect x="6" y="21.4" width="28" height="3.2" rx="1.6" fill="#4F46E5"></rect>
+  <rect x="6" y="28.8" width="15" height="3.2" rx="1.6" fill="#4F46E5"></rect>
+  <circle cx="36.5" cy="15.6" r="3.4" fill="#0F9B7E"></circle>
+  <text x="54" y="31" font-family="Inter, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="22" font-weight="500" fill="#1F1D2E" letter-spacing="-0.5">FeedGenix</text>
+</svg>
