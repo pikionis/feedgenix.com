@@ -99,6 +99,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // The app runs in UTC and writes timestamps without an offset: the session must be UTC
+            // too, or timestamptz columns shift by the server's zone (found locally: +03:00).
+            'timezone' => 'UTC',
         ],
 
         'sqlsrv' => [

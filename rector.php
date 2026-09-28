@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
+use Rector\Transform\Rector\String_\StringToClassConstantRector;
 use RectorLaravel\Rector\ArrayDimFetch\EnvVariableToEnvHelperRector;
 use RectorLaravel\Set\LaravelLevelSetList;
 use RectorLaravel\Set\LaravelSetList;
@@ -38,4 +39,7 @@ return RectorConfig::configure()
         // Tests set and unset $_ENV on purpose; this rule would rewrite
         // unset($_ENV['X']) into unset(Env::get('X')), which is not valid PHP.
         EnvVariableToEnvHelperRector::class => [__DIR__.'/tests'],
+        // The Laravel 5 upgrade sets map old event names such as 'auth.login' to event classes,
+        // which silently renamed our routes named 'auth.login' / 'auth.logout'.
+        StringToClassConstantRector::class,
     ]);

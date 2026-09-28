@@ -96,6 +96,38 @@ code in its module, with its tests. Nothing is copied blindly.
 - **Proof:** removing the rollback hook, the reconnect hook or the middleware priority each makes exactly
   its test fail.
 
+### M1 · Auth controllers (register, login, verify, reset, Google, profile) → `Http/Controllers/Auth`, `Domain/Identity`
+- **Kept:**
+  - email sign-up that creates the person's own workspace;
+  - SPA cookie sessions (Sanctum);
+  - signed email verification;
+  - password reset;
+  - Google sign-in;
+  - profile and password.
+- **Fixed:**
+  - **D17** — a route sweep fails if any route outside a documented public list lacks authentication, checked both statically and with anonymous calls.
+  - **D18** — rate limits:
+    - login: 5/min per address+IP and 30/min per IP;
+    - sign-up: 5/min and 20/h per IP;
+    - reset: 3/min and 20/h.
+  - **D19** — the reset request answers identically for every address.
+  - **D20** — when Google proves the address of an unverified account, that account's password is removed and its sessions ended before linking. Addresses that Google itself has not verified are refused.
+  - **D21** — protected fields cannot be mass assigned.
+- **New:**
+  - Invite-only registration for the private beta:
+    - only a hash of each code is stored;
+    - one use, locked in the sign-up transaction;
+    - optional binding to one address, and an expiry;
+    - every failure gets the same answer;
+    - codes are created with `invites:create`.
+  - SHA-256 address hash in verification links.
+  - A password reset or change ends the other sessions.
+  - Production checks passwords against public breaches using k-anonymity.
+  - `has_password`, so Google-only accounts *set* a first password rather than change one.
+- **Found on the way:**
+  - The local PostgreSQL ran in Europe/Bucharest. Every `timestamptz` the app wrote was stored 3 hours off (a reset token was "expired" as soon as it was issued). Every session is now pinned to UTC, and a test checks it.
+  - Rector's Laravel 5 upgrade rule silently renamed routes named `auth.login` and `auth.logout` to event classes; that rule is now skipped.
+
 ### M1 · `TenantProvisioner` → `Domain/Identity/Actions/ProvisionWorkspace`
 - **Kept:** one owned Free workspace per sign-up path; owner membership; the active workspace.
 - **Changed / fixed:**

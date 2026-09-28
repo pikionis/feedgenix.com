@@ -77,6 +77,12 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Tenant::class, 'current_tenant_id');
     }
 
+    /** False for an account that has only ever signed in with Google. */
+    public function hasPassword(): bool
+    {
+        return $this->getAttribute('password') !== null;
+    }
+
     /** The user's role in a workspace, or null when they are not a member. */
     public function roleIn(int $tenantId): ?string
     {
