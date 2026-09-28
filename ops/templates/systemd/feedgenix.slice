@@ -1,0 +1,12 @@
+# FeedGenix: every application process (PHP-FPM, Redis, workers, scheduler, its PostgreSQL cluster)
+# runs in this slice, so its CPU and memory are capped together. Managed by ops/provision.sh.
+[Unit]
+Description=FeedGenix (all application processes)
+Before=slices.target
+
+[Slice]
+CPUAccounting=yes
+MemoryAccounting=yes
+CPUQuota=${FG_CPU_QUOTA}
+MemoryHigh=${FG_MEMORY_HIGH}
+MemoryMax=${FG_MEMORY_MAX}

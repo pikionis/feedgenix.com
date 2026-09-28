@@ -1,0 +1,94 @@
+name: Ops rehearsal
+
+# Provisioning, the deploy receiver and the isolation checks, rehearsed end to end on fresh
+# Ubuntu 24.04 VMs (ops/tests/rehearse.sh): next to a stand-in legacy app, and on a clean server.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/**'
+      - '.github/workflows/ops.yml'
+      - 'composer.lock'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'routes/**'
+      - 'database/migrations/**'
+  pull_request:
+    paths:
+      - 'ops/**'
+      - '.github/workflows/ops.yml'
+      - 'composer.lock'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'routes/**'
+      - 'database/migrations/**'
+  workflow_dispatch:
+  schedule:
+    # Weekly: the runner image and the apt repositories move on even when the scripts do not.
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: shellcheck · unit tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: shellcheck --version && shellcheck -x -P ops -P ops/lib ops/*.sh ops/lib/*.sh ops/bin/* ops/tests/*.sh
+      - run: ops/tests/unit.sh
+
+  artifact:
+    name: Release artifact
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, intl, zip, redis
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: ops/build-artifact.sh dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: dist/
+          retention-days: 3
+
+  rehearse:
+    name: Rehearsal · ${{ matrix.mode }}
+    needs: [lint, artifact]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [shared, dedicated]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: dist
+      - name: A stand-in for the beta VPS's legacy app
+        if: matrix.mode == 'shared'
+        run: sudo ops/tests/fake-legacy.sh
+      - run: sudo ops/tests/rehearse.sh ${{ matrix.mode }} dist
+      - name: Diagnostics
+        if: failure()
+        run: |
+          sudo journalctl --no-pager -n 300 -u 'feedgenix-*' -u nginx -u 'postgresql@*' || true
+          sudo tail -n 100 /srv/feedgenix/shared/logs/deploys.log || true
+          sudo sh -c 'tail -n 100 /srv/feedgenix/shared/storage/logs/*.log' || true
+          sudo tail -n 50 /var/log/nginx/feedgenix.error.log || true

@@ -1,0 +1,11 @@
+#!/bin/sh
+# feedgenix-artisan: artisan on the live FeedGenix release, as the app user. For administrators (root).
+#   feedgenix-artisan invites:create --email=someone@example.com --note="Beta: Alpine Shop"
+#   feedgenix-artisan tenants:set-plan 12 pro
+set -eu
+if [ "$(id -u)" -ne 0 ]; then
+  echo "feedgenix-artisan: run as root" >&2
+  exit 1
+fi
+cd /
+exec runuser -u feedgenix -- /usr/local/lib/feedgenix/run-artisan "$@"

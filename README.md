@@ -4,8 +4,9 @@ AI feed intelligence for e-commerce catalogues. Connect a product feed, review t
 translate it into the languages you choose and publish a feed URL your channels can pull. Prices,
 stock and barcodes pass through untouched.
 
-> Status: foundation (milestone M0). See `docs/adr/` for the decisions and `docs/porting-map.md`
-> for the build order.
+> Status: milestone M1: identity, tenancy, entitlements, and the scripts for the beta server
+> (`ops/`, not yet run on it). See `docs/adr/` for the decisions and `docs/porting-map.md` for the
+> build order.
 
 ## Stack
 - **Backend:** Laravel 13, PHP 8.3+, PostgreSQL 18 (+ pgvector), Redis on servers, Sanctum.

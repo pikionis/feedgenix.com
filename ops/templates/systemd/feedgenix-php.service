@@ -1,0 +1,20 @@
+# FeedGenix's own PHP-FPM master, run by the feedgenix user: reloading it never touches another
+# application's pool, and the deploy receiver (also feedgenix) can reload it without sudo.
+# Sandbox: feedgenix-.service.d/10-sandbox.conf. Managed by ops/provision.sh.
+[Unit]
+Description=FeedGenix PHP-FPM ${FG_PHP_VERSION}
+After=network.target postgresql@${FG_PG_VERSION}-main.service feedgenix-redis.service
+Wants=feedgenix-redis.service
+
+[Service]
+Type=notify
+User=feedgenix
+Group=feedgenix
+Environment=PHP_INI_SCAN_DIR=:${FG_ETC}/php/fpm.d
+ExecStart=/usr/sbin/php-fpm${FG_PHP_VERSION} --nodaemonize --fpm-config ${FG_ETC}/php-fpm.conf
+ExecReload=/bin/kill -USR2 $MAINPID
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

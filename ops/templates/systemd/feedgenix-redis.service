@@ -1,0 +1,23 @@
+# FeedGenix's private Redis: unix socket only, run by the feedgenix user (not the shared `redis`
+# user), data in /var/lib/feedgenix-redis. Sandbox: feedgenix-.service.d/10-sandbox.conf.
+# Managed by ops/provision.sh.
+[Unit]
+Description=FeedGenix Redis (private instance)
+After=network.target
+
+[Service]
+Type=notify
+User=feedgenix
+Group=feedgenix
+ExecStart=/usr/bin/redis-server ${FG_ETC}/redis.conf --supervised systemd --daemonize no
+Restart=always
+RestartSec=2
+TimeoutStopSec=60
+RuntimeDirectory=feedgenix-redis
+RuntimeDirectoryMode=0700
+StateDirectory=feedgenix-redis
+StateDirectoryMode=0700
+LimitNOFILE=10032
+
+[Install]
+WantedBy=multi-user.target

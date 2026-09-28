@@ -1,0 +1,11 @@
+# FeedGenix scheduler: a tick every minute. Managed by ops/provision.sh.
+[Unit]
+Description=FeedGenix scheduler (every minute)
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

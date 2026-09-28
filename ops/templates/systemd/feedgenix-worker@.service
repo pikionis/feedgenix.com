@@ -1,0 +1,21 @@
+# FeedGenix queue worker for queue %i. It waits for the first release, then runs the live one. Every
+# deploy runs queue:restart: the worker exits after its current job and systemd starts it again on
+# the new release. Sandbox: feedgenix-.service.d/10-sandbox.conf. Managed by ops/provision.sh.
+[Unit]
+Description=FeedGenix queue worker (%i)
+After=network.target postgresql@${FG_PG_VERSION}-main.service feedgenix-redis.service
+Wants=feedgenix-redis.service
+
+[Service]
+Type=simple
+User=feedgenix
+Group=feedgenix
+ExecStart=${FG_LIB}/run-artisan --wait queue:work redis --queue=%i --sleep=3 --tries=3 --max-time=3600 --memory=384
+Restart=always
+RestartSec=2
+# SIGTERM: queue:work finishes the current job, then exits.
+KillSignal=SIGTERM
+TimeoutStopSec=660
+
+[Install]
+WantedBy=multi-user.target

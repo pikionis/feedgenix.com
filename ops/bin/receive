@@ -1,0 +1,286 @@
+#!/usr/bin/env bash
+# FeedGenix deploy receiver: the only command the CI deploy key can run (authorized_keys
+# `restrict,command=…`). It never gives a shell. It runs as the feedgenix user. ADR 0011.
+#
+#   deploy REVISION SHA256   the release artifact (.tar.gz) on stdin: verify, unpack, migrate, cache,
+#                            switch, reload, smoke-test; a failed smoke test switches back
+#   rollback                 switch back to the release before the live one
+#   status                   the live release, the releases on disk, the services
+set -Eeuo pipefail
+shopt -s nullglob
+umask 027
+
+# shellcheck source=../lib/common.sh
+. /usr/local/lib/feedgenix/common.sh
+# shellcheck source=/dev/null
+. "$FG_ETC/host.conf"
+
+RELEASES=$FG_ROOT/releases
+SHARED=$FG_ROOT/shared
+CURRENT=$FG_ROOT/current
+LOG=$SHARED/logs/deploys.log
+PHP=/usr/bin/php$FG_PHP_VERSION
+MAX_BYTES=$((256 * 1024 * 1024))
+KEEP=5
+export PHP_INI_SCAN_DIR=":$FG_ETC/php/cli.d"
+
+PENDING=  # a release directory that is not live yet: removed if the deploy stops before the switch
+INCOMING= # the uploaded file, removed in every case
+TMP=$(mktemp -d)
+finish() {
+  if [[ -n $PENDING ]]; then rm -rf -- "$PENDING"; fi
+  if [[ -n $INCOMING ]]; then rm -f -- "$INCOMING"; fi
+  rm -rf -- "$TMP"
+}
+trap finish EXIT
+
+# Progress goes to the caller and to the deploy log. Writing never fails the deploy: the caller may
+# have gone (a dropped SSH connection) while the deploy carries on.
+say() {
+  printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" >>"$LOG" 2>/dev/null || true
+  printf '%s\n' "$*" 2>/dev/null || true
+}
+fail() {
+  say "FAILED: $*"
+  exit 1
+}
+
+# step LABEL COMMAND… — the command's output goes to the deploy log; on failure its tail is shown.
+step() {
+  local label=$1
+  shift
+  say "· $label"
+  if ! "$@" >>"$LOG" 2>&1; then
+    say "  last lines of $LOG:"
+    tail -n 30 "$LOG" 2>/dev/null | sed 's/^/    /' 2>/dev/null || true
+    return 1
+  fi
+}
+
+lock() {
+  exec 9>>"$SHARED/deploy.lock"
+  flock -n 9 || fail "another deploy or rollback is running"
+}
+
+live_release() { readlink -f "$CURRENT" 2>/dev/null || true; }
+
+# All releases, oldest first (ids start with a UTC timestamp).
+releases() {
+  local dir
+  for dir in "$RELEASES"/*/; do printf '%s\n' "${dir%/}"; done | sort
+}
+
+switch_to() {
+  ln -sfn "$1" "$FG_ROOT/.current.new"
+  mv -Tf "$FG_ROOT/.current.new" "$CURRENT"
+}
+
+# A graceful PHP-FPM reload (the master runs as feedgenix, like this script), then queue:restart:
+# each worker exits after its current job and systemd starts it again on the live release.
+reload_app() {
+  local pid
+  pid=$(systemctl show --property=MainPID --value feedgenix-php.service 2>/dev/null || true)
+  if [[ $pid =~ ^[1-9][0-9]*$ ]] && kill -USR2 "$pid" 2>/dev/null; then
+    say "· PHP-FPM reloaded"
+  else
+    say "· PHP-FPM is not running: it starts on the live release"
+  fi
+  (cd "$CURRENT" && step "queue workers restart after their current job" "$PHP" artisan queue:restart) ||
+    say "  queue:restart failed: workers keep the old code until they restart"
+}
+
+# Through nginx, exactly as a visitor: the health route answers, / and an app route are this
+# release's own files, and the API turns an anonymous user away with 401.
+smoke() {
+  local release=$1
+  for _ in {1..10}; do
+    if smoke_once "$release"; then
+      say "· smoke test passed"
+      return 0
+    fi
+    sleep 2
+  done
+  say "· smoke test failed: $SMOKE_ERROR"
+  return 1
+}
+
+smoke_once() {
+  local release=$1 base="https://$FG_DOMAIN" code
+  local -a opts=(-s --max-time 10 --resolve "$FG_DOMAIN:443:127.0.0.1")
+  if [[ -n ${FG_TLS_CA:-} ]]; then opts+=(--cacert "$FG_TLS_CA"); fi
+
+  code=$(curl "${opts[@]}" -o "$TMP/health" -w '%{http_code}' "$base/api/health" || true)
+  if [[ $code != 200 ]] || ! grep -q '"status":"ok"' "$TMP/health"; then
+    SMOKE_ERROR="GET /api/health answered HTTP $code"
+    return 1
+  fi
+  if [[ $(curl "${opts[@]}" "$base/" | sha256sum) != $(sha256sum <"$release/frontend/build/client/index.html") ]]; then
+    SMOKE_ERROR="GET / is not this release's index.html"
+    return 1
+  fi
+  if [[ $(curl "${opts[@]}" "$base/app" | sha256sum) != $(sha256sum <"$release/frontend/build/client/__spa-fallback.html") ]]; then
+    SMOKE_ERROR="GET /app is not this release's SPA shell"
+    return 1
+  fi
+  code=$(curl "${opts[@]}" -o /dev/null -w '%{http_code}' -H 'Accept: application/json' "$base/api/v1/auth/user" || true)
+  if [[ $code != 401 ]]; then
+    SMOKE_ERROR="GET /api/v1/auth/user without a session answered HTTP $code, not 401"
+    return 1
+  fi
+}
+
+# The app must reach PostgreSQL and Redis over their unix sockets: on a shared host 127.0.0.1 is
+# another application's Redis, and migrate or cache:clear there would damage it.
+env_guard() {
+  local env=$SHARED/.env
+  [[ -f $env ]] || fail "$env is missing: run provision.sh"
+  if ! grep -Eq '^DB_HOST=/' "$env" || ! grep -Eq '^REDIS_HOST=/' "$env"; then
+    fail "$env must use unix sockets (DB_HOST=/…, REDIS_HOST=/…), never TCP; nothing changed"
+  fi
+}
+
+cleanup_releases() {
+  local live dir kept=0
+  live=$(live_release)
+  while IFS= read -r dir; do
+    [[ -n $dir ]] || continue
+    if [[ $dir == "$live" ]] || ((kept < KEEP)); then
+      kept=$((kept + 1))
+      continue
+    fi
+    rm -rf -- "$dir"
+    say "· removed old release ${dir##*/}"
+  done < <(releases | sort -r)
+}
+
+deploy() {
+  local revision=$1 sha=$2 id release size previous file
+  lock
+  env_guard
+  id="$(date -u +%Y%m%d%H%M%S)-${revision:0:12}"
+  release=$RELEASES/$id
+  [[ ! -e $release ]] || fail "release $id already exists"
+  say "deploy $revision as $id"
+
+  # 1. Receive, with a hard size cap, and verify: a truncated upload never becomes a release.
+  INCOMING=$SHARED/incoming/$id.tar.gz
+  head -c $((MAX_BYTES + 1)) >"$INCOMING"
+  size=$(stat -c %s "$INCOMING")
+  ((size <= MAX_BYTES)) || fail "the artifact is larger than $MAX_BYTES bytes; nothing changed"
+  printf '%s  %s\n' "$sha" "$INCOMING" | sha256sum --check --status ||
+    fail "checksum mismatch after $size bytes (a truncated or corrupted upload); nothing changed"
+  say "· received $size bytes, sha256 verified"
+
+  # From here on a dropped SSH connection must not stop the deploy half-way.
+  trap '' HUP PIPE
+
+  # 2. Unpack and check the release.
+  PENDING=$release
+  mkdir -m 0711 "$release"
+  tar -xzf "$INCOMING" -C "$release" --no-same-owner --no-same-permissions 2>>"$LOG" ||
+    fail "the artifact does not unpack; nothing changed"
+  for file in artisan bootstrap/app.php vendor/autoload.php public/index.php REVISION \
+    frontend/build/client/index.html frontend/build/client/__spa-fallback.html; do
+    [[ -f $release/$file ]] || fail "the artifact has no $file; nothing changed"
+  done
+  [[ $(<"$release/REVISION") == "$revision" ]] || fail "the artifact's REVISION is not $revision; nothing changed"
+
+  # nginx (another user) needs to reach public/ and read the SPA build, and nothing else.
+  chmod 0711 "$release/public" "$release/frontend" "$release/frontend/build"
+  find "$release/frontend/build/client" -type d -exec chmod 0755 {} +
+  find "$release/frontend/build/client" -type f -exec chmod 0644 {} +
+  ln -s "$SHARED/.env" "$release/.env"
+  rm -rf "$release/storage"
+  ln -s "$SHARED/storage" "$release/storage"
+
+  # 3. Prepare it while the old release keeps serving. Migrations are additive (ADR 0009), so the
+  #    old code runs on the new schema until the switch.
+  cd "$release"
+  step "migrate" "$PHP" artisan migrate --force --no-interaction || fail "migrations failed; the live release is unchanged"
+  step "cache configuration, routes, events and views" "$PHP" artisan optimize ||
+    fail "caching failed; the live release is unchanged"
+  cd "$FG_ROOT"
+
+  # 4. Switch atomically, reload, smoke-test; switch back if the new release fails.
+  previous=$(live_release)
+  switch_to "$release"
+  PENDING=
+  say "· switched to $id"
+  reload_app
+  if smoke "$release"; then
+    say "live: $id ($revision)"
+    cleanup_releases
+    return 0
+  fi
+
+  if [[ -n $previous && -d $previous ]]; then
+    say "switching back to ${previous##*/}"
+    switch_to "$previous"
+    reload_app
+    if smoke "$previous"; then
+      say "rolled back: ${previous##*/} is live again"
+    else
+      say "WARNING: ${previous##*/} fails the smoke test too"
+    fi
+    rm -rf -- "$release"
+  else
+    say "the first release fails the smoke test: nothing to switch back to"
+  fi
+  fail "release $id did not pass the smoke test"
+}
+
+rollback() {
+  lock
+  local live target
+  live=$(live_release)
+  [[ -n $live ]] || fail "no release is live"
+  target=$(releases | awk -v live="$live" '$0 < live' | tail -n 1)
+  [[ -n $target ]] || fail "there is no release older than ${live##*/}"
+  say "rollback ${live##*/} -> ${target##*/}"
+  switch_to "$target"
+  reload_app
+  smoke "$target" || fail "${target##*/} fails the smoke test (it is live now; deploy a fix)"
+  say "live: ${target##*/}"
+}
+
+status() {
+  local live dir unit
+  live=$(live_release)
+  if [[ -n $live ]]; then
+    printf 'live      %s (%s)\n' "${live##*/}" "$(cat "$live/REVISION" 2>/dev/null)"
+  else
+    printf 'live      none\n'
+  fi
+  while IFS= read -r dir; do
+    [[ -n $dir ]] || continue
+    printf '%s %s\n' "$([[ $dir == "$live" ]] && echo '*' || echo ' ')" "${dir##*/}"
+  done < <(releases | sort -r)
+  for unit in "${FG_SERVICES[@]}"; do
+    printf '%-36s %s\n' "$unit" "$(systemctl is-active "$unit" 2>/dev/null || true)"
+  done
+}
+
+main() {
+  local -a argv=()
+  # Over SSH the requested command arrives in SSH_ORIGINAL_COMMAND; locally as arguments.
+  read -r -a argv <<<"${SSH_ORIGINAL_COMMAND-$*}" || true
+  case ${argv[0]:-} in
+    deploy)
+      ((${#argv[@]} == 3)) || fail "usage: deploy REVISION SHA256 < artifact.tar.gz"
+      [[ ${argv[1]} =~ ^[0-9a-f]{40}$ ]] || fail "REVISION must be a full git sha (40 hex characters)"
+      [[ ${argv[2]} =~ ^[0-9a-f]{64}$ ]] || fail "SHA256 must be 64 hex characters"
+      deploy "${argv[1]}" "${argv[2]}"
+      ;;
+    rollback)
+      ((${#argv[@]} == 1)) || fail "usage: rollback"
+      rollback
+      ;;
+    status)
+      ((${#argv[@]} == 1)) || fail "usage: status"
+      status
+      ;;
+    *) fail "unknown command; allowed: deploy REVISION SHA256 | rollback | status" ;;
+  esac
+}
+
+main "$@"

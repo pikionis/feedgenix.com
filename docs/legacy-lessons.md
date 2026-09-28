@@ -38,7 +38,8 @@ in the milestone named in brackets.
 ## Operations
 - **Four overlapping "healer" crons** fought each other and still left work "covered but pending".
   → One reconciler with an explicit state for every unit. [M4]
-- **Queue workers kept running old code** after a deploy. → Every deploy restarts the workers. [M1]
+- **Queue workers kept running old code** after a deploy. → Every deploy restarts the workers. [M1,
+  done: the rehearsal checks that the worker's PID changes and that it runs from the new release]
 - **A self-spawning worker in a monitor ran against a real database during tests.**
   → Tests have no side effects outside the test database; no process spawning in tests. [M0 policy]
 - **Tests reached real AI APIs** with dummy keys. → `Http::preventStrayRequests()` and MSW in error
@@ -46,7 +47,9 @@ in the milestone named in brackets.
 - **An unindexed GROUP BY over 1M rows made the dashboard take 69 s.**
   → Composite indexes led by `tenant_id` for every dashboard query; query plans checked in review. [M6]
 - **A shared web server lost its HTTPS port to an orphaned process** and the site went down.
-  → The beta vhost is independent, `nginx -t` before every reload, uptime checks alert. [M1]
+  → The beta vhost is independent, `nginx -t` before every reload, uptime checks alert. [M1: the
+  vhost, `nginx -t` with automatic revert and a legacy liveness check after every reload are done
+  (rehearsed with a broken template); uptime alerts come with monitoring in M11]
 
 ## Security
 - **A chunked-upload path let a crafted request delete arbitrary files.**

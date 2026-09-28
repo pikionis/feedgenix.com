@@ -19,3 +19,6 @@ indent_size = 2
 
 [{compose,docker-compose}.{yml,yaml}]
 indent_size = 4
+
+[{ops/**.sh,ops/bin/*}]
+indent_size = 2

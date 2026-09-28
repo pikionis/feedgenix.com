@@ -1,0 +1,18 @@
+#!/bin/sh
+# Runs artisan on the live FeedGenix release, as used by the systemd units and feedgenix-artisan.
+# `cd` resolves the `current` symlink now, so a restarted worker always runs the newest release.
+#   --wait   wait for the first release instead of failing (a worker enabled before any deploy)
+set -eu
+
+current=/srv/feedgenix/current
+if [ "${1:-}" = "--wait" ]; then
+  shift
+  while [ ! -e "$current/artisan" ]; do sleep 15; done
+fi
+
+# FeedGenix's CLI overrides (memory limit, UTC) on top of the system's PHP configuration.
+PHP_INI_SCAN_DIR="${PHP_INI_SCAN_DIR:-:/etc/feedgenix/php/cli.d}"
+export PHP_INI_SCAN_DIR
+
+cd "$current"
+exec /usr/bin/php8.4 artisan "$@"

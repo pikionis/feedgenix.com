@@ -87,8 +87,16 @@ are BCP-47 codes chosen per workspace.
 - The owner speaks Greek; code, docs and commit messages are in English.
 
 ## Environments
-- Private beta/staging runs on the existing VPS next to the frozen legacy app, strictly isolated
-  (own user, PostgreSQL, Redis instance, PHP-FPM pool, nginx vhost). **Every server change needs the
-  owner's explicit go-ahead at that moment.** Production moves to a new server at launch
-  (ADR 0009).
-- Never `git pull` on a server; deploys are release directories switched by symlink.
+- Private beta/staging runs on the existing VPS next to the frozen legacy app, strictly isolated.
+  It has its own user, PostgreSQL, Redis, PHP-FPM master and nginx vhost, all sandboxed systemd
+  units (ADR 0009, ADR 0011). **Every server change needs the owner's explicit go-ahead at that
+  moment.** Production moves to a new server at launch.
+- `ops/`:
+  - `survey.sh` is read-only;
+  - `provision.sh` is idempotent and always starts with `--dry-run`;
+  - `feedgenix-check` runs after every change and every deploy.
+
+  The runbook is `ops/README.md`. Gates for ops changes: shellcheck, `ops/tests/unit.sh`, and the
+  CI rehearsal (`ops/tests/rehearse.sh`) on a fresh Ubuntu 24.04 VM.
+- Never `git pull` on a server. CI builds one artifact and hands it to the forced-command deploy
+  receiver, which switches release directories by symlink and switches back if the smoke test fails.

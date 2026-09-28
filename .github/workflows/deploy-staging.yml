@@ -1,0 +1,93 @@
+name: Deploy · staging
+
+# After CI passes on main, the tested commit is built into one artifact and handed to the server's
+# deploy receiver over SSH (ADR 0011). The key can only deploy, roll back or ask for status.
+# Off until the server exists: set the repository variable STAGING_DEPLOY to "enabled"
+# (ops/README.md, "CI deploys").
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Deploy main's latest commit, or switch back to the previous release
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+
+permissions:
+  contents: read
+
+# One at a time. A newer deploy waits; it never cancels one that is switching releases.
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: ${{ inputs.action == 'rollback' && 'Roll back' || 'Deploy' }} · staging
+    if: >-
+      vars.STAGING_DEPLOY == 'enabled' && (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+        (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      )
+    runs-on: ubuntu-24.04
+    environment:
+      name: staging
+      url: https://staging.feedgenix.com
+    env:
+      REVISION: ${{ github.event.workflow_run.head_sha || github.sha }}
+      ACTION: ${{ inputs.action || 'deploy' }}
+      HOST: ${{ vars.STAGING_HOST }}
+      PORT: ${{ vars.STAGING_SSH_PORT || '22' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REVISION }}
+
+      - uses: shivammathur/setup-php@v2
+        if: env.ACTION == 'deploy'
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, intl, zip, redis
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@v5
+        if: env.ACTION == 'deploy'
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build the release artifact
+        if: env.ACTION == 'deploy'
+        run: echo "ARTIFACT=$(ops/build-artifact.sh dist)" >>"$GITHUB_ENV"
+
+      - name: Deploy key and the server's pinned host key
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STAGING_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" >~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" >~/.ssh/known_hosts
+
+      - name: Deploy ${{ env.REVISION }}
+        if: env.ACTION == 'deploy'
+        run: |
+          ssh -i ~/.ssh/deploy -p "$PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=15 "feedgenix@$HOST" "deploy $REVISION $(cat "$ARTIFACT.sha256")" <"$ARTIFACT"
+
+      - name: Roll back
+        if: env.ACTION == 'rollback'
+        run: |
+          ssh -i ~/.ssh/deploy -p "$PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "feedgenix@$HOST" rollback
+
+      - name: Releases on the server
+        if: always()
+        run: |
+          ssh -i ~/.ssh/deploy -p "$PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "feedgenix@$HOST" status || true

@@ -1,0 +1,17 @@
+# One FeedGenix scheduler tick (artisan schedule:run), started every minute by
+# feedgenix-schedule.timer. Each tick starts on the live release, so a deploy needs no restart.
+# Skipped until the first release. Sandbox: feedgenix-.service.d/10-sandbox.conf.
+# Managed by ops/provision.sh.
+[Unit]
+Description=FeedGenix scheduler tick
+After=postgresql@${FG_PG_VERSION}-main.service feedgenix-redis.service
+
+[Service]
+Type=oneshot
+User=feedgenix
+Group=feedgenix
+ExecCondition=/usr/bin/test -e ${FG_ROOT}/current/artisan
+ExecStart=${FG_LIB}/run-artisan schedule:run
+TimeoutStartSec=50min
+# Tasks the scheduler starts in the background outlive the tick.
+KillMode=process
