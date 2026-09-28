@@ -2,10 +2,27 @@
 
 declare(strict_types=1);
 
+use App\Domain\Tenancy\Models\TenantLanguage;
+use App\Domain\Tenancy\TenantContext;
+use App\Models\Tenant;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 /*
- * Feature and Unit tests boot the application (TestCase blocks every real HTTP call).
- * Arch tests only read the source tree and need no application.
+ * Feature tests boot the application on PostgreSQL (migrated once per process, each test in a
+ * transaction). Unit tests boot it without touching the database. Arch tests only read the source
+ * tree. The base TestCase blocks every real HTTP call.
  */
-pest()->extend(TestCase::class)->in('Feature', 'Unit');
+pest()->extend(TestCase::class)->use(LazilyRefreshDatabase::class)->in('Feature');
+pest()->extend(TestCase::class)->in('Unit');
+
+function tenancy(): TenantContext
+{
+    return resolve(TenantContext::class);
+}
+
+/** Give a workspace a target language (written as that workspace). */
+function addLanguage(Tenant $tenant, string $code): TenantLanguage
+{
+    return tenancy()->run($tenant->id, fn (): TenantLanguage => TenantLanguage::query()->create(['language_code' => $code]));
+}

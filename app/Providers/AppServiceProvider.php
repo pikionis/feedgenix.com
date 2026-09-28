@@ -7,6 +7,7 @@ namespace App\Providers;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\Server;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
 final class AppServiceProvider extends ServiceProvider
@@ -18,6 +19,10 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Outside production, lazy loading, silently dropped attributes (e.g. a request trying to
+        // mass-assign is_staff or plan) and reads of missing attributes throw instead of passing.
+        Model::shouldBeStrict(! $this->app->isProduction());
+
         // The SPA always calls the API on its own origin. Document the server as the relative
         // /api rather than APP_URL, so the exported contract is identical on every machine and
         // CI can diff it (frontend/openapi.json).

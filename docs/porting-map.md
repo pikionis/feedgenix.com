@@ -76,4 +76,31 @@ code in its module, with its tests. Nothing is copied blindly.
 - The legacy Claude memory folder, any `.env`, `settings.local.json` (they hold credentials).
 
 ## Port cards
-_None yet — cards are added as each milestone starts._
+
+### M1 · `TenantContext`, `BelongsToTenant`, `ResolveTenant`, `EnsureStaff` → `Domain/Tenancy`
+- **Kept:** a scoped per-request/per-job context with `run()` that restores on error; tenant resolution
+  before route-model binding (foreign ids are 404); staff-only admin guard.
+- **Changed / fixed:**
+  - The empty context now **fails closed**. Tenant models throw `MissingTenantContext`, and raw SQL sees
+    no rows because of RLS. The legacy empty context was unfiltered.
+  - The system context is explicit and carries a reason.
+  - Staff get **no** bypass inside the customer app.
+  - Membership is re-checked on every request.
+  - Rows cannot be created for, or moved to, another workspace (`CrossTenantWrite`, plus RLS `WITH CHECK`).
+- **New:**
+  - PostgreSQL RLS (`TenantRls`) and a session binder that mirrors the context into `app.tenant_id` /
+    `app.bypass`. The binder re-applies the context after every rollback (a rollback reverts a setting
+    changed inside it, which could bring back a previous job's workspace) and on every new connection.
+  - Jobs carry the dispatcher's workspace in their payload and restore the previous context when they end.
+- **Dropped:** `BelongsToTenantViaSupplier` (every data table has `tenant_id`); the frozen-archive handling.
+- **Proof:** removing the rollback hook, the reconnect hook or the middleware priority each makes exactly
+  its test fail.
+
+### M1 · `TenantProvisioner` → `Domain/Identity/Actions/ProvisionWorkspace`
+- **Kept:** one owned Free workspace per sign-up path; owner membership; the active workspace.
+- **Changed / fixed:**
+  - It is idempotent.
+  - Slug races are retried inside savepoints (tested with a simulated concurrent insert).
+  - Greek and other names are transliterated.
+  - Empty or symbol-only names fall back to the email, then to `workspace`.
+  - Plan, owner and slug are set with `forceFill`; they are not mass assignable (D21).

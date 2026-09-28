@@ -63,6 +63,18 @@ frontend/src): Channable French column names (`titre_fr`, `categorie_de`…), `_
 `id_type_produit`, legacy supplier names, and the hard-coded `fr/de/en/it` language list. Languages
 are BCP-47 codes chosen per workspace.
 
+## Tenancy in code (ADR 0002)
+- Tenant-owned models use `App\Domain\Tenancy\Concerns\BelongsToTenant`; their migration calls
+  `TenantRls::enable('<table>')`. A schema test fails if a `tenant_id` table has no policy.
+- Act for a workspace with `TenantContext::run($tenantId, fn …)`; platform-wide code uses
+  `runAsSystem('<reason>', fn …)`. With no context, tenant models throw and raw SQL sees nothing.
+- Inside `run()`, dispatch jobs from a **block** closure (`function () { dispatch($job); }`), never
+  `fn () => dispatch($job)`: a returned `PendingDispatch` queues the job when it is destroyed, which
+  is after the context has been restored — the job would run without its workspace.
+- Queued jobs inherit the dispatcher's workspace automatically; they never inherit the system context.
+- Models declare their database defaults in `$attributes`: strict models (outside production) throw
+  on a missing attribute instead of reading null.
+
 ## How to work
 - Every change ships with adversarial tests (edge cases, failure paths, "would this test fail on the
   old code?"). Prove a guard works by breaking the code once and watching the test fail.
