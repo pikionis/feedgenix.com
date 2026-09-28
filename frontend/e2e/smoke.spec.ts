@@ -8,10 +8,11 @@ test('the pre-rendered home page shows the brand promise', async ({ page }) => {
   await expect(page.getByText(/pass through untouched/i)).toBeVisible()
 })
 
-test('the app hydrates from the SPA fallback and reaches the API on the same origin', async ({ page }) => {
-  await page.goto('/app')
+test('the workspace sends a visitor without a session to sign in, remembering the page', async ({ page }) => {
+  await page.goto('/app/settings')
 
-  await expect(page.getByTestId('api-status')).toHaveText('API ok')
+  await expect(page).toHaveURL(/\/login\?next=%2Fapp%2Fsettings$/)
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
 })
 
 test('the health endpoint answers through the same origin', async ({ request }) => {

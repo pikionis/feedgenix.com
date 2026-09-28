@@ -31,11 +31,12 @@ the legacy Feed Intelligence app. The decisions behind it are in `docs/adr/`; th
 - Gates (run before every commit; CI runs the same):
   - `composer check` → Pint, Larastan level 8 (no baseline), Rector dry-run, Pest (parallel, on PostgreSQL).
   - `cd frontend && npm run check` → typegen + tsc, oxlint, Prettier, Vitest, build.
-  - `cd frontend && npm run e2e` → Playwright against the production build (starts Laravel on :8000).
+  - `cd frontend && npm run e2e` → Playwright against the production build (starts Laravel on :8000 with
+    its own freshly migrated database, `feedgenix_e2e`, and open registration).
 - API contract: `composer api:export` then `cd frontend && npm run api:types`. CI fails if
   `frontend/openapi.json` or `frontend/src/lib/api/schema.d.ts` is out of date.
 - Local database: role `feedgenix` (not superuser, CREATEDB for parallel tests), databases
-  `feedgenix` and `feedgenix_test`. Queue, cache and sessions use the database driver locally
+  `feedgenix`, `feedgenix_test` and `feedgenix_e2e`. Every session runs in UTC (config/database.php). Queue, cache and sessions use the database driver locally
   (there is no Redis locally); code uses only Laravel's contracts, never Redis directly.
 
 ## Structure

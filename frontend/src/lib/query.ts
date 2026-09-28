@@ -1,6 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
 
-/** One QueryClient per browser session (created in root.tsx, cleared on logout from M1). */
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
@@ -8,3 +7,9 @@ export function createQueryClient(): QueryClient {
     },
   })
 }
+
+/**
+ * The browser's single QueryClient, shared by React and the route loaders (which run outside
+ * React). Cleared on sign-out so nothing of one session survives into the next.
+ */
+export const queryClient = createQueryClient()

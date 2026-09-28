@@ -150,6 +150,27 @@ code in its module, with its tests. Nothing is copied blindly.
   - The 402 is documented in the OpenAPI contract through a Scramble extension, so the SPA's types include the upgrade payload.
 - **Later:** pausing over-limit feeds and languages on a downgrade (M6); feed and product counters (M2 and M4).
 
+### M1 · Frontend `auth.tsx`, `AuthScreens.tsx`, `lib/api.ts`, `lib/limits.ts`, `UpgradeDialog`, `PlanCards`, `CustomerShell`, `WorkspaceSettings` → `frontend/src/{routes,features,lib}`
+- **Kept:**
+  - sign-in, sign-up (with Google), password reset;
+  - the verification banner;
+  - one upgrade dialog opened by any 402, using the server's wording and the cheapest plan that fits;
+  - plan cards with the monthly/yearly switch;
+  - workspace and account settings.
+- **Changed:**
+  - A typed `openapi-fetch` client generated from the backend contract replaces axios.
+  - Middleware handles the CSRF cookie, a single retry on 419, 401 → sign-in, and 402 → the dialog.
+  - React Router 8 route modules; the `/app` loader redirects to `/login?next=…` without a session. `?next=` only accepts paths inside `/app`, which prevents open redirects.
+  - react-hook-form + zod through a local resolver. `@hookform/resolvers` was left out because its optional peer chain conflicts with React Router's valibot.
+- **New:**
+  - Target-language settings, with usage against the limit.
+  - A `has_password`-aware password form: Google-only accounts *set* a password.
+  - Semantic, accessible markup (`output`, `fieldset`/`legend`, labelled fields with described errors).
+- **Proof:**
+  - removing the 419 retry fails its tests;
+  - loosening `?next=` fails five tests, including the e2e one;
+  - the e2e suite runs the whole sign-up → settings → 402 → sign-out → sign-in flow on the real stack.
+
 ### M1 · `TenantProvisioner` → `Domain/Identity/Actions/ProvisionWorkspace`
 - **Kept:** one owned Free workspace per sign-up path; owner membership; the active workspace.
 - **Changed / fixed:**

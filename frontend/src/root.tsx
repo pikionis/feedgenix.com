@@ -4,9 +4,9 @@ import '@fontsource/jetbrains-mono/400.css'
 import './app.css'
 
 import { QueryClientProvider } from '@tanstack/react-query'
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router'
-import { createQueryClient } from '~/lib/query'
+import { queryClient } from '~/lib/query'
 import type { Route } from './+types/root'
 
 export const links: Route.LinksFunction = () => [{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }]
@@ -30,8 +30,6 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const [queryClient] = useState(createQueryClient)
-
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />

@@ -1,4 +1,5 @@
 import createClient from 'openapi-fetch'
+import { sessionMiddleware } from './middleware'
 import type { paths } from './schema'
 
 /**
@@ -18,3 +19,5 @@ export const api = createClient<paths>({
   // request would go to the real network).
   fetch: (request) => globalThis.fetch(request),
 })
+
+api.use(sessionMiddleware(origin))

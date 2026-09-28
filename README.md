@@ -20,7 +20,7 @@ Requirements: PHP 8.3+ with `pdo_pgsql`, `intl`, `zip`; Composer 2; Node 24; Pos
 ```bash
 # database (as a PostgreSQL superuser; the app role must NOT be superuser or BYPASSRLS)
 psql -U postgres -c "CREATE ROLE feedgenix LOGIN PASSWORD '<choose one>' CREATEDB NOSUPERUSER NOBYPASSRLS;"
-psql -U postgres -c "CREATE DATABASE feedgenix OWNER feedgenix;" -c "CREATE DATABASE feedgenix_test OWNER feedgenix;"
+psql -U postgres -c "CREATE DATABASE feedgenix OWNER feedgenix;" -c "CREATE DATABASE feedgenix_test OWNER feedgenix;" -c "CREATE DATABASE feedgenix_e2e OWNER feedgenix;"
 
 # backend
 composer install
@@ -39,7 +39,7 @@ npm run dev                     # http://localhost:5173
 ```bash
 composer check                  # Pint · Larastan · Rector · Pest
 cd frontend && npm run check    # tsc · oxlint · Prettier · Vitest · build
-cd frontend && npm run e2e      # Playwright against the production build
+cd frontend && npm run e2e      # Playwright against the production build (own database: feedgenix_e2e)
 ```
 
 After changing an API endpoint: `composer api:export && (cd frontend && npm run api:types)`.

@@ -9,7 +9,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg) => arg.replace(/
 const port = Number(args.port ?? 4173)
 const backend = new URL(process.env.FEEDGENIX_BACKEND_URL ?? 'http://127.0.0.1:8000')
 const root = resolve('build/client')
-const proxied = ['/api/', '/sanctum/']
+const proxied = ['/api/', '/sanctum/', '/auth/']
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',

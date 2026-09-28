@@ -16,6 +16,8 @@ export default defineConfig({
       '/api': backend,
       '/sanctum': backend,
       '/up': backend,
+      // Google sign-in: server-side redirects with a session.
+      '/auth': backend,
     },
   },
 })
