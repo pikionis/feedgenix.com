@@ -8,7 +8,9 @@ use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanCatalog;
 use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Domain\Tenancy\TenantContext;
+use App\Domain\Translation\Models\Language;
 use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -45,7 +47,7 @@ final class WorkspaceResource extends JsonResource
                 'slug' => $tenant->slug,
                 'role' => $this->role,
             ],
-            'plan' => PlanCatalog::publicPlan($plan),
+            'plan' => new PlanResource($plan),
             'recommended_plan' => (string) config('plans.recommended'),
             'entitlements' => [
                 'plan' => $plan,
@@ -70,18 +72,16 @@ final class WorkspaceResource extends JsonResource
                     'credits_per_product' => PlanCatalog::overageCreditsPerProduct($plan),
                 ],
             ],
-            'languages' => $this->languages($tenant),
+            'languages' => LanguageResource::collection($this->languages($tenant)),
         ];
     }
 
-    /** @return list<array{code: string, name: string, native_name: string, direction: string}> */
-    private function languages(Tenant $tenant): array
+    /** @return Collection<int, Language> */
+    private function languages(Tenant $tenant): Collection
     {
-        return array_values(resolve(TenantContext::class)->run($tenant->id, static fn (): array => TenantLanguage::query()
-            ->with('language')
-            ->orderBy('language_code')
-            ->get()
-            ->map(static fn (TenantLanguage $row): array => LanguageResource::shape($row->language))
-            ->all()));
+        return resolve(TenantContext::class)->run($tenant->id, static fn (): Collection => Language::query()
+            ->whereIn('code', TenantLanguage::query()->select('language_code'))
+            ->orderBy('code')
+            ->get());
     }
 }

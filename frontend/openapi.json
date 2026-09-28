@@ -34,7 +34,9 @@
                                         },
                                         "plans": {
                                             "type": "array",
-                                            "items": {}
+                                            "items": {
+                                                "$ref": "#/components/schemas/PlanResource"
+                                            }
                                         }
                                     },
                                     "required": [
@@ -67,27 +69,7 @@
                                         "languages": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "code": {
-                                                        "type": "string"
-                                                    },
-                                                    "name": {
-                                                        "type": "string"
-                                                    },
-                                                    "native_name": {
-                                                        "type": "string"
-                                                    },
-                                                    "direction": {
-                                                        "type": "string"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "code",
-                                                    "name",
-                                                    "native_name",
-                                                    "direction"
-                                                ]
+                                                "$ref": "#/components/schemas/LanguageResource"
                                             }
                                         }
                                     },
@@ -717,6 +699,30 @@
                 ],
                 "title": "ForgotPasswordRequest"
             },
+            "LanguageResource": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "native_name": {
+                        "type": "string"
+                    },
+                    "direction": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name",
+                    "native_name",
+                    "direction"
+                ],
+                "title": "LanguageResource"
+            },
             "LoginRequest": {
                 "type": "object",
                 "properties": {
@@ -738,6 +744,132 @@
                     "password"
                 ],
                 "title": "LoginRequest"
+            },
+            "PlanResource": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "tagline": {
+                        "type": "string"
+                    },
+                    "price_monthly_eur": {
+                        "type": "number"
+                    },
+                    "price_yearly_per_month_eur": {
+                        "type": "number"
+                    },
+                    "price_yearly_eur": {
+                        "type": "number"
+                    },
+                    "yearly_savings_eur": {
+                        "type": "number"
+                    },
+                    "limits": {
+                        "type": "object",
+                        "properties": {
+                            "feeds": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "languages": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "products_per_month": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "products_per_year": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "worker_slots": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "feeds",
+                            "languages",
+                            "products_per_month",
+                            "products_per_year",
+                            "worker_slots"
+                        ]
+                    },
+                    "overage_credits_per_product": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "features": {
+                        "type": "object",
+                        "properties": {
+                            "ai_translation": {
+                                "type": "boolean"
+                            },
+                            "ai_agent": {
+                                "type": "boolean"
+                            },
+                            "rag_memory": {
+                                "type": "boolean"
+                            },
+                            "field_instructions": {
+                                "type": "boolean"
+                            },
+                            "model_choice": {
+                                "type": "boolean"
+                            },
+                            "priority_queue": {
+                                "type": "boolean"
+                            },
+                            "dedicated_infrastructure": {
+                                "type": "boolean"
+                            },
+                            "api_mcp": {
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "ai_translation",
+                            "ai_agent",
+                            "rag_memory",
+                            "field_instructions",
+                            "model_choice",
+                            "priority_queue",
+                            "dedicated_infrastructure",
+                            "api_mcp"
+                        ]
+                    }
+                },
+                "required": [
+                    "key",
+                    "name",
+                    "tagline",
+                    "price_monthly_eur",
+                    "price_yearly_per_month_eur",
+                    "price_yearly_eur",
+                    "yearly_savings_eur",
+                    "limits",
+                    "overage_credits_per_product",
+                    "features"
+                ],
+                "title": "PlanResource"
             },
             "RegisterRequest": {
                 "type": "object",
@@ -978,96 +1110,7 @@
                         ]
                     },
                     "plan": {
-                        "type": "object",
-                        "properties": {
-                            "key": {
-                                "type": "string"
-                            },
-                            "name": {
-                                "type": "string"
-                            },
-                            "tagline": {},
-                            "price_monthly_eur": {
-                                "type": "number"
-                            },
-                            "price_yearly_per_month_eur": {
-                                "type": "number"
-                            },
-                            "price_yearly_eur": {
-                                "type": "number"
-                            },
-                            "yearly_savings_eur": {
-                                "type": "number"
-                            },
-                            "limits": {
-                                "type": "object",
-                                "properties": {
-                                    "feeds": {
-                                        "type": [
-                                            "integer",
-                                            "null"
-                                        ]
-                                    },
-                                    "languages": {
-                                        "type": [
-                                            "integer",
-                                            "null"
-                                        ]
-                                    },
-                                    "products_per_month": {
-                                        "type": [
-                                            "integer",
-                                            "null"
-                                        ]
-                                    },
-                                    "products_per_year": {
-                                        "type": [
-                                            "integer",
-                                            "null"
-                                        ]
-                                    },
-                                    "worker_slots": {
-                                        "type": [
-                                            "integer",
-                                            "null"
-                                        ]
-                                    }
-                                },
-                                "required": [
-                                    "feeds",
-                                    "languages",
-                                    "products_per_month",
-                                    "products_per_year",
-                                    "worker_slots"
-                                ]
-                            },
-                            "overage_credits_per_product": {
-                                "type": [
-                                    "integer",
-                                    "null"
-                                ]
-                            },
-                            "features": {
-                                "type": "string"
-                            },
-                            "models": {
-                                "type": "array",
-                                "items": {}
-                            }
-                        },
-                        "required": [
-                            "key",
-                            "name",
-                            "tagline",
-                            "price_monthly_eur",
-                            "price_yearly_per_month_eur",
-                            "price_yearly_eur",
-                            "yearly_savings_eur",
-                            "limits",
-                            "overage_credits_per_product",
-                            "features",
-                            "models"
-                        ]
+                        "$ref": "#/components/schemas/PlanResource"
                     },
                     "recommended_plan": {
                         "type": "string"
@@ -1187,7 +1230,9 @@
                     },
                     "languages": {
                         "type": "array",
-                        "items": {}
+                        "items": {
+                            "$ref": "#/components/schemas/LanguageResource"
+                        }
                     }
                 },
                 "required": [

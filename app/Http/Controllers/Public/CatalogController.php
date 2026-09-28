@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Public;
 use App\Domain\Billing\PlanCatalog;
 use App\Domain\Translation\Models\Language;
 use App\Http\Resources\LanguageResource;
+use App\Http\Resources\PlanResource;
 use Illuminate\Http\JsonResponse;
 
 /** Public reference data for the pricing page and the sign-up flow. */
@@ -22,7 +23,7 @@ final class CatalogController
         return response()->json([
             'recommended' => (string) config('plans.recommended'),
             'annual_discount' => PlanCatalog::annualDiscount(),
-            'plans' => array_map(PlanCatalog::publicPlan(...), PlanCatalog::LADDER),
+            'plans' => PlanResource::collection(PlanCatalog::LADDER),
         ]);
     }
 
@@ -30,9 +31,7 @@ final class CatalogController
     public function languages(): JsonResponse
     {
         return response()->json([
-            'languages' => Language::query()->where('active', true)->orderBy('name')->get()
-                ->map(static fn (Language $language): array => LanguageResource::shape($language))
-                ->values(),
+            'languages' => LanguageResource::collection(Language::query()->where('active', true)->orderBy('name')->get()),
         ]);
     }
 }

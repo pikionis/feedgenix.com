@@ -9,28 +9,22 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * A language from the registry, by its BCP-47 code.
+ *
  * @property Language $resource
  */
 final class LanguageResource extends JsonResource
 {
     /**
-     * @return array{code: string, name: string, native_name: string, direction: string}
+     * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
-        return self::shape($this->resource);
-    }
-
-    /**
-     * @return array{code: string, name: string, native_name: string, direction: string}
-     */
-    public static function shape(?Language $language): array
-    {
         return [
-            'code' => (string) $language?->code,
-            'name' => (string) $language?->name,
-            'native_name' => (string) $language?->native_name,
-            'direction' => (string) $language?->direction,
+            'code' => $this->resource->code,
+            'name' => $this->resource->name,
+            'native_name' => $this->resource->native_name,
+            'direction' => $this->resource->direction,
         ];
     }
 }

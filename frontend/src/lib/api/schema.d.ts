@@ -304,12 +304,47 @@ export interface components {
       /** Format: email */
       email: string
     }
+    /** LanguageResource */
+    LanguageResource: {
+      code: string
+      name: string
+      native_name: string
+      direction: string
+    }
     /** LoginRequest */
     LoginRequest: {
       /** Format: email */
       email: string
       password: string
       remember?: boolean
+    }
+    /** PlanResource */
+    PlanResource: {
+      key: string
+      name: string
+      tagline: string
+      price_monthly_eur: number
+      price_yearly_per_month_eur: number
+      price_yearly_eur: number
+      yearly_savings_eur: number
+      limits: {
+        feeds: number | null
+        languages: number | null
+        products_per_month: number | null
+        products_per_year: number | null
+        worker_slots: number | null
+      }
+      overage_credits_per_product: number | null
+      features: {
+        ai_translation: boolean
+        ai_agent: boolean
+        rag_memory: boolean
+        field_instructions: boolean
+        model_choice: boolean
+        priority_queue: boolean
+        dedicated_infrastructure: boolean
+        api_mcp: boolean
+      }
     }
     /** RegisterRequest */
     RegisterRequest: {
@@ -390,25 +425,7 @@ export interface components {
         slug: string
         role: string
       }
-      plan: {
-        key: string
-        name: string
-        tagline: unknown
-        price_monthly_eur: number
-        price_yearly_per_month_eur: number
-        price_yearly_eur: number
-        yearly_savings_eur: number
-        limits: {
-          feeds: number | null
-          languages: number | null
-          products_per_month: number | null
-          products_per_year: number | null
-          worker_slots: number | null
-        }
-        overage_credits_per_product: number | null
-        features: string
-        models: unknown[]
-      }
+      plan: components['schemas']['PlanResource']
       recommended_plan: string
       entitlements: {
         plan: string
@@ -434,7 +451,7 @@ export interface components {
           credits_per_product: number | null
         }
       }
-      languages: unknown[]
+      languages: components['schemas']['LanguageResource'][]
     }
   }
   responses: {
@@ -513,7 +530,7 @@ export interface operations {
           'application/json': {
             recommended: string
             annual_discount: number
-            plans: unknown[]
+            plans: components['schemas']['PlanResource'][]
           }
         }
       }
@@ -534,12 +551,7 @@ export interface operations {
         }
         content: {
           'application/json': {
-            languages: {
-              code: string
-              name: string
-              native_name: string
-              direction: string
-            }[]
+            languages: components['schemas']['LanguageResource'][]
           }
         }
       }

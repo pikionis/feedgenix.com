@@ -3,13 +3,20 @@
 declare(strict_types=1);
 
 use App\Domain\Billing\PlanCatalog;
+use App\Http\Resources\PlanResource;
+
+/** @return array<string, mixed> */
+function publicPlan(string $plan): array
+{
+    return (new PlanResource($plan))->resolve();
+}
 
 it('has exactly the plans of the upgrade ladder, so none is unreachable', function (): void {
     expect(PlanCatalog::keys())->toBe(PlanCatalog::LADDER);
 });
 
 it('prices yearly as twelve discounted months paid once', function (string $plan, float $perMonth, float $year, float $savings): void {
-    $public = PlanCatalog::publicPlan($plan);
+    $public = publicPlan($plan);
 
     expect([$public['price_yearly_per_month_eur'], $public['price_yearly_eur'], $public['yearly_savings_eur']])
         ->toBe([$perMonth, $year, $savings]);
@@ -21,12 +28,12 @@ it('prices yearly as twelve discounted months paid once', function (string $plan
 ]);
 
 it('shows the annual product pool as twelve months', function (): void {
-    expect(PlanCatalog::publicPlan('pro')['limits']['products_per_year'])->toBe(600_000)
-        ->and(PlanCatalog::publicPlan('ultra')['limits']['products_per_year'])->toBeNull();
+    expect(publicPlan('pro')['limits']['products_per_year'])->toBe(600_000)
+        ->and(publicPlan('ultra')['limits']['products_per_year'])->toBeNull();
 });
 
 it('never exposes internal guards, costs or the markup in a public plan', function (string $plan): void {
-    $public = PlanCatalog::publicPlan($plan);
+    $public = publicPlan($plan);
     $json = (string) json_encode($public);
 
     expect(array_keys($public['limits']))->toBe(['feeds', 'languages', 'products_per_month', 'products_per_year', 'worker_slots'])
@@ -38,7 +45,7 @@ it('never exposes internal guards, costs or the markup in a public plan', functi
 })->with(PlanCatalog::LADDER);
 
 it('defines the same features on every plan, and every strong feature on Pro', function (): void {
-    $features = array_map(static fn (string $plan): array => array_keys(PlanCatalog::publicPlan($plan)['features']), PlanCatalog::LADDER);
+    $features = array_map(static fn (string $plan): array => array_keys(publicPlan($plan)['features']), PlanCatalog::LADDER);
 
     expect(array_unique(array_map(serialize(...), $features)))->toHaveCount(1);
 
