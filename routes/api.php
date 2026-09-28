@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\App\ProfileController;
+use App\Http\Controllers\App\WorkspaceController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\SessionController;
+use App\Http\Controllers\Public\CatalogController;
 use App\Http\Controllers\Public\HealthController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +18,10 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::get('/health', HealthController::class)->name('health');
+
+// Public reference data (pricing page, sign-up).
+Route::get('/plans', [CatalogController::class, 'plans'])->name('catalog.plans');
+Route::get('/languages', [CatalogController::class, 'languages'])->name('catalog.languages');
 
 Route::prefix('auth')->group(function (): void {
     Route::post('/register', RegisterController::class)->middleware('throttle:register')->name('auth.register');
@@ -38,4 +44,11 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+    // The workspace the person acts in: every query below is limited to it (ADR 0002).
+    Route::middleware('tenant')->group(function (): void {
+        Route::get('/workspace', [WorkspaceController::class, 'show'])->name('workspace.show');
+        Route::put('/workspace', [WorkspaceController::class, 'update'])->name('workspace.update');
+        Route::put('/workspace/languages', [WorkspaceController::class, 'updateLanguages'])->name('workspace.languages');
+    });
 });

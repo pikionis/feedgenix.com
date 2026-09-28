@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\OpenApi\PlanLimitExceededToResponse;
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
 
 return [
@@ -155,7 +156,10 @@ return [
         RestrictedDocsAccess::class,
     ],
 
-    'extensions' => [],
+    'extensions' => [
+        // The 402 plan-limit payload the SPA's upgrade dialog relies on.
+        PlanLimitExceededToResponse::class,
+    ],
 
     /*
      * Automatically document API security (OpenAPI `security` / `securitySchemes`) based on route

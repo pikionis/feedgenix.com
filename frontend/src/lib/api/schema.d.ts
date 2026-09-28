@@ -4,6 +4,43 @@
  */
 
 export interface paths {
+  '/plans': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * The plans
+     * @description Prices, public limits and features only — never internal guards, costs or the credit markup.
+     */
+    get: operations['catalog.plans']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/languages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** The languages a workspace can translate into (BCP-47) */
+    get: operations['catalog.languages']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/auth/verify-email/{id}/{hash}': {
     parameters: {
       query?: never
@@ -218,6 +255,46 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/workspace': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** The workspace: plan in force, limits, usage and target languages */
+    get: operations['workspace.show']
+    /** Rename the workspace (owner or admin) */
+    put: operations['workspace.update']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/workspace/languages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Set the target languages (owner or admin)
+     * @description The list replaces the current one and must fit the plan: otherwise a 402 names the plan that
+     *     would fit. Concurrent changes are serialised on the workspace row, so two requests can never
+     *     together exceed the limit.
+     */
+    put: operations['workspace.languages']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -274,6 +351,18 @@ export interface components {
       name?: string
       locale?: string
     }
+    /**
+     * UpdateWorkspaceLanguagesRequest
+     * @description The full set of target languages (it replaces the current one). Codes are matched to the
+     *     registry case-insensitively ("PT-br" → "pt-BR") and duplicates collapse.
+     */
+    UpdateWorkspaceLanguagesRequest: {
+      languages: string[]
+    }
+    /** UpdateWorkspaceRequest */
+    UpdateWorkspaceRequest: {
+      name: string
+    }
     /** UserResource */
     UserResource: {
       id: number
@@ -292,6 +381,60 @@ export interface components {
         role: string | null
         plan: string
       } | null
+    }
+    /** WorkspaceResource */
+    WorkspaceResource: {
+      workspace: {
+        id: number
+        name: string
+        slug: string
+        role: string
+      }
+      plan: {
+        key: string
+        name: string
+        tagline: unknown
+        price_monthly_eur: number
+        price_yearly_per_month_eur: number
+        price_yearly_eur: number
+        yearly_savings_eur: number
+        limits: {
+          feeds: number | null
+          languages: number | null
+          products_per_month: number | null
+          products_per_year: number | null
+          worker_slots: number | null
+        }
+        overage_credits_per_product: number | null
+        features: string
+        models: unknown[]
+      }
+      recommended_plan: string
+      entitlements: {
+        plan: string
+        /** @enum {string} */
+        interval: 'year' | 'month'
+        paid_until: string | null
+        period: {
+          start: string
+          end: string
+        }
+        limits: {
+          feeds: number | null
+          languages: number | null
+          products: number | null
+          worker_slots: number | null
+        }
+        used: {
+          languages: number
+        }
+        overage: {
+          available: boolean
+          enabled: boolean
+          credits_per_product: number | null
+        }
+      }
+      languages: unknown[]
     }
   }
   responses: {
@@ -323,6 +466,28 @@ export interface components {
         }
       }
     }
+    /** @description A plan limit was reached, or the feature is part of a higher plan */
+    PlanLimitExceeded: {
+      headers: {
+        [name: string]: unknown
+      }
+      content: {
+        'application/json': {
+          /** @enum {string} */
+          error: 'plan_limit' | 'plan_feature'
+          /** @description The limit key or feature, e.g. "languages". */
+          limit: string
+          allowed: number | null
+          used: number | null
+          /** @description The plan in force. */
+          plan: string
+          /** @description The cheapest plan that fits, or null (talk to us). */
+          upgrade_to: string | null
+          /** @description A sentence for the person, naming the numbers. */
+          message: string
+        }
+      }
+    }
   }
   parameters: never
   requestBodies: never
@@ -331,6 +496,55 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
+  'catalog.plans': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            recommended: string
+            annual_discount: number
+            plans: unknown[]
+          }
+        }
+      }
+    }
+  }
+  'catalog.languages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            languages: {
+              code: string
+              name: string
+              native_name: string
+              direction: string
+            }[]
+          }
+        }
+      }
+    }
+  }
   'verification.verify': {
     parameters: {
       query?: never
@@ -656,6 +870,80 @@ export interface operations {
         content?: never
       }
       401: components['responses']['AuthenticationException']
+    }
+  }
+  'workspace.show': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `WorkspaceResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WorkspaceResource']
+        }
+      }
+      401: components['responses']['AuthenticationException']
+    }
+  }
+  'workspace.update': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateWorkspaceRequest']
+      }
+    }
+    responses: {
+      /** @description `WorkspaceResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WorkspaceResource']
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'workspace.languages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateWorkspaceLanguagesRequest']
+      }
+    }
+    responses: {
+      /** @description `WorkspaceResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WorkspaceResource']
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      402: components['responses']['PlanLimitExceeded']
+      422: components['responses']['ValidationException']
     }
   }
 }

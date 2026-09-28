@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 const PUBLIC_ROUTES = [
     'up' => 'framework health check for the load balancer',
     'api/health' => 'uptime checks and the post-deploy smoke test',
+    'api/plans' => 'the public price list (no internal guards, costs or markup)',
+    'api/languages' => 'the public language registry',
     'api/auth/register' => 'sign-up (rate limited, invite-only in the beta)',
     'api/auth/login' => 'sign-in (rate limited)',
     'api/auth/forgot-password' => 'reset request (rate limited, same answer for every address)',

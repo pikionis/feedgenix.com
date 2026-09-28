@@ -128,6 +128,28 @@ code in its module, with its tests. Nothing is copied blindly.
   - The local PostgreSQL ran in Europe/Bucharest. Every `timestamptz` the app wrote was stored 3 hours off (a reset token was "expired" as soon as it was issued). Every session is now pinned to UTC, and a test checks it.
   - Rector's Laravel 5 upgrade rule silently renamed routes named `auth.login` and `auth.logout` to event classes; that rule is now skipped.
 
+### M1 · `Entitlements`, `TenantEntitlements`, `PlanLimitExceeded`, `config/tiers.php`, `TenantsSetPlan`, `WorkspaceController` → `Domain/Billing`, `config/plans.php`
+- **Kept:**
+  - the plan in force, with 3 grace days;
+  - the yearly annual pool (12×);
+  - monthly slices anchored at the allowance clock, with no month-end drift;
+  - limit precedence: override > plan > internal guard;
+  - the cheapest-fitting upgrade suggestion;
+  - the 402 payload `{error, limit, allowed, used, plan, upgrade_to, message}`;
+  - a public catalogue without internal guards;
+  - `tenants:set-plan` for staff.
+- **Changed:**
+  - `suppliers` is now `feeds`.
+  - The overage is 10 credits per product (1 credit = €0.0001).
+  - The legacy USD AI cap becomes the private-beta `beta_ai_budget_eur_month` guard, which is never public.
+  - `set-plan` validates every input (plan, interval, real dates, known limits, values) and keeps the start of the term on renewals.
+- **New:**
+  - Target languages are the first limited resource. Setting them replaces the whole list; codes are matched case-insensitively against the registry and duplicates collapse.
+  - Changes are serialised on the workspace row, so concurrent requests cannot exceed the limit.
+  - Only owners and admins can change them.
+  - The 402 is documented in the OpenAPI contract through a Scramble extension, so the SPA's types include the upgrade payload.
+- **Later:** pausing over-limit feeds and languages on a downgrade (M6); feed and product counters (M2 and M4).
+
 ### M1 · `TenantProvisioner` → `Domain/Identity/Actions/ProvisionWorkspace`
 - **Kept:** one owned Free workspace per sign-up path; owner membership; the active workspace.
 - **Changed / fixed:**

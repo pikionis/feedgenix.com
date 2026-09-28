@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Billing\Entitlements;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -76,7 +77,7 @@ final class UserResource extends JsonResource
             'name' => $tenant->name,
             'slug' => $tenant->slug,
             'role' => $role,
-            'plan' => $tenant->plan,
+            'plan' => Entitlements::for($tenant)->plan(),
         ];
     }
 }

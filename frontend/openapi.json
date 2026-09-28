@@ -10,6 +10,97 @@
         }
     ],
     "paths": {
+        "/plans": {
+            "get": {
+                "operationId": "catalog.plans",
+                "description": "Prices, public limits and features only \u2014 never internal guards, costs or the credit markup.",
+                "summary": "The plans",
+                "tags": [
+                    "Catalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "recommended": {
+                                            "type": "string"
+                                        },
+                                        "annual_discount": {
+                                            "type": "number"
+                                        },
+                                        "plans": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "recommended",
+                                        "annual_discount",
+                                        "plans"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/languages": {
+            "get": {
+                "operationId": "catalog.languages",
+                "summary": "The languages a workspace can translate into (BCP-47)",
+                "tags": [
+                    "Catalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "languages": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "code": {
+                                                        "type": "string"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "native_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "direction": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "code",
+                                                    "name",
+                                                    "native_name",
+                                                    "direction"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "languages"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/verify-email/{id}/{hash}": {
             "get": {
                 "operationId": "verification.verify",
@@ -508,6 +599,106 @@
                     }
                 }
             }
+        },
+        "/v1/workspace": {
+            "get": {
+                "operationId": "workspace.show",
+                "summary": "The workspace: plan in force, limits, usage and target languages",
+                "tags": [
+                    "Workspace"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`WorkspaceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkspaceResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "workspace.update",
+                "summary": "Rename the workspace (owner or admin)",
+                "tags": [
+                    "Workspace"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateWorkspaceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`WorkspaceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkspaceResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/workspace/languages": {
+            "put": {
+                "operationId": "workspace.languages",
+                "description": "The list replaces the current one and must fit the plan: otherwise a 402 names the plan that\nwould fit. Concurrent changes are serialised on the workspace row, so two requests can never\ntogether exceed the limit.",
+                "summary": "Set the target languages (owner or admin)",
+                "tags": [
+                    "Workspace"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateWorkspaceLanguagesRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`WorkspaceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkspaceResource"
+                                }
+                            }
+                        }
+                    },
+                    "402": {
+                        "$ref": "#/components/responses/PlanLimitExceeded"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -647,6 +838,38 @@
                 },
                 "title": "UpdateProfileRequest"
             },
+            "UpdateWorkspaceLanguagesRequest": {
+                "type": "object",
+                "description": "The full set of target languages (it replaces the current one). Codes are matched to the\nregistry case-insensitively (\"PT-br\" \u2192 \"pt-BR\") and duplicates collapse.",
+                "properties": {
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 16
+                        },
+                        "maxItems": 50
+                    }
+                },
+                "required": [
+                    "languages"
+                ],
+                "title": "UpdateWorkspaceLanguagesRequest"
+            },
+            "UpdateWorkspaceRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 80
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "UpdateWorkspaceRequest"
+            },
             "UserResource": {
                 "type": "object",
                 "properties": {
@@ -727,6 +950,254 @@
                     "workspace"
                 ],
                 "title": "UserResource"
+            },
+            "WorkspaceResource": {
+                "type": "object",
+                "properties": {
+                    "workspace": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "slug": {
+                                "type": "string"
+                            },
+                            "role": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "slug",
+                            "role"
+                        ]
+                    },
+                    "plan": {
+                        "type": "object",
+                        "properties": {
+                            "key": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "tagline": {},
+                            "price_monthly_eur": {
+                                "type": "number"
+                            },
+                            "price_yearly_per_month_eur": {
+                                "type": "number"
+                            },
+                            "price_yearly_eur": {
+                                "type": "number"
+                            },
+                            "yearly_savings_eur": {
+                                "type": "number"
+                            },
+                            "limits": {
+                                "type": "object",
+                                "properties": {
+                                    "feeds": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "languages": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "products_per_month": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "products_per_year": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "worker_slots": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "feeds",
+                                    "languages",
+                                    "products_per_month",
+                                    "products_per_year",
+                                    "worker_slots"
+                                ]
+                            },
+                            "overage_credits_per_product": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "features": {
+                                "type": "string"
+                            },
+                            "models": {
+                                "type": "array",
+                                "items": {}
+                            }
+                        },
+                        "required": [
+                            "key",
+                            "name",
+                            "tagline",
+                            "price_monthly_eur",
+                            "price_yearly_per_month_eur",
+                            "price_yearly_eur",
+                            "yearly_savings_eur",
+                            "limits",
+                            "overage_credits_per_product",
+                            "features",
+                            "models"
+                        ]
+                    },
+                    "recommended_plan": {
+                        "type": "string"
+                    },
+                    "entitlements": {
+                        "type": "object",
+                        "properties": {
+                            "plan": {
+                                "type": "string"
+                            },
+                            "interval": {
+                                "type": "string",
+                                "enum": [
+                                    "year",
+                                    "month"
+                                ]
+                            },
+                            "paid_until": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "period": {
+                                "type": "object",
+                                "properties": {
+                                    "start": {
+                                        "type": "string"
+                                    },
+                                    "end": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "start",
+                                    "end"
+                                ]
+                            },
+                            "limits": {
+                                "type": "object",
+                                "properties": {
+                                    "feeds": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "languages": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "products": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "worker_slots": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "feeds",
+                                    "languages",
+                                    "products",
+                                    "worker_slots"
+                                ]
+                            },
+                            "used": {
+                                "type": "object",
+                                "properties": {
+                                    "languages": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "languages"
+                                ]
+                            },
+                            "overage": {
+                                "type": "object",
+                                "properties": {
+                                    "available": {
+                                        "type": "boolean"
+                                    },
+                                    "enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "credits_per_product": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "available",
+                                    "enabled",
+                                    "credits_per_product"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "plan",
+                            "interval",
+                            "paid_until",
+                            "period",
+                            "limits",
+                            "used",
+                            "overage"
+                        ]
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "workspace",
+                    "plan",
+                    "recommended_plan",
+                    "entitlements",
+                    "languages"
+                ],
+                "title": "WorkspaceResource"
             }
         },
         "responses": {
@@ -773,6 +1244,65 @@
                                 }
                             },
                             "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "PlanLimitExceeded": {
+                "description": "A plan limit was reached, or the feature is part of a higher plan",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "enum": [
+                                        "plan_limit",
+                                        "plan_feature"
+                                    ]
+                                },
+                                "limit": {
+                                    "type": "string",
+                                    "description": "The limit key or feature, e.g. \"languages\"."
+                                },
+                                "allowed": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ]
+                                },
+                                "used": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ]
+                                },
+                                "plan": {
+                                    "type": "string",
+                                    "description": "The plan in force."
+                                },
+                                "upgrade_to": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "description": "The cheapest plan that fits, or null (talk to us)."
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "description": "A sentence for the person, naming the numbers."
+                                }
+                            },
+                            "required": [
+                                "error",
+                                "limit",
+                                "allowed",
+                                "used",
+                                "plan",
+                                "upgrade_to",
                                 "message"
                             ]
                         }
