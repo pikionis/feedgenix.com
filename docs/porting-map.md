@@ -171,6 +171,15 @@ code in its module, with its tests. Nothing is copied blindly.
   - loosening `?next=` fails five tests, including the e2e one;
   - the e2e suite runs the whole sign-up → settings → 402 → sign-out → sign-in flow on the real stack.
 
+### M1 · New — staff two-factor sign-in (`Domain/Identity/TwoFactor`, `/admin`)
+- **Purpose.** The staff area sees every workspace. It requires TOTP set up **and** proven in the current session; the proof holds for 12 hours and the session id is regenerated when it is given.
+- **Secret.** Encrypted with the app key. The QR code is drawn on our own server, so the secret never reaches a third-party QR service.
+- **App codes.** Each code is accepted once. The last time step is stored under a row lock, so a replayed code or two concurrent uses of one code fail.
+- **Recovery codes.** Eight codes, shown once and stored as SHA-256 hashes. Each works once, and any spacing or case is accepted when typing them.
+- **Limits and errors.** Attempts are limited to 5 per minute. `EnsureStaff` answers `two_factor_setup_required` or `two_factor_required`.
+- **`/admin` (SPA).** It walks staff through setup (QR, manual key, recovery codes) and the per-session check, then shows a first platform overview counted in the system context.
+- **Proof.** Removing the replay check fails the "only once" test. Removing the per-session proof fails three tests.
+
 ### M1 · `TenantProvisioner` → `Domain/Identity/Actions/ProvisionWorkspace`
 - **Kept:** one owned Free workspace per sign-up path; owner membership; the active workspace.
 - **Changed / fixed:**

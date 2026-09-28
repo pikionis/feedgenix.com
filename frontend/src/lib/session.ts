@@ -22,10 +22,10 @@ export function useSession() {
   return useQuery(sessionQuery)
 }
 
-/** Where to go after signing in: a path inside the workspace from ?next=, or the workspace itself. */
+/** Where to go after signing in: a path inside the app (or the staff area) from ?next=, or the workspace. */
 export function nextPath(search: URLSearchParams): string {
   const next = search.get('next')
-  const inside = next !== null && (next === '/app' || /^\/app[/?#]/.test(next))
+  const inside = next !== null && /^\/(app|admin)([/?#]|$)/.test(next)
 
   return inside ? next : '/app'
 }

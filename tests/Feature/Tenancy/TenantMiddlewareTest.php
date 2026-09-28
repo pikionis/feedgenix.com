@@ -64,10 +64,12 @@ it('gives staff no bypass inside the customer app', function (): void {
 
 it('opens the admin area to staff only, in the system context', function (): void {
     $customer = User::factory()->withWorkspace()->create();
-    $staff = User::factory()->staff()->create();
+    $staff = staffWithTwoFactor();
 
     $this->actingAs($customer)->getJson('/_test/admin')->assertForbidden();
-    $this->actingAs($staff)->getJson('/_test/admin')->assertOk()->assertExactJson(['system' => true]);
+    $this->actingAs($staff)->getJson('/_test/admin')->assertForbidden(); // second factor not proven yet
+    $this->actingAs($staff)->withSession(twoFactorPassedSession())->getJson('/_test/admin')
+        ->assertOk()->assertExactJson(['system' => true]);
 });
 
 it('requires authentication before any workspace resolution', function (): void {

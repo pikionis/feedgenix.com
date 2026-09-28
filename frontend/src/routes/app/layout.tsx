@@ -68,6 +68,7 @@ export default function AppLayout() {
               Overview
             </NavItem>
             <NavItem to="/app/settings">Settings</NavItem>
+            {user.is_staff && <NavItem to="/admin">Staff</NavItem>}
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="text-muted-foreground">{user.workspace?.name}</span>

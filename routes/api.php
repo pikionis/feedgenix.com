@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\App\ProfileController;
+use App\Http\Controllers\App\TwoFactorController;
 use App\Http\Controllers\App\WorkspaceController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -44,6 +46,20 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+    // Two-factor sign-in (staff for now).
+    Route::prefix('security/two-factor')->group(function (): void {
+        Route::get('/', [TwoFactorController::class, 'show'])->name('two-factor.show');
+        Route::post('/', [TwoFactorController::class, 'begin'])->name('two-factor.begin');
+        Route::post('/confirm', [TwoFactorController::class, 'confirm'])->middleware('throttle:two-factor')->name('two-factor.confirm');
+        Route::post('/challenge', [TwoFactorController::class, 'challenge'])->middleware('throttle:two-factor')->name('two-factor.challenge');
+        Route::post('/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])->name('two-factor.recovery-codes');
+    });
+
+    // The staff admin API: two-factor proven in this session, system context (sees every workspace).
+    Route::middleware('staff')->prefix('admin')->group(function (): void {
+        Route::get('/overview', OverviewController::class)->name('admin.overview');
+    });
 
     // The workspace the person acts in: every query below is limited to it (ADR 0002).
     Route::middleware('tenant')->group(function (): void {

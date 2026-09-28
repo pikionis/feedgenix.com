@@ -11,6 +11,9 @@ it.each([
   ['/appevil', '/app'],
   ['/app?tab=1', '/app?tab=1'],
   ['/app\\evil.example', '/app'],
+  ['/admin', '/admin'],
+  ['/admin?x=1', '/admin?x=1'],
+  ['/adminx', '/app'],
 ])('sends %s to %s after sign-in, never outside the app', (next, expected) => {
   const search = new URLSearchParams(next === null ? '' : `next=${encodeURIComponent(next)}`)
 

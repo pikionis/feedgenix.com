@@ -56,6 +56,9 @@ final class IdentityServiceProvider extends ServiceProvider
             Limit::perHour(20)->by('reset-hour:'.$request->ip()),
         ]);
 
+        RateLimiter::for('two-factor', static fn (Request $request): Limit => Limit::perMinute(5)
+            ->by('2fa:'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
+
         RateLimiter::for('oauth', static fn (Request $request): Limit => Limit::perMinute(20)->by('oauth:'.$request->ip()));
     }
 

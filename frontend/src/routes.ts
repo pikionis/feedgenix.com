@@ -14,4 +14,7 @@ export default [
     index('routes/app/overview.tsx'),
     route('settings', 'routes/app/settings.tsx'),
   ]),
+
+  // The staff area: staff only, two-factor proven in the session (enforced by the API).
+  route('admin', 'routes/admin/layout.tsx', [index('routes/admin/index.tsx')]),
 ] satisfies RouteConfig

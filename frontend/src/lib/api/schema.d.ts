@@ -99,6 +99,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/admin/overview': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['admin.overview']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/auth/forgot-password': {
     parameters: {
       query?: never
@@ -249,6 +265,75 @@ export interface paths {
     put?: never
     /** Sign out and end the session */
     post: operations['auth.logout']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/security/two-factor': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** The state of two-factor sign-in for this account and this session. Never the secret */
+    get: operations['two-factor.show']
+    put?: never
+    /** Start setting it up: a new secret, as a QR code and as text for manual entry */
+    post: operations['two-factor.begin']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/security/two-factor/confirm': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Finish setting it up with a first code. The recovery codes are shown only now */
+    post: operations['two-factor.confirm']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/security/two-factor/challenge': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Prove the second factor for this session: an app code or a recovery code */
+    post: operations['two-factor.challenge']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/security/two-factor/recovery-codes': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** New recovery codes (the old ones stop working). Needs the second factor in this session */
+    post: operations['two-factor.recovery-codes']
     delete?: never
     options?: never
     head?: never
@@ -483,6 +568,22 @@ export interface components {
         }
       }
     }
+    /** @description Validation error */
+    InvalidTwoFactorCode: {
+      headers: {
+        [name: string]: unknown
+      }
+      content: {
+        'application/json': {
+          /** @description Errors overview. */
+          message: string
+          /** @description A detailed description of each field that failed validation. */
+          errors: {
+            [key: string]: string[]
+          }
+        }
+      }
+    }
     /** @description A plan limit was reached, or the feature is part of a higher plan */
     PlanLimitExceeded: {
       headers: {
@@ -657,6 +758,32 @@ export interface operations {
           }
         }
       }
+    }
+  }
+  'admin.overview': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            workspaces: number
+            paid_workspaces: number
+            users: number
+            verified_users: number
+            target_languages: number
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
     }
   }
   'auth.password.email': {
@@ -882,6 +1009,147 @@ export interface operations {
         content?: never
       }
       401: components['responses']['AuthenticationException']
+    }
+  }
+  'two-factor.show': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            enabled: boolean
+            pending: boolean
+            recovery_codes_left: number
+            passed: boolean
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+    }
+  }
+  'two-factor.begin': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            secret: string
+            otpauth_url: string
+            qr_svg_data_url: string
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+    }
+  }
+  'two-factor.confirm': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          code: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            recovery_codes: string[]
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      422: components['responses']['InvalidTwoFactorCode']
+    }
+  }
+  'two-factor.challenge': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          code: string
+        }
+      }
+    }
+    responses: {
+      /** @description No content */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['AuthenticationException']
+      422: components['responses']['InvalidTwoFactorCode']
+    }
+  }
+  'two-factor.recovery-codes': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            recovery_codes: string[]
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      /** @description An error */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * @description Error overview.
+             * @example Confirm it is you first.
+             */
+            message: string
+          }
+        }
+      }
     }
   }
   'workspace.show': {

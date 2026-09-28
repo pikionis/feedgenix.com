@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,9 +28,13 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $email
  * @property bool $is_staff
  * @property int|null $current_tenant_id
+ * @property string|null $two_factor_secret
+ * @property list<string>|null $two_factor_recovery_codes SHA-256 hashes of the unused codes
+ * @property CarbonImmutable|null $two_factor_confirmed_at
+ * @property int|null $two_factor_last_step
  */
 #[Fillable(['name', 'email', 'password', 'locale', 'avatar_url'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_last_step'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
@@ -46,6 +51,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'current_tenant_id' => null,
         'google_id' => null,
         'avatar_url' => null,
+        'two_factor_secret' => null,
+        'two_factor_recovery_codes' => null,
+        'two_factor_confirmed_at' => null,
+        'two_factor_last_step' => null,
     ];
 
     /**
@@ -58,6 +67,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'is_staff' => 'boolean',
             'current_tenant_id' => 'integer',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'array',
+            'two_factor_confirmed_at' => 'immutable_datetime',
+            'two_factor_last_step' => 'integer',
         ];
     }
 
