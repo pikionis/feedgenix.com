@@ -149,7 +149,7 @@ final readonly class TenantEntitlements
 
         $used ??= $this->used($key);
         if ($used + $adding > $limit) {
-            throw PlanLimitExceeded::limit($this->plan(), $key, $limit, $used, $this->upgradeFor($key, $used + $adding));
+            throw PlanLimitExceeded::limit($this->plan(), $key, $limit, $used, $used + $adding, $this->upgradeFor($key, $used + $adding));
         }
     }
 

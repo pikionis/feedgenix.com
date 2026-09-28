@@ -22,7 +22,7 @@ it('opens on a plan limit with the server’s wording, the numbers and the plan 
   const dialog = await screen.findByRole('dialog')
   expect(dialog).toHaveTextContent('You have reached your plan’s limit')
   expect(dialog).toHaveTextContent(languageLimit.message)
-  expect(dialog).toHaveTextContent('0 / 1')
+  expect(dialog).toHaveTextContent('2 / 1')
   expect(await screen.findByRole('link', { name: 'See Pro' })).toHaveAttribute('href', '/app/settings#plan')
 })
 

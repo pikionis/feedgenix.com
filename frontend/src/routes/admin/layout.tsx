@@ -24,7 +24,7 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-surface">
       <header className="sticky top-0 z-10 border-b-[0.5px] border-hairline bg-background">
-        <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-6 py-3">
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
           <Logo />
           <span className="rounded-full bg-ink px-2.5 py-0.5 text-xs text-on-ink">Staff</span>
           <Link to="/app" className="ml-auto text-sm text-muted-foreground hover:text-foreground">
@@ -32,7 +32,7 @@ export default function AdminLayout() {
           </Link>
         </div>
       </header>
-      <main className="mx-auto max-w-[1200px] px-6 py-8">
+      <main className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
         <Outlet />
       </main>
     </div>

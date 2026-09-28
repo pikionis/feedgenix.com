@@ -99,6 +99,7 @@ export const languageLimit: LimitHit = {
   limit: 'languages',
   allowed: 1,
   used: 0,
+  requested: 2,
   plan: 'free',
   upgrade_to: 'pro',
   message: 'Your Free plan includes 1 target language. Pro gives you 5 target languages.',

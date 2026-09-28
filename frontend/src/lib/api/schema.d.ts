@@ -596,7 +596,10 @@ export interface components {
           /** @description The limit key or feature, e.g. "languages". */
           limit: string
           allowed: number | null
+          /** @description Usage before the action. */
           used: number | null
+          /** @description What the action would have brought usage to. */
+          requested: number | null
           /** @description The plan in force. */
           plan: string
           /** @description The cheapest plan that fits, or null (talk to us). */

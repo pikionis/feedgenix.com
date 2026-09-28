@@ -1640,7 +1640,15 @@
                                     "type": [
                                         "integer",
                                         "null"
-                                    ]
+                                    ],
+                                    "description": "Usage before the action."
+                                },
+                                "requested": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "What the action would have brought usage to."
                                 },
                                 "plan": {
                                     "type": "string",
@@ -1663,6 +1671,7 @@
                                 "limit",
                                 "allowed",
                                 "used",
+                                "requested",
                                 "plan",
                                 "upgrade_to",
                                 "message"

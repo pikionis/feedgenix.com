@@ -31,11 +31,12 @@ final class PlanLimitExceededToResponse extends ExceptionToResponseExtension
             ->addProperty('error', (new OpenApiTypes\StringType)->enum(['plan_limit', 'plan_feature']))
             ->addProperty('limit', (new OpenApiTypes\StringType)->setDescription('The limit key or feature, e.g. "languages".'))
             ->addProperty('allowed', (new OpenApiTypes\IntegerType)->nullable(true))
-            ->addProperty('used', (new OpenApiTypes\IntegerType)->nullable(true))
+            ->addProperty('used', (new OpenApiTypes\IntegerType)->nullable(true)->setDescription('Usage before the action.'))
+            ->addProperty('requested', (new OpenApiTypes\IntegerType)->nullable(true)->setDescription('What the action would have brought usage to.'))
             ->addProperty('plan', (new OpenApiTypes\StringType)->setDescription('The plan in force.'))
             ->addProperty('upgrade_to', (new OpenApiTypes\StringType)->nullable(true)->setDescription('The cheapest plan that fits, or null (talk to us).'))
             ->addProperty('message', (new OpenApiTypes\StringType)->setDescription('A sentence for the person, naming the numbers.'))
-            ->setRequired(['error', 'limit', 'allowed', 'used', 'plan', 'upgrade_to', 'message']);
+            ->setRequired(['error', 'limit', 'allowed', 'used', 'requested', 'plan', 'upgrade_to', 'message']);
 
         return Response::make(402)
             ->setDescription('A plan limit was reached, or the feature is part of a higher plan')

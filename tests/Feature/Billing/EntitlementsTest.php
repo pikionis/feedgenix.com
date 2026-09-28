@@ -114,6 +114,7 @@ it('explains a limit with the numbers and the plan that would fit', function ():
         'limit' => 'languages',
         'allowed' => 1,
         'used' => 0,
+        'requested' => 2,
         'plan' => 'free',
         'upgrade_to' => 'pro',
         'message' => 'Your Free plan includes 1 target language. Pro gives you 5 target languages.',
@@ -135,7 +136,7 @@ it('renders as HTTP 402 with exactly the public payload', function (): void {
     $response = limitError(fn () => rights(Tenant::factory()->create())->assertWithin('languages', adding: 3, used: 0))->render();
 
     expect($response->getStatusCode())->toBe(402)
-        ->and(array_keys((array) $response->getData(true)))->toBe(['error', 'limit', 'allowed', 'used', 'plan', 'upgrade_to', 'message']);
+        ->and(array_keys((array) $response->getData(true)))->toBe(['error', 'limit', 'allowed', 'used', 'requested', 'plan', 'upgrade_to', 'message']);
 });
 
 it('counts a workspace\'s own target languages only', function (): void {

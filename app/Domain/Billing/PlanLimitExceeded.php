@@ -9,7 +9,8 @@ use RuntimeException;
 
 /**
  * A plan limit was reached or a feature is on a higher plan. Rendered as HTTP 402 with everything
- * the SPA's upgrade dialog needs — {error, limit, allowed, used, plan, upgrade_to, message} — and
+ * the SPA's upgrade dialog needs — {error, limit, allowed, used, requested, plan, upgrade_to, message}
+ * (`requested` = what the person would have had after the action) — and
  * never anything internal (guards, costs, markup).
  */
 final class PlanLimitExceeded extends RuntimeException
@@ -33,14 +34,14 @@ final class PlanLimitExceeded extends RuntimeException
     ];
 
     /**
-     * @param  array{error: string, limit: string, allowed: int|null, used: int|null, plan: string, upgrade_to: string|null}  $payload
+     * @param  array{error: string, limit: string, allowed: int|null, used: int|null, requested: int|null, plan: string, upgrade_to: string|null}  $payload
      */
     private function __construct(string $message, private readonly array $payload)
     {
         parent::__construct($message);
     }
 
-    public static function limit(string $plan, string $key, int $allowed, int $used, ?string $upgradeTo): self
+    public static function limit(string $plan, string $key, int $allowed, int $used, int $requested, ?string $upgradeTo): self
     {
         [$one, $many] = self::LABELS[$key] ?? [$key, $key];
         $message = 'Your '.PlanCatalog::name($plan).' plan includes '.number_format($allowed).' '.($allowed === 1 ? $one : $many).'.';
@@ -56,6 +57,7 @@ final class PlanLimitExceeded extends RuntimeException
             'limit' => $key,
             'allowed' => $allowed,
             'used' => $used,
+            'requested' => $requested,
             'plan' => $plan,
             'upgrade_to' => $upgradeTo,
         ]);
@@ -73,13 +75,14 @@ final class PlanLimitExceeded extends RuntimeException
             'limit' => $feature,
             'allowed' => null,
             'used' => null,
+            'requested' => null,
             'plan' => $plan,
             'upgrade_to' => $upgradeTo,
         ]);
     }
 
     /**
-     * @return array{error: string, limit: string, allowed: int|null, used: int|null, plan: string, upgrade_to: string|null, message: string}
+     * @return array{error: string, limit: string, allowed: int|null, used: int|null, requested: int|null, plan: string, upgrade_to: string|null, message: string}
      */
     public function payload(): array
     {

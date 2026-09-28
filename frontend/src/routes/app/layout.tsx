@@ -61,7 +61,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-surface">
       <header className="sticky top-0 z-10 border-b-[0.5px] border-hairline bg-background">
-        <div className="mx-auto flex max-w-[1200px] items-center gap-6 px-6 py-3">
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <Logo />
           <nav aria-label="Workspace" className="flex gap-1 text-sm">
             <NavItem to="/app" end>
@@ -71,14 +71,16 @@ export default function AppLayout() {
             {user.is_staff && <NavItem to="/admin">Staff</NavItem>}
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
-            <span className="text-muted-foreground">{user.workspace?.name}</span>
+            <span className="hidden max-w-[260px] truncate text-muted-foreground md:inline">
+              {user.workspace?.name}
+            </span>
             <Button variant="ghost" size="sm" onClick={() => void signOut()}>
               Sign out
             </Button>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[1200px] px-6 py-8">
+      <main className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
         {!user.email_verified && <VerifyEmailNotice email={user.email} />}
         <Outlet />
       </main>

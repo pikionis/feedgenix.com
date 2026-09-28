@@ -44,8 +44,12 @@ export function UpgradeDialog() {
     >
       {hit !== null && (
         <div className="flex flex-col gap-5">
-          {hit.allowed !== null && hit.used !== null && (
-            <UsageBar used={hit.used} allowed={hit.allowed} label={`Your plan · ${UNITS[hit.limit] ?? hit.limit}`} />
+          {hit.allowed !== null && (hit.requested ?? hit.used) !== null && (
+            <UsageBar
+              used={hit.requested ?? hit.used ?? 0}
+              allowed={hit.allowed}
+              label={`Asked for · included in your plan (${UNITS[hit.limit] ?? hit.limit})`}
+            />
           )}
           {target !== null ? (
             <div className="rounded-xl border-2 border-primary p-4">
