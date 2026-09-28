@@ -1,0 +1,14 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+# Level 8, no baseline: every finding is fixed, never parked.
+parameters:
+    level: 8
+    phpVersion: 80300
+    paths:
+        - app
+        - bootstrap/app.php
+        - config
+        - database
+        - routes
+    tmpDir: storage/framework/phpstan
