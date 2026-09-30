@@ -3,17 +3,23 @@
 declare(strict_types=1);
 
 use App\Domain\Ingest\FeedPreparer;
+use App\Domain\Ingest\Fetch\Fetcher;
+use App\Domain\Ingest\Fetch\FetchSettings;
+use App\Domain\Ingest\Fetch\HttpFetcher;
 use App\Domain\Ingest\IngestLimits;
 use App\Domain\Ingest\ParseOptions;
 use App\Domain\Ingest\PreparedFeed;
 use App\Domain\Ingest\Readers\LimitedRows;
 use App\Domain\Ingest\Readers\ReaderFactory;
 use App\Domain\Ingest\Warnings;
+use App\Models\User;
 use Illuminate\Support\Facades\File;
+use Illuminate\Testing\TestResponse;
 use OpenSpout\Common\Entity\Cell;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Writer;
+use Tests\Support\FakeFetchNetwork;
 
 /*
  * Synthetic feed fixtures for the ingest tests: files are written per test into a scratch directory
@@ -97,6 +103,43 @@ function xlsxFile(array $rows, ?callable $configure = null): string
     $writer->close();
 
     return $path;
+}
+
+/** A scripted network in place of the real one for every fetch the app makes. */
+function network(): FakeFetchNetwork
+{
+    $network = new FakeFetchNetwork;
+    app()->instance(Fetcher::class, new HttpFetcher(
+        $network,
+        $network,
+        new FetchSettings(maxBytes: (int) config('ingest.limits.max_bytes')),
+    ));
+
+    return $network;
+}
+
+/** Creates a feed through the API as $user; returns the response. */
+function createFeed(User $user, array $body): TestResponse
+{
+    return test()->actingAs($user)->postJson('/api/v1/feeds', $body);
+}
+
+/**
+ * Uploads $bytes to $feedId through the chunked API as $user, in $chunkSize pieces sent in
+ * reverse order (the order must not matter), and completes it.
+ */
+function uploadFeed(User $user, int $feedId, string $bytes, string $filename = 'feed.csv'): TestResponse
+{
+    $start = test()->actingAs($user)->postJson("/api/v1/feeds/{$feedId}/uploads", ['filename' => $filename, 'size' => strlen($bytes)])->assertCreated();
+    $id = (string) $start->json('upload.id');
+    $chunk = (int) $start->json('upload.chunk_size');
+
+    for ($index = (int) $start->json('upload.total_chunks') - 1; $index >= 0; $index--) {
+        test()->actingAs($user)->call('PUT', "/api/v1/feeds/{$feedId}/uploads/{$id}/chunks/{$index}", [], [], [], ['CONTENT_TYPE' => 'application/octet-stream', 'HTTP_ACCEPT' => 'application/json'], substr($bytes, $index * $chunk, $chunk))
+            ->assertNoContent();
+    }
+
+    return test()->actingAs($user)->postJson("/api/v1/feeds/{$feedId}/uploads/{$id}/complete", ['sha256' => hash('sha256', $bytes)]);
 }
 
 /** @param array<string, string> $entries name => bytes */

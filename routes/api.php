@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\App\FeedController;
+use App\Http\Controllers\App\FeedImportController;
 use App\Http\Controllers\App\ProfileController;
 use App\Http\Controllers\App\TwoFactorController;
+use App\Http\Controllers\App\UploadController;
 use App\Http\Controllers\App\WorkspaceController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -66,5 +69,21 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::get('/workspace', [WorkspaceController::class, 'show'])->name('workspace.show');
         Route::put('/workspace', [WorkspaceController::class, 'update'])->name('workspace.update');
         Route::put('/workspace/languages', [WorkspaceController::class, 'updateLanguages'])->name('workspace.languages');
+
+        // Feeds and their imports (M2).
+        Route::get('/feeds', [FeedController::class, 'index'])->name('feeds.index');
+        Route::post('/feeds', [FeedController::class, 'store'])->name('feeds.store');
+        Route::get('/feeds/{feed}', [FeedController::class, 'show'])->name('feeds.show');
+        Route::patch('/feeds/{feed}', [FeedController::class, 'update'])->name('feeds.update');
+        Route::delete('/feeds/{feed}', [FeedController::class, 'destroy'])->name('feeds.destroy');
+        Route::get('/feeds/{feed}/imports', [FeedImportController::class, 'index'])->name('feeds.imports');
+        Route::post('/feeds/{feed}/fetch', [FeedImportController::class, 'fetch'])->middleware('throttle:feed-fetch')->name('feeds.fetch');
+        Route::post('/feeds/{feed}/uploads', [UploadController::class, 'start'])->name('uploads.start');
+        Route::scopeBindings()->group(function (): void {
+            Route::put('/feeds/{feed}/uploads/{upload}/chunks/{index}', [UploadController::class, 'chunk'])->whereUuid('upload')->whereNumber('index')->name('uploads.chunk');
+            Route::post('/feeds/{feed}/uploads/{upload}/complete', [UploadController::class, 'complete'])->whereUuid('upload')->name('uploads.complete');
+        });
+        Route::get('/imports/{import}', [FeedImportController::class, 'show'])->name('imports.show');
+        Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->name('imports.reread');
     });
 });

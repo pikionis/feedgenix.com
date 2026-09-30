@@ -4,22 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Models\Tenant;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
-
-function owner(Tenant $tenant): User
-{
-    return User::query()->findOrFail($tenant->owner_id);
-}
-
-function memberOf(Tenant $tenant, string $role): User
-{
-    $user = User::factory()->create();
-    $tenant->users()->attach($user->id, ['role' => $role]);
-    $user->forceFill(['current_tenant_id' => $tenant->id])->save();
-
-    return $user;
-}
 
 /** @return list<string> */
 function targetCodes(Tenant $tenant): array

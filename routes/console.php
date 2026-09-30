@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function (): void {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+// Expired uploads and leftover work files (abandoned 2 GB uploads must not fill the disk).
+Schedule::command('ingest:prune')->dailyAt('03:30')->withoutOverlapping()->onOneServer();

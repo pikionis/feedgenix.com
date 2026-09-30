@@ -56,3 +56,19 @@ function currentTotp(User $user): string
 {
     return (new Google2FA)->getCurrentOtp((string) $user->fresh()?->two_factor_secret);
 }
+
+/** The workspace's owner. */
+function owner(Tenant $tenant): User
+{
+    return User::query()->findOrFail($tenant->owner_id);
+}
+
+/** A new user who belongs to the workspace with $role (owner, admin, member) and acts in it. */
+function memberOf(Tenant $tenant, string $role): User
+{
+    $user = User::factory()->create();
+    $tenant->users()->attach($user->id, ['role' => $role]);
+    $user->forceFill(['current_tenant_id' => $tenant->id])->save();
+
+    return $user;
+}

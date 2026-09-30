@@ -79,6 +79,121 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** The workspace's feeds, each with its latest import */
+    get: operations['feeds.index']
+    put?: never
+    /**
+     * Create a feed (owner or admin)
+     * @description With a URL the first download starts at once; without one the feed waits for an upload. The
+     *     plan's feed limit applies: over it, a 402 names the plan that fits.
+     */
+    post: operations['feeds.store']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/feeds/{feed}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** A feed with its latest import */
+    get: operations['feeds.show']
+    put?: never
+    post?: never
+    /** Delete a feed with its imports and stored files (owner or admin) */
+    delete: operations['feeds.destroy']
+    options?: never
+    head?: never
+    /**
+     * Rename a feed, change its URL or its reading options (owner or admin). What is not sent is
+     *     kept: an omitted URL never clears the stored one
+     */
+    patch: operations['feeds.update']
+    trace?: never
+  }
+  '/v1/feeds/{feed}/imports': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** A feed's imports, newest first */
+    get: operations['feeds.imports']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/feeds/{feed}/fetch': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Fetch a URL feed now */
+    post: operations['feeds.fetch']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/imports/{import}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** An import in full: how the file was read, its column profile, samples and warnings */
+    get: operations['imports.show']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/imports/{import}/reread': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Read an import's stored file again with corrected options (encoding, delimiter, quoting,
+     *     XML item). The options are saved on the feed for its next imports
+     */
+    post: operations['imports.reread']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/health': {
     parameters: {
       query?: never
@@ -340,6 +455,60 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds/{feed}/uploads': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Start a chunked upload of a feed file (up to the size cap) */
+    post: operations['uploads.start']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/feeds/{feed}/uploads/{upload}/chunks/{index}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Send one chunk as the raw request body (`application/octet-stream`). Chunks may arrive in any
+     *     order and be sent again; each must have exactly its expected length
+     */
+    put: operations['uploads.chunk']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/feeds/{feed}/uploads/{upload}/complete': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Complete the upload: the chunks are assembled, checked and imported */
+    post: operations['uploads.complete']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/workspace': {
     parameters: {
       query?: never
@@ -384,10 +553,139 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    /** CompleteUploadRequest */
+    CompleteUploadRequest: {
+      /** @description The SHA-256 of the whole file, when the client computed it: a corrupted upload is caught here. */
+      sha256?: string | null
+    }
+    /** FeedResource */
+    FeedResource: {
+      id: number
+      name: string
+      /** @enum {string} */
+      source: 'url' | 'upload'
+      host: string | null
+      /** @enum {string} */
+      status: 'active' | 'paused'
+      parse_options: {
+        encoding: string | null
+        delimiter: string | null
+        quoted: boolean
+        xml_item_path: string | null
+      }
+      latest_import: {
+        id: number
+        feed_id: number
+        /** @enum {string} */
+        origin: 'upload' | 'fetch' | 'reread'
+        status: components['schemas']['ImportStatus']
+        original_name: string | null
+        format: components['schemas']['Format'] | null
+        row_count: number | null
+        column_count: number | null
+        reuses_import_id: number | null
+        failure: {
+          reason: string | null
+          message: string
+          retry_after_seconds: number | null
+        } | null
+        started_at: string | null
+        finished_at: string | null
+        created_at: string | null
+      } | null
+      created_at: string | null
+    }
     /** ForgotPasswordRequest */
     ForgotPasswordRequest: {
       /** Format: email */
       email: string
+    }
+    /**
+     * Format
+     * @description What a feed's rows are written in, after any gzip or zip around it is removed.
+     * @enum {string}
+     */
+    Format: 'csv' | 'xml' | 'json' | 'ndjson' | 'xlsx'
+    /** ImportResource */
+    ImportResource: {
+      id: number
+      feed_id: number
+      /** @enum {string} */
+      origin: 'upload' | 'fetch' | 'reread'
+      status: components['schemas']['ImportStatus']
+      original_name: string | null
+      format: components['schemas']['Format'] | null
+      row_count: number | null
+      column_count: number | null
+      reuses_import_id: number | null
+      failure: {
+        reason: string | null
+        message: string
+        retry_after_seconds: number | null
+      } | null
+      started_at: string | null
+      finished_at: string | null
+      created_at: string | null
+      received_bytes: number | null
+      containers: string[]
+      inner_name: string | null
+      encoding: {
+        name: string
+        /** @enum {string} */
+        reason: 'bom' | 'utf16_pattern' | 'valid_utf8' | 'ascii' | 'fallback' | 'xml_declaration' | 'override'
+      } | null
+      delimiter: string | null
+      xml_item_path: string | null
+      parse_options: {
+        encoding: unknown
+        delimiter: unknown
+        quoted: boolean
+        xml_item_path: unknown
+      }
+      sku: {
+        column: string
+        /** @enum {string} */
+        confidence: 'high' | 'low'
+        empty: number
+        duplicates: number
+      } | null
+      columns: {
+        position: number
+        name: string
+        filled: number
+        fill_rate: number
+        max_length: number
+        kind: components['schemas']['ValueKind']
+        examples: string[]
+      }[]
+      sample_rows: unknown[]
+      warnings: unknown[]
+    }
+    /**
+     * ImportStatus
+     * @enum {string}
+     */
+    ImportStatus: 'queued' | 'fetching' | 'reading' | 'profiled' | 'unchanged' | 'failed'
+    /** ImportSummaryResource */
+    ImportSummaryResource: {
+      id: number
+      feed_id: number
+      /** @enum {string} */
+      origin: 'upload' | 'fetch' | 'reread'
+      status: components['schemas']['ImportStatus']
+      original_name: string | null
+      format: components['schemas']['Format'] | null
+      row_count: number | null
+      column_count: number | null
+      reuses_import_id: number | null
+      failure: {
+        reason: string | null
+        message: string
+        retry_after_seconds: number | null
+      } | null
+      started_at: string | null
+      finished_at: string | null
+      created_at: string | null
     }
     /** LanguageResource */
     LanguageResource: {
@@ -445,6 +743,40 @@ export interface components {
       remember?: boolean
       password_confirmation: string
     }
+    /**
+     * RereadImportRequest
+     * @description Read the same file again with corrected options (encoding, delimiter, quoting, XML item).
+     */
+    RereadImportRequest: {
+      ''?: {
+        encoding: string
+        delimiter: string
+        quoted: string
+        xml_item_path: string
+      }
+      /** @enum {string|null} */
+      encoding?:
+        | 'UTF-8'
+        | 'UTF-16LE'
+        | 'UTF-16BE'
+        | 'UTF-32LE'
+        | 'UTF-32BE'
+        | 'Windows-1252'
+        | 'ISO-8859-1'
+        | 'ISO-8859-15'
+        | 'Windows-1250'
+        | 'ISO-8859-2'
+        | 'Windows-1251'
+        | 'Windows-1253'
+        | 'ISO-8859-7'
+        | 'Windows-1254'
+        | 'ISO-8859-9'
+        | null
+      /** @enum {string|null} */
+      delimiter?: ',' | ';' | '\t' | '|' | null
+      quoted?: boolean
+      xml_item_path?: string | null
+    }
     /** ResetPasswordRequest */
     ResetPasswordRequest: {
       token: string
@@ -452,6 +784,73 @@ export interface components {
       email: string
       password: string
       password_confirmation: string
+    }
+    /** StartUploadRequest */
+    StartUploadRequest: {
+      filename: string
+      size: number
+    }
+    /** StoreFeedRequest */
+    StoreFeedRequest: {
+      name: string
+      /** @description Without a URL the feed is fed by uploads. */
+      url?: string | null
+      parse_options?: {
+        /** @enum {string|null} */
+        encoding:
+          | 'UTF-8'
+          | 'UTF-16LE'
+          | 'UTF-16BE'
+          | 'UTF-32LE'
+          | 'UTF-32BE'
+          | 'Windows-1252'
+          | 'ISO-8859-1'
+          | 'ISO-8859-15'
+          | 'Windows-1250'
+          | 'ISO-8859-2'
+          | 'Windows-1251'
+          | 'Windows-1253'
+          | 'ISO-8859-7'
+          | 'Windows-1254'
+          | 'ISO-8859-9'
+          | null
+        /** @enum {string|null} */
+        delimiter: ',' | ';' | '\t' | '|' | null
+        quoted: boolean
+        xml_item_path: string | null
+      }
+    }
+    /**
+     * UpdateFeedRequest
+     * @description Only what is sent changes: an omitted URL keeps the stored one (legacy D16).
+     */
+    UpdateFeedRequest: {
+      name?: string
+      url?: string
+      parse_options?: {
+        /** @enum {string|null} */
+        encoding:
+          | 'UTF-8'
+          | 'UTF-16LE'
+          | 'UTF-16BE'
+          | 'UTF-32LE'
+          | 'UTF-32BE'
+          | 'Windows-1252'
+          | 'ISO-8859-1'
+          | 'ISO-8859-15'
+          | 'Windows-1250'
+          | 'ISO-8859-2'
+          | 'Windows-1251'
+          | 'Windows-1253'
+          | 'ISO-8859-7'
+          | 'Windows-1254'
+          | 'ISO-8859-9'
+          | null
+        /** @enum {string|null} */
+        delimiter: ',' | ';' | '\t' | '|' | null
+        quoted: boolean
+        xml_item_path: string | null
+      }
     }
     /**
      * UpdatePasswordRequest
@@ -483,6 +882,15 @@ export interface components {
     UpdateWorkspaceRequest: {
       name: string
     }
+    /** UploadSessionResource */
+    UploadSessionResource: {
+      id: string
+      filename: string
+      size: number
+      chunk_size: number
+      total_chunks: number
+      expires_at: string
+    }
     /** UserResource */
     UserResource: {
       id: number
@@ -502,6 +910,13 @@ export interface components {
         plan: string
       } | null
     }
+    /**
+     * ValueKind
+     * @description What a column's values look like, from a sample of them. Mapping (M3) uses it as evidence; it never changes a value.
+     * @enum {string}
+     */
+    ValueKind:
+      'empty' | 'gtin' | 'integer' | 'decimal' | 'boolean' | 'date' | 'image_url' | 'url' | 'html' | 'code' | 'text'
     /** WorkspaceResource */
     WorkspaceResource: {
       workspace: {
@@ -605,6 +1020,18 @@ export interface components {
           /** @description The cheapest plan that fits, or null (talk to us). */
           upgrade_to: string | null
           /** @description A sentence for the person, naming the numbers. */
+          message: string
+        }
+      }
+    }
+    /** @description Not found */
+    ModelNotFoundException: {
+      headers: {
+        [name: string]: unknown
+      }
+      content: {
+        'application/json': {
+          /** @description Error overview. */
           message: string
         }
       }
@@ -724,6 +1151,278 @@ export interface operations {
         }
       }
       401: components['responses']['AuthenticationException']
+    }
+  }
+  'feeds.index': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Array of `FeedResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            data: components['schemas']['FeedResource'][]
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+    }
+  }
+  'feeds.store': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StoreFeedRequest']
+      }
+    }
+    responses: {
+      /** @description `FeedResource` */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            feed: components['schemas']['FeedResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      402: components['responses']['PlanLimitExceeded']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'feeds.show': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `FeedResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            feed: components['schemas']['FeedResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'feeds.destroy': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description No content */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'feeds.update': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['UpdateFeedRequest']
+      }
+    }
+    responses: {
+      /** @description `FeedResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            feed: components['schemas']['FeedResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'feeds.imports': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Paginated set of `ImportSummaryResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            import: components['schemas']['ImportSummaryResource'][]
+            links: {
+              first: string | null
+              last: string | null
+              prev: string | null
+              next: string | null
+            }
+            meta: {
+              current_page: number
+              from: number | null
+              last_page: number
+              /** @description Generated paginator links. */
+              links: {
+                url: string | null
+                label: string
+                active: boolean
+              }[]
+              /** @description Base path for paginator generated URLs. */
+              path: string | null
+              /** @description Number of items shown per page. */
+              per_page: number
+              /** @description Number of the last item in the slice. */
+              to: number | null
+              /** @description Total number of items being paginated. */
+              total: number
+            }
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'feeds.fetch': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `ImportSummaryResource` */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            import: components['schemas']['ImportSummaryResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'imports.show': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The import ID */
+        import: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `ImportResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            import: components['schemas']['ImportResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'imports.reread': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The import ID */
+        import: number
+      }
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['RereadImportRequest']
+      }
+    }
+    responses: {
+      /** @description `ImportSummaryResource` */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            import: components['schemas']['ImportSummaryResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
     }
   }
   health: {
@@ -1153,6 +1852,98 @@ export interface operations {
           }
         }
       }
+    }
+  }
+  'uploads.start': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StartUploadRequest']
+      }
+    }
+    responses: {
+      /** @description `UploadSessionResource` */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            upload: components['schemas']['UploadSessionResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'uploads.chunk': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+        /** @description The upload ID */
+        upload: string
+        index: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description No content */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'uploads.complete': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+        /** @description The upload ID */
+        upload: string
+      }
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['CompleteUploadRequest']
+      }
+    }
+    responses: {
+      /** @description `ImportSummaryResource` */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            import: components['schemas']['ImportSummaryResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
     }
   }
   'workspace.show': {

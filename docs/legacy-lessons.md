@@ -53,7 +53,9 @@ in the milestone named in brackets.
 
 ## Security
 - **A chunked-upload path let a crafted request delete arbitrary files.**
-  → Upload paths are derived from ids, never from client input. [M2]
+  → Upload paths are derived from ids, never from client input. [M2, done: paths are
+  `uploads/{tenant}/{uuid}/{index}`, the client's file name is never on disk, and another feed's or
+  workspace's upload answers 404]
 - **Re-saving an import without credentials wiped the stored ones.**
   → Omitted secrets mean "unchanged", tested for every secret field. [M8]
 - **API keys ended up in a committed settings file.**

@@ -243,3 +243,55 @@ code in its module, with its tests. Nothing is copied blindly.
   - An arch rule: raw curl, sockets and DNS only in `Ingest/Fetch` (and AI providers).
 - **Dropped:** URL-embedded credentials (refused); FTP and SFTP (M8, with encrypted credentials and D16).
 - **Proof:** 12 mutants, one per guard, each caught.
+
+### M2 · `Support/Uploads/ChunkedUpload`, the upload controller → `Domain/Ingest/Actions/Uploads`, `Http/Controllers/App/UploadController`
+- **Kept:**
+  - Fixed-size chunks (5 MiB), sent in any order and retried at will, assembled on `complete`.
+  - The size cap is checked before the first byte is sent.
+- **Fixed:**
+  - The legacy built paths from a client-supplied upload id, and a crafted one deleted files outside
+    storage. Every path is now made by the server: `uploads/{tenant}/{uuid}/{index}`. The route only
+    matches a UUID and a number, the upload must belong to the feed in the URL (scoped bindings), and
+    another workspace's upload answers 404.
+  - A chunk must have exactly its expected length (the copy stops one byte past it). It is written to
+    `.part` and renamed, so a half-written chunk never counts as received.
+- **New:**
+  - An optional SHA-256 of the whole file, checked after assembly.
+  - Sessions expire after a day (410 afterwards); completing one closes it.
+  - The client's file name is only displayed: base name, no control characters, at most 200 characters.
+  - `ingest:prune`, daily at 03:30: expired upload sessions with their chunks, job work folders
+    untouched for a day, and staged files older than a day. Stored feed files are never touched;
+    `--dry-run` lists without deleting.
+- **Proof:** the prune rules — 8 mutants, each caught.
+
+### M2 · New — feeds and imports (`Domain/Feeds`, `Domain/Ingest/{ImportRunner, Jobs/ProcessImport, Actions/QueueImport}`, `/api/v1/feeds…`, `/api/v1/imports…`)
+The legacy "supplier" becomes a **feed**. It has no legacy code to port: the legacy read files inside
+the scan, so a file it could not read had no record of its own.
+- **Tables** (all under RLS):
+  - `feeds`: the source (URL or upload), status, and the reading options the customer chose.
+  - `feed_sources`: the URL, encrypted (only its host is ever returned: feed URLs often carry an
+    access token), with the ETag and Last-Modified of the last good read.
+  - `imports`: one per file received, with how it was read (format, containers, encoding and why,
+    delimiter, XML item), the profile, sample rows, SKU choice, warnings, or the failure reason.
+    `sample_rows` is `json`, not `jsonb`: jsonb reorders keys, and columns must show in feed order.
+  - `import_columns`: one row per column of the profile.
+  - `upload_sessions`.
+- **The run:** `queued → fetching → reading → profiled | unchanged | failed`.
+  - **One unfinished import per feed**, enforced by a partial unique index; a second request gets
+    409 `feed_busy`. An import unfinished after 2 hours is expired, so a dead job never locks a feed,
+    and the job's `failed()` marks only an unfinished import as `interrupted`, in its own workspace.
+  - Files are stored once per workspace under their SHA-256 (`imports/{tenant}/{ab}/{sha}`). The
+    same bytes read with the same options, or a 304, are `unchanged` and reuse the last profile.
+  - ETag and Last-Modified are remembered only after a successful read, and sent only while the feed
+    has a readable profile (a 304 must never leave a feed with nothing).
+  - A file that could not be read is kept, so it can be **read again** with a corrected encoding,
+    delimiter or item path. The choice is saved on the feed for the next import.
+- **Queue:** `ProcessImport` runs once, for up to an hour; every connection's `retry_after` (3,900 s)
+  exceeds the longest job timeout, and a test compares them (a shorter `retry_after` runs a job twice).
+- **Limits and roles:** feeds count against the plan (paused ones too), checked under the workspace
+  row lock (402 naming the plan that fits). Owners and admins manage feeds; members read and import.
+  Fetching on demand is rate-limited (10 a minute per user).
+- **API:** statuses, formats, value kinds, encoding reasons and SKU confidence are enums in the
+  OpenAPI contract, so the frontend handles each of them.
+- **Proof:** 21 mutants over the pipeline and API; 20 caught. The survivor is equivalent and kept on
+  purpose: the UUID route constraint repeats what the UUID model binding already does (404).

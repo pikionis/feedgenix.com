@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Billing;
 
+use App\Domain\Feeds\Models\Feed;
 use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\Tenant;
@@ -123,6 +124,11 @@ final readonly class TenantEntitlements
             'languages' => resolve(TenantContext::class)->run(
                 $this->tenant->id,
                 static fn (): int => TenantLanguage::query()->count(),
+            ),
+            // Paused feeds count too: pausing never frees a slot for a new feed.
+            'feeds' => resolve(TenantContext::class)->run(
+                $this->tenant->id,
+                static fn (): int => Feed::query()->count(),
             ),
             default => throw new InvalidArgumentException("No usage counter for [{$key}]."),
         };

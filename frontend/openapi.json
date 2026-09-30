@@ -194,6 +194,536 @@
                 }
             }
         },
+        "/v1/feeds": {
+            "get": {
+                "operationId": "feeds.index",
+                "summary": "The workspace's feeds, each with its latest import",
+                "tags": [
+                    "Feed"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `FeedResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/FeedResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "feeds.store",
+                "description": "With a URL the first download starts at once; without one the feed waits for an upload. The\nplan's feed limit applies: over it, a 402 names the plan that fits.",
+                "summary": "Create a feed (owner or admin)",
+                "tags": [
+                    "Feed"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreFeedRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`FeedResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "feed": {
+                                            "$ref": "#/components/schemas/FeedResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "feed"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "402": {
+                        "$ref": "#/components/responses/PlanLimitExceeded"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}": {
+            "get": {
+                "operationId": "feeds.show",
+                "summary": "A feed with its latest import",
+                "tags": [
+                    "Feed"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`FeedResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "feed": {
+                                            "$ref": "#/components/schemas/FeedResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "feed"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "feeds.update",
+                "summary": "Rename a feed, change its URL or its reading options (owner or admin). What is not sent is\nkept: an omitted URL never clears the stored one",
+                "tags": [
+                    "Feed"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateFeedRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`FeedResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "feed": {
+                                            "$ref": "#/components/schemas/FeedResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "feed"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "feeds.destroy",
+                "summary": "Delete a feed with its imports and stored files (owner or admin)",
+                "tags": [
+                    "Feed"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/imports": {
+            "get": {
+                "operationId": "feeds.imports",
+                "summary": "A feed's imports, newest first",
+                "tags": [
+                    "FeedImport"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `ImportSummaryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "import": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ImportSummaryResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "import",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/fetch": {
+            "post": {
+                "operationId": "feeds.fetch",
+                "summary": "Fetch a URL feed now",
+                "tags": [
+                    "FeedImport"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "`ImportSummaryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "import": {
+                                            "$ref": "#/components/schemas/ImportSummaryResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "import"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/imports/{import}": {
+            "get": {
+                "operationId": "imports.show",
+                "summary": "An import in full: how the file was read, its column profile, samples and warnings",
+                "tags": [
+                    "FeedImport"
+                ],
+                "parameters": [
+                    {
+                        "name": "import",
+                        "in": "path",
+                        "required": true,
+                        "description": "The import ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ImportResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "import": {
+                                            "$ref": "#/components/schemas/ImportResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "import"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/imports/{import}/reread": {
+            "post": {
+                "operationId": "imports.reread",
+                "summary": "Read an import's stored file again with corrected options (encoding, delimiter, quoting,\nXML item). The options are saved on the feed for its next imports",
+                "tags": [
+                    "FeedImport"
+                ],
+                "parameters": [
+                    {
+                        "name": "import",
+                        "in": "path",
+                        "required": true,
+                        "description": "The import ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RereadImportRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "`ImportSummaryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "import": {
+                                            "$ref": "#/components/schemas/ImportSummaryResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "import"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "operationId": "health",
@@ -869,6 +1399,182 @@
                 }
             }
         },
+        "/v1/feeds/{feed}/uploads": {
+            "post": {
+                "operationId": "uploads.start",
+                "summary": "Start a chunked upload of a feed file (up to the size cap)",
+                "tags": [
+                    "Upload"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartUploadRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`UploadSessionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "upload": {
+                                            "$ref": "#/components/schemas/UploadSessionResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "upload"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/uploads/{upload}/chunks/{index}": {
+            "put": {
+                "operationId": "uploads.chunk",
+                "summary": "Send one chunk as the raw request body (`application/octet-stream`). Chunks may arrive in any\norder and be sent again; each must have exactly its expected length",
+                "tags": [
+                    "Upload"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "upload",
+                        "in": "path",
+                        "required": true,
+                        "description": "The upload ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "index",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/uploads/{upload}/complete": {
+            "post": {
+                "operationId": "uploads.complete",
+                "summary": "Complete the upload: the chunks are assembled, checked and imported",
+                "tags": [
+                    "Upload"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "upload",
+                        "in": "path",
+                        "required": true,
+                        "description": "The upload ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompleteUploadRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "`ImportSummaryResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "import": {
+                                            "$ref": "#/components/schemas/ImportSummaryResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "import"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/v1/workspace": {
             "get": {
                 "operationId": "workspace.show",
@@ -972,6 +1678,220 @@
     },
     "components": {
         "schemas": {
+            "CompleteUploadRequest": {
+                "type": "object",
+                "properties": {
+                    "sha256": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The SHA-256 of the whole file, when the client computed it: a corrupted upload is caught here.",
+                        "pattern": "^[a-fA-F0-9]{64}$"
+                    }
+                },
+                "title": "CompleteUploadRequest"
+            },
+            "FeedResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string",
+                        "enum": [
+                            "url",
+                            "upload"
+                        ]
+                    },
+                    "host": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "paused"
+                        ]
+                    },
+                    "parse_options": {
+                        "type": "object",
+                        "properties": {
+                            "encoding": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "delimiter": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "quoted": {
+                                "type": "boolean"
+                            },
+                            "xml_item_path": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "encoding",
+                            "delimiter",
+                            "quoted",
+                            "xml_item_path"
+                        ]
+                    },
+                    "latest_import": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "feed_id": {
+                                "type": "integer"
+                            },
+                            "origin": {
+                                "type": "string",
+                                "enum": [
+                                    "upload",
+                                    "fetch",
+                                    "reread"
+                                ]
+                            },
+                            "status": {
+                                "$ref": "#/components/schemas/ImportStatus"
+                            },
+                            "original_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "format": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/components/schemas/Format"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ]
+                            },
+                            "row_count": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "column_count": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "reuses_import_id": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "failure": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "reason": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "message": {
+                                        "type": "string"
+                                    },
+                                    "retry_after_seconds": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "reason",
+                                    "message",
+                                    "retry_after_seconds"
+                                ]
+                            },
+                            "started_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "finished_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "created_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "feed_id",
+                            "origin",
+                            "status",
+                            "original_name",
+                            "format",
+                            "row_count",
+                            "column_count",
+                            "reuses_import_id",
+                            "failure",
+                            "started_at",
+                            "finished_at",
+                            "created_at"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "source",
+                    "host",
+                    "status",
+                    "parse_options",
+                    "latest_import",
+                    "created_at"
+                ],
+                "title": "FeedResource"
+            },
             "ForgotPasswordRequest": {
                 "type": "object",
                 "properties": {
@@ -985,6 +1905,430 @@
                     "email"
                 ],
                 "title": "ForgotPasswordRequest"
+            },
+            "Format": {
+                "type": "string",
+                "description": "What a feed's rows are written in, after any gzip or zip around it is removed.\n",
+                "enum": [
+                    "csv",
+                    "xml",
+                    "json",
+                    "ndjson",
+                    "xlsx"
+                ],
+                "title": "Format"
+            },
+            "ImportResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "feed_id": {
+                        "type": "integer"
+                    },
+                    "origin": {
+                        "type": "string",
+                        "enum": [
+                            "upload",
+                            "fetch",
+                            "reread"
+                        ]
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ImportStatus"
+                    },
+                    "original_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "format": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Format"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "row_count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "column_count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "reuses_import_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "failure": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "reason": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "message": {
+                                "type": "string"
+                            },
+                            "retry_after_seconds": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "reason",
+                            "message",
+                            "retry_after_seconds"
+                        ]
+                    },
+                    "started_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "finished_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "received_bytes": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "containers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "inner_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "encoding": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "reason": {
+                                "type": "string",
+                                "enum": [
+                                    "bom",
+                                    "utf16_pattern",
+                                    "valid_utf8",
+                                    "ascii",
+                                    "fallback",
+                                    "xml_declaration",
+                                    "override"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "reason"
+                        ]
+                    },
+                    "delimiter": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "xml_item_path": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "parse_options": {
+                        "type": "object",
+                        "properties": {
+                            "encoding": {},
+                            "delimiter": {},
+                            "quoted": {
+                                "type": "boolean"
+                            },
+                            "xml_item_path": {}
+                        },
+                        "required": [
+                            "encoding",
+                            "delimiter",
+                            "quoted",
+                            "xml_item_path"
+                        ]
+                    },
+                    "sku": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "column": {
+                                "type": "string"
+                            },
+                            "confidence": {
+                                "type": "string",
+                                "enum": [
+                                    "high",
+                                    "low"
+                                ]
+                            },
+                            "empty": {
+                                "type": "integer"
+                            },
+                            "duplicates": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "column",
+                            "confidence",
+                            "empty",
+                            "duplicates"
+                        ]
+                    },
+                    "columns": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "position": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "filled": {
+                                    "type": "integer"
+                                },
+                                "fill_rate": {
+                                    "type": "number"
+                                },
+                                "max_length": {
+                                    "type": "integer"
+                                },
+                                "kind": {
+                                    "$ref": "#/components/schemas/ValueKind"
+                                },
+                                "examples": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "position",
+                                "name",
+                                "filled",
+                                "fill_rate",
+                                "max_length",
+                                "kind",
+                                "examples"
+                            ]
+                        }
+                    },
+                    "sample_rows": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "id",
+                    "feed_id",
+                    "origin",
+                    "status",
+                    "original_name",
+                    "format",
+                    "row_count",
+                    "column_count",
+                    "reuses_import_id",
+                    "failure",
+                    "started_at",
+                    "finished_at",
+                    "created_at",
+                    "received_bytes",
+                    "containers",
+                    "inner_name",
+                    "encoding",
+                    "delimiter",
+                    "xml_item_path",
+                    "parse_options",
+                    "sku",
+                    "columns",
+                    "sample_rows",
+                    "warnings"
+                ],
+                "title": "ImportResource"
+            },
+            "ImportStatus": {
+                "type": "string",
+                "enum": [
+                    "queued",
+                    "fetching",
+                    "reading",
+                    "profiled",
+                    "unchanged",
+                    "failed"
+                ],
+                "title": "ImportStatus"
+            },
+            "ImportSummaryResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "feed_id": {
+                        "type": "integer"
+                    },
+                    "origin": {
+                        "type": "string",
+                        "enum": [
+                            "upload",
+                            "fetch",
+                            "reread"
+                        ]
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ImportStatus"
+                    },
+                    "original_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "format": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Format"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "row_count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "column_count": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "reuses_import_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "failure": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "reason": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "message": {
+                                "type": "string"
+                            },
+                            "retry_after_seconds": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "reason",
+                            "message",
+                            "retry_after_seconds"
+                        ]
+                    },
+                    "started_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "finished_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "feed_id",
+                    "origin",
+                    "status",
+                    "original_name",
+                    "format",
+                    "row_count",
+                    "column_count",
+                    "reuses_import_id",
+                    "failure",
+                    "started_at",
+                    "finished_at",
+                    "created_at"
+                ],
+                "title": "ImportSummaryResource"
             },
             "LanguageResource": {
                 "type": "object",
@@ -1196,6 +2540,84 @@
                 ],
                 "title": "RegisterRequest"
             },
+            "RereadImportRequest": {
+                "type": "object",
+                "description": "Read the same file again with corrected options (encoding, delimiter, quoting, XML item).",
+                "properties": {
+                    "": {
+                        "type": "object",
+                        "properties": {
+                            "encoding": {
+                                "type": "string"
+                            },
+                            "delimiter": {
+                                "type": "string"
+                            },
+                            "quoted": {
+                                "type": "string"
+                            },
+                            "xml_item_path": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "encoding",
+                            "delimiter",
+                            "quoted",
+                            "xml_item_path"
+                        ]
+                    },
+                    "encoding": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "UTF-8",
+                            "UTF-16LE",
+                            "UTF-16BE",
+                            "UTF-32LE",
+                            "UTF-32BE",
+                            "Windows-1252",
+                            "ISO-8859-1",
+                            "ISO-8859-15",
+                            "Windows-1250",
+                            "ISO-8859-2",
+                            "Windows-1251",
+                            "Windows-1253",
+                            "ISO-8859-7",
+                            "Windows-1254",
+                            "ISO-8859-9",
+                            null
+                        ]
+                    },
+                    "delimiter": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            ",",
+                            ";",
+                            "\t",
+                            "|",
+                            null
+                        ]
+                    },
+                    "quoted": {
+                        "type": "boolean"
+                    },
+                    "xml_item_path": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^[^\\/\\s]+(\\/[^\\/\\s]+)*$",
+                        "maxLength": 255
+                    }
+                },
+                "title": "RereadImportRequest"
+            },
             "ResetPasswordRequest": {
                 "type": "object",
                 "properties": {
@@ -1222,6 +2644,181 @@
                     "password_confirmation"
                 ],
                 "title": "ResetPasswordRequest"
+            },
+            "StartUploadRequest": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "size": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 2147483648
+                    }
+                },
+                "required": [
+                    "filename",
+                    "size"
+                ],
+                "title": "StartUploadRequest"
+            },
+            "StoreFeedRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Without a URL the feed is fed by uploads.",
+                        "maxLength": 2048
+                    },
+                    "parse_options": {
+                        "type": "object",
+                        "properties": {
+                            "encoding": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "enum": [
+                                    "UTF-8",
+                                    "UTF-16LE",
+                                    "UTF-16BE",
+                                    "UTF-32LE",
+                                    "UTF-32BE",
+                                    "Windows-1252",
+                                    "ISO-8859-1",
+                                    "ISO-8859-15",
+                                    "Windows-1250",
+                                    "ISO-8859-2",
+                                    "Windows-1251",
+                                    "Windows-1253",
+                                    "ISO-8859-7",
+                                    "Windows-1254",
+                                    "ISO-8859-9",
+                                    null
+                                ]
+                            },
+                            "delimiter": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "enum": [
+                                    ",",
+                                    ";",
+                                    "\t",
+                                    "|",
+                                    null
+                                ]
+                            },
+                            "quoted": {
+                                "type": "boolean"
+                            },
+                            "xml_item_path": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\/\\s]+(\\/[^\\/\\s]+)*$",
+                                "maxLength": 255
+                            }
+                        },
+                        "required": [
+                            "encoding",
+                            "delimiter",
+                            "quoted",
+                            "xml_item_path"
+                        ]
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "StoreFeedRequest"
+            },
+            "UpdateFeedRequest": {
+                "type": "object",
+                "description": "Only what is sent changes: an omitted URL keeps the stored one (legacy D16).",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "url": {
+                        "type": "string",
+                        "maxLength": 2048
+                    },
+                    "parse_options": {
+                        "type": "object",
+                        "properties": {
+                            "encoding": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "enum": [
+                                    "UTF-8",
+                                    "UTF-16LE",
+                                    "UTF-16BE",
+                                    "UTF-32LE",
+                                    "UTF-32BE",
+                                    "Windows-1252",
+                                    "ISO-8859-1",
+                                    "ISO-8859-15",
+                                    "Windows-1250",
+                                    "ISO-8859-2",
+                                    "Windows-1251",
+                                    "Windows-1253",
+                                    "ISO-8859-7",
+                                    "Windows-1254",
+                                    "ISO-8859-9",
+                                    null
+                                ]
+                            },
+                            "delimiter": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "enum": [
+                                    ",",
+                                    ";",
+                                    "\t",
+                                    "|",
+                                    null
+                                ]
+                            },
+                            "quoted": {
+                                "type": "boolean"
+                            },
+                            "xml_item_path": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\/\\s]+(\\/[^\\/\\s]+)*$",
+                                "maxLength": 255
+                            }
+                        },
+                        "required": [
+                            "encoding",
+                            "delimiter",
+                            "quoted",
+                            "xml_item_path"
+                        ]
+                    }
+                },
+                "title": "UpdateFeedRequest"
             },
             "UpdatePasswordRequest": {
                 "type": "object",
@@ -1288,6 +2885,38 @@
                     "name"
                 ],
                 "title": "UpdateWorkspaceRequest"
+            },
+            "UploadSessionResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "size": {
+                        "type": "integer"
+                    },
+                    "chunk_size": {
+                        "type": "integer"
+                    },
+                    "total_chunks": {
+                        "type": "integer"
+                    },
+                    "expires_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "filename",
+                    "size",
+                    "chunk_size",
+                    "total_chunks",
+                    "expires_at"
+                ],
+                "title": "UploadSessionResource"
             },
             "UserResource": {
                 "type": "object",
@@ -1369,6 +2998,24 @@
                     "workspace"
                 ],
                 "title": "UserResource"
+            },
+            "ValueKind": {
+                "type": "string",
+                "description": "What a column's values look like, from a sample of them. Mapping (M3) uses it as evidence; it never changes a value.\n",
+                "enum": [
+                    "empty",
+                    "gtin",
+                    "integer",
+                    "decimal",
+                    "boolean",
+                    "date",
+                    "image_url",
+                    "url",
+                    "html",
+                    "code",
+                    "text"
+                ],
+                "title": "ValueKind"
             },
             "WorkspaceResource": {
                 "type": "object",
@@ -1674,6 +3321,25 @@
                                 "requested",
                                 "plan",
                                 "upgrade_to",
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ModelNotFoundException": {
+                "description": "Not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
                                 "message"
                             ]
                         }

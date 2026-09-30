@@ -66,7 +66,18 @@ it('answers 401 to anonymous calls on every protected API route', function (): v
             continue;
         }
 
-        $uri = '/'.preg_replace('/\{[^}]+\}/', '1', $route->uri());
+        // A value each parameter's constraint accepts: a 404 from a non-matching placeholder would
+        // hide a missing authentication check.
+        $uri = '/'.preg_replace_callback('/\{([^}?]+)\??\}/', static function (array $match) use ($route): string {
+            $pattern = $route->wheres[$match[1]] ?? null;
+            foreach (['1', '00000000-0000-4000-8000-000000000001'] as $candidate) {
+                if ($pattern === null || preg_match('#^(?:'.$pattern.')$#', $candidate) === 1) {
+                    return $candidate;
+                }
+            }
+
+            throw new RuntimeException("No sample value for {{$match[1]}} in {$route->uri()}");
+        }, $route->uri());
         $method = collect($route->methods())->first(static fn (string $m): bool => $m !== 'HEAD');
 
         $this->json((string) $method, $uri)->assertUnauthorized();
