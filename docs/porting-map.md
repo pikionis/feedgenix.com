@@ -224,3 +224,22 @@ code in its module, with its tests. Nothing is copied blindly.
   - The value kind of each column, from a sample: GTIN (check digit verified), integer, decimal, boolean, date, image URL, URL, HTML, code, text. `0012345` is a code, never a number.
   - A few examples and the longest length per column.
   - A column signature (the names in order): the same signature means an earlier mapping still fits (D6 is fixed with it in M3).
+
+### M2 · `FeedDownloadService::downloadHttp`, `CommissionFeedFetcher::downloadHttp` → `Domain/Ingest/Fetch` (HTTP only; SFTP/FTP in M8)
+- **Kept:**
+  - 403 and 429 mean a cooldown, not a failure;
+  - a `Content-Length` the body does not reach is a truncated download;
+  - streaming to disk;
+  - clear messages for 401 and 404.
+- **Fixed:**
+  - The Commission fetcher turned TLS verification **off**; it is always on.
+  - Redirects were followed blindly by curl; now each hop is checked.
+  - Nothing stopped a URL from reaching the metadata service or the host's own Redis.
+- **New:**
+  - The SSRF policy of ADR 0013: URL rules, public-only addresses including IPv6 wrappers, the connection pinned to the checked address (no DNS rebinding), hand-followed redirects that are re-checked, and a size cap.
+  - `Retry-After`, capped at a day.
+  - Conditional requests (ETag, Last-Modified).
+  - `Accept-Encoding: gzip`: a gzip body is stored as sent and inflated with its integrity checked.
+  - An arch rule: raw curl, sockets and DNS only in `Ingest/Fetch` (and AI providers).
+- **Dropped:** URL-embedded credentials (refused); FTP and SFTP (M8, with encrypted credentials and D16).
+- **Proof:** 12 mutants, one per guard, each caught.

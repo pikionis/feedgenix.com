@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Ingest\Fetch;
+
+/** A feed URL taken apart after it passed the guard. */
+final readonly class Target
+{
+    public function __construct(
+        public string $url,
+        public string $scheme,
+        public string $host,
+        public int $port,
+    ) {}
+
+    public function isIpLiteral(): bool
+    {
+        return filter_var($this->host, FILTER_VALIDATE_IP) !== false;
+    }
+
+    /** A Location header, absolute or relative, resolved against this URL. */
+    public function resolve(string $location): string
+    {
+        $location = trim($location);
+        if (preg_match('~^[a-z][a-z0-9+.-]*:~i', $location) === 1) {
+            return $location;
+        }
+
+        $origin = $this->scheme.'://'.(str_contains($this->host, ':') ? "[{$this->host}]" : $this->host)
+            .($this->port === ($this->scheme === 'https' ? 443 : 80) ? '' : ':'.$this->port);
+
+        if (str_starts_with($location, '//')) {
+            return $this->scheme.':'.$location;
+        }
+
+        if (str_starts_with($location, '/')) {
+            return $origin.$location;
+        }
+
+        $path = (string) parse_url($this->url, PHP_URL_PATH);
+        $directory = substr($path, 0, (int) strrpos($path, '/') + 1);
+
+        return $origin.($directory === '' ? '/' : $directory).$location;
+    }
+}
