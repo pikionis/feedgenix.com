@@ -16,3 +16,4 @@ record supersedes them.
 | [0009](0009-hosting-deploys-and-backups.md) | Hosting, deploys and backups |
 | [0010](0010-test-policy.md) | Test policy |
 | [0011](0011-sandboxed-units-and-deploy-receiver.md) | Sandboxed services and a forced-command deploy receiver (refines 0009) |
+| [0012](0012-reading-feeds.md) | Reading feeds: recognition by content, UTF-8, formats, never partial |

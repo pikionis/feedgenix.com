@@ -42,3 +42,25 @@ it('fails fast on a value env() would turn into a non-string', function (string 
     'false' => ['(false)', 'bool'],
     'null' => ['null', 'null'],
 ]);
+
+it('reads true/false and 1/0 as booleans, and the default when unset', function (string $raw, bool $expected): void {
+    setTestEnv($raw);
+
+    expect(TypedEnv::bool('FG_TYPED_ENV_TEST', ! $expected))->toBe($expected);
+})->with([['true', true], ['false', false], ['1', true], ['0', false], ['(true)', true]]);
+
+it('uses the boolean default when the variable is unset or empty', function (): void {
+    expect(TypedEnv::bool('FG_TYPED_ENV_TEST', true))->toBeTrue()
+        ->and(TypedEnv::bool('FG_TYPED_ENV_TEST', false))->toBeFalse();
+
+    setTestEnv('');
+    expect(TypedEnv::bool('FG_TYPED_ENV_TEST', true))->toBeTrue()
+        ->and(TypedEnv::bool('FG_TYPED_ENV_TEST', false))->toBeFalse();
+});
+
+it('fails fast on a boolean typo instead of silently meaning "off"', function (string $raw): void {
+    setTestEnv($raw);
+
+    expect(fn (): bool => TypedEnv::bool('FG_TYPED_ENV_TEST', false))
+        ->toThrow(InvalidArgumentException::class, 'must be true or false');
+})->with(['yes', 'on', 'ture', '2']);

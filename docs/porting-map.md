@@ -188,3 +188,39 @@ code in its module, with its tests. Nothing is copied blindly.
   - Greek and other names are transliterated.
   - Empty or symbol-only names fall back to the email, then to `workspace`.
   - Plan, owner and slug are set with `forceFill`; they are not mass assignable (D21).
+
+### M2 · `FileParser`, `FileUploadService::detect*`, `CommissionFeedFetcher::ensureUtf8/normalise`, `verifyArchiveIntegrity` → `Domain/Ingest` (preparer, readers)
+- **Kept:**
+  - Streaming every format, whatever its size.
+  - The XML flattening rules: `a.b` for nesting, `a@attr` for attributes, `a[0]` for repeats, empty leaves left out.
+  - The Excel `sep=` hint, and the legacy delimiter candidates (`,` `;` tab `|`).
+  - Windows-1252 as the fallback for text that is not UTF-8.
+  - The gzip and zip integrity checks.
+- **Fixed:**
+  - **D1** — gzip is inflated, by content rather than by file name. Truncation and CRC errors are refused (the legacy served a silently truncated gzip), concatenated members are read, and bombs are refused by size and ratio.
+  - **D2** — every text feed is converted to UTF-8, streaming and chunk-safe (split UTF-16 surrogates and UTF-8 sequences are carried over). Invalid bytes become U+FFFD and are counted. Detection uses the BOM, the NUL pattern of BOM-less UTF-16, UTF-8 validity, then the XML declaration. The customer can override it with 15 encodings, including Windows-1250 and Windows-1253, which mbstring cannot convert: intl's UConverter is used instead.
+  - **D3** — duplicate and blank headers become `Price (2)` and `Column 4` instead of failing.
+  - **D4** — namespaced XML fields are kept with their prefix (`g:id`, `g:shipping.g:price`).
+  - **D5** — XLSX is streamed by OpenSpout (a million rows in bounded memory) instead of being loaded whole.
+  - **D23** — the XML item is the element that repeats most under a parent that does not repeat. `rss/channel/item`, `feed/entry` and `catalog/products/product` all work; the customer can name the path.
+  - The CSV parser's non-standard backslash escape is off (RFC 4180): `"C:\"` stays `C:\`.
+  - A malformed XML or JSON file stops the import with the line or problem named, instead of being half read: half a catalogue is how the legacy's disappear incidents started.
+- **New:**
+  - A content sniffer: an old `.xls`, a PDF, a web page (a login page behind a feed URL) and binary data are each refused with the reason.
+  - JSON: a top-level list, a list inside an object (the pointer is found with a bounded scan), and NDJSON. Numbers keep their exact text (`19.90`, a 20-digit GTIN): `json_decode` would change golden values.
+  - XXE and billion laughs: a document declaring entities is refused, and nothing is fetched (`LIBXML_NONET`, no DTD loading).
+  - Mixed-content HTML in XML is kept as markup.
+  - Caps: bytes, inflated bytes, inflate ratio, rows, columns, bytes per cell and nesting depth. Each refusal names its cap.
+  - NUL bytes are removed and counted (PostgreSQL text cannot hold them).
+- **Dropped:** the Competec-specific joiners (`Categories.joined3`, `attributes.flat`, `Dimensions.formatted`, `LongTextBullets.*`). Composing columns belongs to mapping (M3), for every feed.
+- **Proof:** 22 mutants, one per guard, each made its test fail. The mutation run also found a test whose emoji did not actually straddle the chunk boundary; it was fixed.
+
+### M2 · `AnalysisService` → `Domain/Ingest/Profile/ColumnProfiler`
+- **Kept:** one pass over every row; per-column fill rate; the sample rows for the mapping review; SKU candidates by name (the legacy list, plus Google's `g:id`).
+- **Changed:**
+  - The SKU column is chosen on **evidence**: every row filled and every value unique wins over a better name. Otherwise it is offered at low confidence, with its gaps and repeats counted. Uniqueness is tracked up to a cap and never claimed beyond it.
+  - Whitespace-only values count as empty.
+- **New:**
+  - The value kind of each column, from a sample: GTIN (check digit verified), integer, decimal, boolean, date, image URL, URL, HTML, code, text. `0012345` is a code, never a number.
+  - A few examples and the longest length per column.
+  - A column signature (the names in order): the same signature means an earlier mapping still fits (D6 is fixed with it in M3).

@@ -18,6 +18,9 @@ use Tests\TestCase;
  */
 pest()->extend(TestCase::class)->use(LazilyRefreshDatabase::class)->in('Feature');
 pest()->extend(TestCase::class)->in('Unit');
+pest()->afterEach(fn () => cleanIngestScratch())->in('Unit/Ingest', 'Feature/Ingest');
+
+require_once __DIR__.'/Support/ingest.php';
 
 function tenancy(): TenantContext
 {

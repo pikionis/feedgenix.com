@@ -30,4 +30,22 @@ final class TypedEnv
 
         return $value;
     }
+
+    /** true/false (or 1/0), empty for the default; anything else is a typo that must not silently mean "off". */
+    public static function bool(string $key, bool $default): bool
+    {
+        $value = Env::get($key, $default);
+
+        return match (true) {
+            is_bool($value) => $value,
+            $value === '' => $default,
+            $value === '1' => true,
+            $value === '0' => false,
+            default => throw new InvalidArgumentException(sprintf(
+                'Environment variable [%s] must be true or false, got "%s".',
+                $key,
+                is_scalar($value) ? (string) $value : get_debug_type($value),
+            )),
+        };
+    }
 }
