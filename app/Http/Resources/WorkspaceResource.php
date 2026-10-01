@@ -64,6 +64,7 @@ final class WorkspaceResource extends JsonResource
                     'worker_slots' => $entitlements->limit('worker_slots'),
                 ],
                 'used' => [
+                    'feeds' => $entitlements->used('feeds'),
                     'languages' => $entitlements->used('languages'),
                 ],
                 'overage' => [

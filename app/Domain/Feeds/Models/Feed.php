@@ -11,9 +11,12 @@ use App\Domain\Ingest\ParseOptions;
 use App\Domain\Tenancy\Concerns\BelongsToTenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * A customer's feed: where its products come from and how to read them.
@@ -27,7 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property CarbonImmutable|null $created_at
  * @property-read FeedSource|null $feedSource
  * @property-read Import|null $latestImport
- * @property-read Import|null $profileImport
+ * @property-read int|null $profile_import_id only with the withSummary() scope
  */
 #[Fillable(['name', 'source', 'parse_options'])]
 class Feed extends Model
@@ -87,14 +90,18 @@ class Feed extends Model
     }
 
     /**
-     * The import whose profile is current: the last one that was read successfully.
+     * What the API shows of a feed: its source, the latest import's summary (never its samples: the
+     * feed list is polled while imports run) and `profile_import_id`, the import whose profile is
+     * current (the last one read successfully).
      *
-     * @return HasOne<Import, $this>
+     * @param  Builder<static>  $query
      */
-    public function profileImport(): HasOne
+    #[Scope]
+    protected function withSummary(Builder $query): void
     {
-        return $this->hasOne(Import::class)->ofMany(['id' => 'max'], static function ($query): void {
-            $query->where('status', ImportStatus::Profiled->value);
-        });
+        $columns = array_map(static fn (string $column): string => 'imports.'.$column, Import::SUMMARY_COLUMNS);
+
+        $query->with(['feedSource', 'latestImport' => static fn (Relation $latest): Relation => $latest->select($columns)])
+            ->withMax(['imports as profile_import_id' => static fn (Builder $imports): Builder => $imports->where('status', ImportStatus::Profiled->value)], 'id');
     }
 }

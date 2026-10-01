@@ -67,6 +67,7 @@ export default function AppLayout() {
             <NavItem to="/app" end>
               Overview
             </NavItem>
+            <NavItem to="/app/feeds">Feeds</NavItem>
             <NavItem to="/app/settings">Settings</NavItem>
             {user.is_staff && <NavItem to="/admin">Staff</NavItem>}
           </nav>

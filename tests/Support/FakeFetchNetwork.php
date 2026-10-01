@@ -22,8 +22,16 @@ final class FakeFetchNetwork implements Resolver, Transport
     /** @var array<string, list<list<string>>> host => answers, one per lookup (the last one repeats) */
     private array $dns = [];
 
-    /** @var array<string, list<array{status: int, headers: array<string, string>, body: string}|FetchFailed>> url => responses */
+    /**
+     * Each response is served once, in order; the last one served then repeats. A response added
+     * later is served next, so a test can change what a URL answers between two fetches.
+     *
+     * @var array<string, list<array{status: int, headers: array<string, string>, body: string}|FetchFailed>> url => responses not served yet
+     */
     private array $responses = [];
+
+    /** @var array<string, array{status: int, headers: array<string, string>, body: string}|FetchFailed> url => the last response served */
+    private array $served = [];
 
     /** @var list<string> */
     public array $lookups = [];
@@ -70,8 +78,10 @@ final class FakeFetchNetwork implements Resolver, Transport
     {
         $this->requests[] = ['url' => $target->url, 'host' => $target->host, 'address' => $address, 'headers' => $headers];
 
-        $queue = $this->responses[$target->url] ?? throw new RuntimeException("No scripted response for {$target->url}");
-        $response = count($queue) > 1 ? array_shift($this->responses[$target->url]) : $queue[0];
+        $response = ($this->responses[$target->url] ?? []) !== []
+            ? array_shift($this->responses[$target->url])
+            : $this->served[$target->url] ?? throw new RuntimeException("No scripted response for {$target->url}");
+        $this->served[$target->url] = $response;
         if ($response instanceof FetchFailed) {
             throw $response;
         }

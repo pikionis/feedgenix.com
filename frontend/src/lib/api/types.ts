@@ -22,3 +22,26 @@ export interface ValidationErrorBody {
 export function isValidationError(body: unknown): body is ValidationErrorBody {
   return typeof body === 'object' && body !== null && 'errors' in body && typeof body.errors === 'object'
 }
+
+/** A feed with its latest import's summary (GET /v1/feeds/{feed}). */
+export type Feed = components['schemas']['FeedResource']
+
+export type ImportSummary = components['schemas']['ImportSummaryResource']
+
+/** An import in full: how the file was read, its column profile and sample rows. */
+export type FeedImport = components['schemas']['ImportResource']
+
+export type ImportStatus = components['schemas']['ImportStatus']
+
+export type ValueKind = components['schemas']['ValueKind']
+
+export type FeedFormat = components['schemas']['Format']
+
+export type EncodingReason = NonNullable<FeedImport['encoding']>['reason']
+
+/** What the customer may correct when a file was read wrongly (POST /v1/imports/{import}/reread). */
+export type ReadingOptions = components['schemas']['RereadImportRequest']
+
+export type Encoding = NonNullable<ReadingOptions['encoding']>
+
+export type Delimiter = NonNullable<ReadingOptions['delimiter']>

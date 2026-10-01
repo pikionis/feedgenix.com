@@ -17,11 +17,11 @@ use Illuminate\Validation\ValidationException;
 
 final class FeedImportController
 {
-    /** A feed's imports, newest first. */
+    /** A feed's last 20 imports, newest first. */
     public function index(Feed $feed): AnonymousResourceCollection
     {
         return ImportSummaryResource::collection(
-            Import::query()->where('feed_id', $feed->id)->latest('id')->paginate(20),
+            Import::query()->select(Import::SUMMARY_COLUMNS)->where('feed_id', $feed->id)->latest('id')->limit(20)->get(),
         );
     }
 

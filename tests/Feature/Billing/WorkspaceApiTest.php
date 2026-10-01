@@ -15,12 +15,15 @@ function targetCodes(Tenant $tenant): array
 it('shows the plan in force, the limits and the usage, never money', function (): void {
     $tenant = Tenant::factory()->create();
     addLanguage($tenant, 'de');
+    createFeed(owner($tenant), ['name' => 'Uploads'])->assertCreated();
 
     $response = $this->actingAs(owner($tenant))->getJson('/api/v1/workspace')->assertOk()
         ->assertJsonPath('workspace.role', 'owner')
         ->assertJsonPath('plan.key', 'free')
         ->assertJsonPath('entitlements.limits.languages', 1)
         ->assertJsonPath('entitlements.used.languages', 1)
+        ->assertJsonPath('entitlements.limits.feeds', 1)
+        ->assertJsonPath('entitlements.used.feeds', 1)
         ->assertJsonPath('entitlements.limits.products', 500)
         ->assertJsonPath('languages.0.code', 'de');
 

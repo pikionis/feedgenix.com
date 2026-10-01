@@ -293,5 +293,32 @@ the scan, so a file it could not read had no record of its own.
   Fetching on demand is rate-limited (10 a minute per user).
 - **API:** statuses, formats, value kinds, encoding reasons and SKU confidence are enums in the
   OpenAPI contract, so the frontend handles each of them.
+  - A feed carries `profile_import_id`, the import whose profile is current; it stays while a later
+    import fails. An import says whether it `can_reread` (its file is stored).
+  - The feed list and a feed's last 20 imports load summary columns only: the list is polled while
+    imports run, and samples or profiles never travel with it.
 - **Proof:** 21 mutants over the pipeline and API; 20 caught. The survivor is equivalent and kept on
   purpose: the UUID route constraint repeats what the UUID model binding already does (404).
+
+### M2 · Frontend `AddSupplier.tsx` → `frontend/src/features/feeds`, `routes/app/feeds.tsx`, `routes/app/feed.tsx`
+- **Kept:** one dialog for a URL or a file, with progress while the file uploads.
+- **Changed:**
+  - The browser uploads in chunks: three at a time, in any order. A chunk is retried twice after a
+    network or server error, never after a refusal. **The first failure stops every other chunk.**
+    Without that, a failed upload kept sending (and retrying) in the background. A test proves it,
+    and fails when the stop is removed.
+  - A failed upload never makes a second feed: "Upload again" goes into the feed already created.
+  - Over the plan's feed limit, the 402 hands over to the upgrade dialog.
+- **New:**
+  - The feeds list (source, size, last import's status) and the plan's feed usage.
+  - The feed page:
+    - how the file was read: format and containers, encoding and why, separator, XML item, SKU;
+    - the column profile and sample products;
+    - the status, polled while an import runs;
+    - a failure in the customer's words, with the wait a rate-limited source asked for;
+    - "read it differently", showing only the options that matter for the format;
+    - fetch now (409 while busy), upload a new file, delete, and the import history.
+- **Proof:** 34 Vitest tests. The Playwright demo of M2: an Excel upload and a Google Shopping URL
+  each become a column profile, and the Free plan stops at one feed. End-to-end runs use the sync
+  queue, may fetch from 127.0.0.1, and keep the cache in memory (rate limits are tested in Pest;
+  the suite signs up many accounts from one address).

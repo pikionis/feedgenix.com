@@ -53,6 +53,12 @@ class Import extends Model
 {
     use BelongsToTenant;
 
+    /** What a summary shows (ImportSummaryResource): never the samples, the columns or where the file is. */
+    public const array SUMMARY_COLUMNS = [
+        'id', 'feed_id', 'origin', 'status', 'original_name', 'format', 'row_count', 'column_count', 'reuses_import_id',
+        'failure_reason', 'failure_message', 'retry_after_seconds', 'started_at', 'finished_at', 'created_at',
+    ];
+
     /** @var array<string, mixed> */
     protected $attributes = [
         'status' => 'queued',

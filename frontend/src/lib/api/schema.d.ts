@@ -130,7 +130,7 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** A feed's imports, newest first */
+    /** A feed's last 20 imports, newest first */
     get: operations['feeds.imports']
     put?: never
     post?: never
@@ -593,6 +593,8 @@ export interface components {
         finished_at: string | null
         created_at: string | null
       } | null
+      /** @description The import whose profile is current (the last one read successfully); it stays while a later import fails. */
+      profile_import_id: number | null
       created_at: string | null
     }
     /** ForgotPasswordRequest */
@@ -626,6 +628,8 @@ export interface components {
       started_at: string | null
       finished_at: string | null
       created_at: string | null
+      /** @description The received file is stored, so it can be read again with other options. */
+      can_reread: boolean
       received_bytes: number | null
       containers: string[]
       inner_name: string | null
@@ -637,10 +641,10 @@ export interface components {
       delimiter: string | null
       xml_item_path: string | null
       parse_options: {
-        encoding: unknown
-        delimiter: unknown
+        encoding: string | null
+        delimiter: string | null
         quoted: boolean
-        xml_item_path: unknown
+        xml_item_path: string | null
       }
       sku: {
         column: string
@@ -658,8 +662,14 @@ export interface components {
         kind: components['schemas']['ValueKind']
         examples: string[]
       }[]
-      sample_rows: unknown[]
-      warnings: unknown[]
+      sample_rows: {
+        [key: string]: string
+      }[]
+      warnings: {
+        code: string
+        message: string
+        count: number
+      }[]
     }
     /**
      * ImportStatus
@@ -748,12 +758,6 @@ export interface components {
      * @description Read the same file again with corrected options (encoding, delimiter, quoting, XML item).
      */
     RereadImportRequest: {
-      ''?: {
-        encoding: string
-        delimiter: string
-        quoted: string
-        xml_item_path: string
-      }
       /** @enum {string|null} */
       encoding?:
         | 'UTF-8'
@@ -943,6 +947,7 @@ export interface components {
           worker_slots: number | null
         }
         used: {
+          feeds: number
           languages: number
         }
         overage: {
@@ -1299,39 +1304,14 @@ export interface operations {
     }
     requestBody?: never
     responses: {
-      /** @description Paginated set of `ImportSummaryResource` */
+      /** @description Array of `ImportSummaryResource` */
       200: {
         headers: {
           [name: string]: unknown
         }
         content: {
           'application/json': {
-            import: components['schemas']['ImportSummaryResource'][]
-            links: {
-              first: string | null
-              last: string | null
-              prev: string | null
-              next: string | null
-            }
-            meta: {
-              current_page: number
-              from: number | null
-              last_page: number
-              /** @description Generated paginator links. */
-              links: {
-                url: string | null
-                label: string
-                active: boolean
-              }[]
-              /** @description Base path for paginator generated URLs. */
-              path: string | null
-              /** @description Number of items shown per page. */
-              per_page: number
-              /** @description Number of the last item in the slice. */
-              to: number | null
-              /** @description Total number of items being paginated. */
-              total: number
-            }
+            data: components['schemas']['ImportSummaryResource'][]
           }
         }
       }

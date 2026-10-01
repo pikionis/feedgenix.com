@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>Alpine Test Shop</title>
+    <link>https://shop.example</link>
+    <description>A synthetic Google Shopping feed for the end-to-end tests.</description>
+    <item>
+      <g:id>AT-1001</g:id>
+      <title>Trail running shoe</title>
+      <description><![CDATA[<p>Light trail shoe with a <b>grippy</b> sole.</p>]]></description>
+      <link>https://shop.example/p/at-1001</link>
+      <g:image_link>https://img.example/at-1001.jpg</g:image_link>
+      <g:price>129.90 EUR</g:price>
+      <g:availability>in stock</g:availability>
+      <g:gtin>4006381333931</g:gtin>
+      <g:brand>Alpine</g:brand>
+    </item>
+    <item>
+      <g:id>AT-1002</g:id>
+      <title>Merino beanie</title>
+      <description><![CDATA[<p>Warm merino wool beanie.</p>]]></description>
+      <link>https://shop.example/p/at-1002</link>
+      <g:image_link>https://img.example/at-1002.jpg</g:image_link>
+      <g:price>34.00 EUR</g:price>
+      <g:availability>in stock</g:availability>
+      <g:gtin>5901234123457</g:gtin>
+      <g:brand>Alpine</g:brand>
+    </item>
+    <item>
+      <g:id>AT-1003</g:id>
+      <title>Insulated bottle 0.75 l</title>
+      <description><![CDATA[<p>Keeps drinks cold for 24 hours.</p>]]></description>
+      <link>https://shop.example/p/at-1003</link>
+      <g:image_link>https://img.example/at-1003.jpg</g:image_link>
+      <g:price>27.50 EUR</g:price>
+      <g:availability>out of stock</g:availability>
+      <g:gtin>96385074</g:gtin>
+      <g:brand>Alpine</g:brand>
+    </item>
+  </channel>
+</rss>

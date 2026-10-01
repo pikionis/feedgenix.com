@@ -14,8 +14,11 @@ trait ValidatesParseOptions
     /** @return array<string, mixed> */
     protected function parseOptionRules(string $prefix = 'parse_options.'): array
     {
+        // Nested options are one object of known keys; at the top level the request is the object.
+        $container = $prefix === '' ? [] : [rtrim($prefix, '.') => ['sometimes', 'array:encoding,delimiter,quoted,xml_item_path']];
+
         return [
-            rtrim($prefix, '.') => ['sometimes', 'array:encoding,delimiter,quoted,xml_item_path'],
+            ...$container,
             $prefix.'encoding' => ['nullable', 'string', Rule::in(Encodings::names())],
             $prefix.'delimiter' => ['nullable', 'string', Rule::in(ParseOptions::DELIMITERS)],
             $prefix.'quoted' => ['sometimes', 'boolean'],

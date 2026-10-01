@@ -43,6 +43,8 @@ final class FeedResource extends JsonResource
                 'xml_item_path' => $options->xmlItemPath,
             ],
             'latest_import' => $latest === null ? null : (new ImportSummaryResource($latest))->toArray($request),
+            /** The import whose profile is current (the last one read successfully); it stays while a later import fails. */
+            'profile_import_id' => $feed->profile_import_id,
             'created_at' => $feed->created_at?->toIso8601String(),
         ];
     }

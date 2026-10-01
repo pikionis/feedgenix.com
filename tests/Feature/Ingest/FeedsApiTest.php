@@ -217,3 +217,42 @@ it('rate-limits fetching on demand', function (): void {
 
     $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/fetch")->assertStatus(429);
 });
+
+it('points at the import whose profile is current, also while a later import fails', function (): void {
+    [$tenant, $network] = shopWithFeedUrl();
+    $created = createFeed(owner($tenant), ['name' => 'Main', 'url' => 'https://shop.example/feed.csv?token=secret-token']);
+    $feedId = (int) $created->json('feed.id');
+    $profiled = (int) $created->json('feed.latest_import.id');
+    $created->assertJsonPath('feed.profile_import_id', $profiled);
+
+    $network->respond('https://shop.example/feed.csv?token=secret-token', 200, '<!DOCTYPE html><html>Log in</html>');
+    $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/fetch")->assertJsonPath('import.status', 'failed');
+
+    $this->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feedId}")
+        ->assertJsonPath('feed.latest_import.status', 'failed')
+        ->assertJsonPath('feed.profile_import_id', $profiled);
+    $this->actingAs(owner($tenant))->getJson('/api/v1/feeds')->assertJsonPath('data.0.profile_import_id', $profiled);
+});
+
+it('has no profile to point at before a file was read', function (): void {
+    createFeed(owner(Tenant::factory()->create()), ['name' => 'Uploads'])
+        ->assertJsonPath('feed.latest_import', null)
+        ->assertJsonPath('feed.profile_import_id', null);
+});
+
+it('keeps the feed and import lists light: samples, columns and file locations stay in the database', function (): void {
+    [$tenant] = shopWithFeedUrl();
+    $feedId = (int) createFeed(owner($tenant), ['name' => 'Main', 'url' => 'https://shop.example/feed.csv?token=secret-token'])->json('feed.id');
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $this->actingAs(owner($tenant))->getJson('/api/v1/feeds')->assertOk()->assertJsonPath('data.0.latest_import.row_count', 2);
+    $this->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feedId}/imports")->assertOk()->assertJsonPath('data.0.row_count', 2);
+    $queries = collect(DB::getQueryLog())->pluck('query')->filter(fn (string $sql): bool => str_contains($sql, 'from "imports"'));
+    DB::disableQueryLog();
+
+    expect($queries)->not->toBeEmpty();
+    foreach ($queries as $sql) {
+        expect($sql)->not->toContain('"imports".*')->not->toContain('select *')->not->toContain('sample_rows');
+    }
+});

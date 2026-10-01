@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use App\Domain\Ingest\Models\Import;
 use App\Domain\Ingest\Models\ImportColumn;
+use App\Domain\Ingest\ParseOptions;
 use App\Domain\Ingest\Profile\ValueKind;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -27,10 +28,12 @@ final class ImportResource extends JsonResource
     public function toArray(Request $request): array
     {
         $import = $this->resource;
-        $options = $import->parse_options;
+        $options = ParseOptions::fromArray($import->parse_options);
 
         return [
             ...(new ImportSummaryResource($import))->toArray($request),
+            /** The received file is stored, so it can be read again with other options. */
+            'can_reread' => $import->blob_path !== null,
             'received_bytes' => $import->received_bytes,
             'containers' => $import->containers,
             'inner_name' => $import->inner_name,
@@ -42,10 +45,10 @@ final class ImportResource extends JsonResource
             'delimiter' => $import->delimiter,
             'xml_item_path' => $import->xml_item_path,
             'parse_options' => [
-                'encoding' => isset($options['encoding']) && is_string($options['encoding']) ? $options['encoding'] : null,
-                'delimiter' => isset($options['delimiter']) && is_string($options['delimiter']) ? $options['delimiter'] : null,
-                'quoted' => ($options['quoted'] ?? true) !== false,
-                'xml_item_path' => isset($options['xml_item_path']) && is_string($options['xml_item_path']) ? $options['xml_item_path'] : null,
+                'encoding' => $options->encoding,
+                'delimiter' => $options->delimiter,
+                'quoted' => $options->quoted,
+                'xml_item_path' => $options->xmlItemPath,
             ],
             'sku' => $import->sku === null ? null : [
                 'column' => (string) $import->sku['column'],
@@ -64,10 +67,12 @@ final class ImportResource extends JsonResource
                 'kind' => ValueKind::from($column->kind),
                 'examples' => $column->examples,
             ])->values()->all(),
+            /** @var list<array<string, string>> */
             'sample_rows' => array_map(
                 static fn (array $row): array => array_combine(array_map(strval(...), array_keys($row)), array_map(strval(...), $row)),
                 $import->sample_rows ?? [],
             ),
+            /** @var list<array{code: string, message: string, count: int}> */
             'warnings' => array_map(static fn (array $warning): array => [
                 'code' => (string) $warning['code'],
                 'message' => (string) $warning['message'],

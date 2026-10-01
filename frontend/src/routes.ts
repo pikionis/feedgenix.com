@@ -12,6 +12,8 @@ export default [
   // The workspace: every page needs a session (the layout's loader redirects to sign-in).
   route('app', 'routes/app/layout.tsx', [
     index('routes/app/overview.tsx'),
+    route('feeds', 'routes/app/feeds.tsx'),
+    route('feeds/:feedId', 'routes/app/feed.tsx'),
     route('settings', 'routes/app/settings.tsx'),
   ]),
 

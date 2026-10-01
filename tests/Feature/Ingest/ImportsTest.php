@@ -173,6 +173,16 @@ it('lists a feed’s imports, newest first', function (): void {
         ->assertJsonPath('data.1.status', 'profiled');
 });
 
+it('lists only the last 20 imports', function (): void {
+    [$tenant, $feedId] = urlFeed("sku\nA-1\n");
+    $ids = tenancy()->run($tenant->id, fn (): array => collect(range(1, 21))->map(fn (): int => Import::query()->create(['feed_id' => $feedId, 'origin' => 'fetch', 'status' => ImportStatus::Unchanged])->id)->all());
+
+    $this->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feedId}/imports")
+        ->assertJsonCount(20, 'data')
+        ->assertJsonPath('data.0.id', end($ids))
+        ->assertJsonPath('data.19.id', $ids[1]);
+});
+
 it('marks an import whose job died as interrupted, in its own workspace', function (): void {
     $tenant = Tenant::factory()->onPlan('pro')->create();
     $feedId = (int) createFeed(owner($tenant), ['name' => 'Uploads'])->json('feed.id');
@@ -192,4 +202,25 @@ it('leaves a finished import alone when its job reports a late failure', functio
     (new ProcessImport($import->id, $tenant->id))->failed(new RuntimeException('late'));
 
     expect(latestImport($tenant, $feedId)->status)->toBe(ImportStatus::Profiled);
+});
+
+it('says whether an import can be read again: only when its file is stored', function (): void {
+    [$tenant, $feedId, $network] = urlFeed("sku\nA-1\n");
+    $stored = latestImport($tenant, $feedId);
+    $network->respond('https://shop.example/feed', 429, '', ['Retry-After' => '60']);
+    $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/fetch")->assertJsonPath('import.status', 'failed');
+    $limited = latestImport($tenant, $feedId);
+
+    $this->actingAs(owner($tenant))->getJson("/api/v1/imports/{$stored->id}")->assertJsonPath('import.can_reread', true);
+    $this->actingAs(owner($tenant))->getJson("/api/v1/imports/{$limited->id}")->assertJsonPath('import.can_reread', false);
+    $this->actingAs(owner($tenant))->postJson("/api/v1/imports/{$limited->id}/reread", ['encoding' => 'UTF-8'])
+        ->assertUnprocessable()->assertJsonValidationErrors('import');
+});
+
+it('refuses reading options it does not know', function (): void {
+    [$tenant, $feedId] = urlFeed("sku\nA-1\n");
+    $import = latestImport($tenant, $feedId);
+
+    $this->actingAs(owner($tenant))->postJson("/api/v1/imports/{$import->id}/reread", ['encoding' => 'EBCDIC', 'delimiter' => ':', 'xml_item_path' => '/rss//item'])
+        ->assertUnprocessable()->assertJsonValidationErrors(['encoding', 'delimiter', 'xml_item_path']);
 });

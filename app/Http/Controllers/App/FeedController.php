@@ -29,7 +29,7 @@ final class FeedController
     /** The workspace's feeds, each with its latest import. */
     public function index(): AnonymousResourceCollection
     {
-        $feeds = Feed::query()->with(['feedSource', 'latestImport'])->orderBy('id')->get();
+        $feeds = Feed::query()->withSummary()->orderBy('id')->get();
 
         return FeedResource::collection($feeds);
     }
@@ -51,13 +51,13 @@ final class FeedController
             $queue->fetch($feed);
         }
 
-        return (new FeedResource($feed->load(['feedSource', 'latestImport'])))->response()->setStatusCode(201);
+        return $this->summary($feed)->response()->setStatusCode(201);
     }
 
     /** A feed with its latest import. */
     public function show(Feed $feed): FeedResource
     {
-        return new FeedResource($feed->load(['feedSource', 'latestImport']));
+        return $this->summary($feed);
     }
 
     /**
@@ -91,7 +91,7 @@ final class FeedController
 
         $feed->save();
 
-        return new FeedResource($feed->load(['feedSource', 'latestImport']));
+        return $this->summary($feed);
     }
 
     /** Delete a feed with its imports and stored files (owner or admin). */
@@ -101,5 +101,10 @@ final class FeedController
         $delete->handle($feed);
 
         return response()->noContent();
+    }
+
+    private function summary(Feed $feed): FeedResource
+    {
+        return new FeedResource(Feed::query()->withSummary()->findOrFail($feed->id));
     }
 }

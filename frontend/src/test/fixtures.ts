@@ -1,4 +1,4 @@
-import type { LimitHit, Plan, SessionUser, Workspace } from '~/lib/api/types'
+import type { Feed, FeedImport, ImportSummary, LimitHit, Plan, SessionUser, Workspace } from '~/lib/api/types'
 
 /** Typed from the OpenAPI contract, so a fixture can never drift from what the API returns. */
 export const origin = window.location.origin
@@ -78,7 +78,7 @@ export function workspace(overrides: Partial<Workspace> = {}): Workspace {
       paid_until: null,
       period: { start: '2027-01-01T00:00:00+00:00', end: '2027-02-01T00:00:00+00:00' },
       limits: { feeds: 1, languages: 1, products: 500, worker_slots: 1 },
-      used: { languages: 0 },
+      used: { feeds: 0, languages: 0 },
       overage: { available: false, enabled: true, credits_per_product: null },
     },
     languages: [],
@@ -103,4 +103,85 @@ export const languageLimit: LimitHit = {
   plan: 'free',
   upgrade_to: 'pro',
   message: 'Your Free plan includes 1 target language. Pro gives you 5 target languages.',
+}
+
+const READ_AT = '2027-01-10T10:00:00+00:00'
+
+export function importSummary(overrides: Partial<ImportSummary> = {}): ImportSummary {
+  return {
+    id: 100,
+    feed_id: 7,
+    origin: 'fetch',
+    status: 'profiled',
+    original_name: null,
+    format: 'csv',
+    row_count: 2,
+    column_count: 3,
+    reuses_import_id: null,
+    failure: null,
+    started_at: READ_AT,
+    finished_at: READ_AT,
+    created_at: READ_AT,
+    ...overrides,
+  }
+}
+
+export function feed(overrides: Partial<Feed> = {}): Feed {
+  return {
+    id: 7,
+    name: 'Main shop',
+    source: 'url',
+    host: 'shop.example',
+    status: 'active',
+    parse_options: { encoding: null, delimiter: null, quoted: true, xml_item_path: null },
+    latest_import: importSummary(),
+    profile_import_id: 100,
+    created_at: READ_AT,
+    ...overrides,
+  }
+}
+
+export function feedImport(overrides: Partial<FeedImport> = {}): FeedImport {
+  return {
+    ...importSummary(),
+    can_reread: true,
+    received_bytes: 64,
+    containers: [],
+    inner_name: null,
+    encoding: { name: 'UTF-8', reason: 'valid_utf8' },
+    delimiter: ';',
+    xml_item_path: null,
+    parse_options: { encoding: null, delimiter: null, quoted: true, xml_item_path: null },
+    sku: { column: 'sku', confidence: 'high', empty: 0, duplicates: 0 },
+    columns: [
+      { position: 0, name: 'sku', filled: 2, fill_rate: 1, max_length: 3, kind: 'code', examples: ['A-1', 'A-2'] },
+      {
+        position: 1,
+        name: 'title',
+        filled: 2,
+        fill_rate: 1,
+        max_length: 6,
+        kind: 'text',
+        examples: ['Hammer', 'Nail'],
+      },
+      { position: 2, name: 'price', filled: 1, fill_rate: 0.5, max_length: 4, kind: 'decimal', examples: ['9.90'] },
+    ],
+    sample_rows: [
+      { sku: 'A-1', title: 'Hammer', price: '9.90' },
+      { sku: 'A-2', title: 'Nail', price: '' },
+    ],
+    warnings: [],
+    ...overrides,
+  }
+}
+
+export const feedLimit: LimitHit = {
+  error: 'plan_limit',
+  limit: 'feeds',
+  allowed: 1,
+  used: 1,
+  requested: 2,
+  plan: 'free',
+  upgrade_to: 'pro',
+  message: 'Your Free plan includes 1 feed. Pro gives you 5 feeds.',
 }
