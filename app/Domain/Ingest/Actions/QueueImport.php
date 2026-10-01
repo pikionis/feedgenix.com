@@ -20,8 +20,8 @@ use InvalidArgumentException;
  */
 final class QueueImport
 {
-    /** An unfinished import older than this outlived any job that could run it: it is over. */
-    private const int STALE_AFTER_SECONDS = 7_200;
+    /** An unfinished import untouched for longer than any job may run (plus a margin) is over. */
+    private const int STALE_AFTER_SECONDS = ProcessImport::TIMEOUT + 600;
 
     public function fetch(Feed $feed): Import
     {

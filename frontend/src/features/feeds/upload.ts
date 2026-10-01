@@ -7,8 +7,15 @@ const PARALLEL = 3
 const ATTEMPTS = 3
 const RETRY_MS = 1000
 
-/** An upload that stopped, with the sentence to show. */
-export class UploadFailed extends Error {}
+/** An upload that stopped, with the sentence to show and the answer's status (null: no answer). */
+export class UploadFailed extends Error {
+  readonly status: number | null
+
+  constructor(message: string, status: number | null = null) {
+    super(message)
+    this.status = status
+  }
+}
 
 export interface UploadProgress {
   sent: number
@@ -31,7 +38,9 @@ export async function uploadFile(
     body: { filename: file.name, size: file.size },
     signal,
   })
-  if (started.data === undefined) throw new UploadFailed(feedErrorMessage(started.response.status, started.error))
+  if (started.data === undefined) {
+    throw new UploadFailed(feedErrorMessage(started.response.status, started.error), started.response.status)
+  }
   const upload = started.data.upload
 
   const pending = Array.from({ length: upload.total_chunks }, (_, index) => index)
@@ -72,7 +81,7 @@ export async function uploadFile(
     signal,
   })
   if (completed.data === undefined) {
-    throw new UploadFailed(feedErrorMessage(completed.response.status, completed.error))
+    throw new UploadFailed(feedErrorMessage(completed.response.status, completed.error), completed.response.status)
   }
 
   return completed.data.import
@@ -106,7 +115,7 @@ async function sendChunk(
   }
 
   // A refusal (wrong length, expired upload, no access) will not change on a retry.
-  if (status !== null && status < 500) throw new UploadFailed(feedErrorMessage(status, body))
+  if (status !== null && status < 500) throw new UploadFailed(feedErrorMessage(status, body), status)
   if (attempt >= ATTEMPTS) {
     throw new UploadFailed(
       status === null

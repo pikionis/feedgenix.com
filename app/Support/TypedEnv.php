@@ -48,4 +48,21 @@ final class TypedEnv
             )),
         };
     }
+
+    /** A positive whole number written in digits, empty for the default; "2GB" or "-1" fail fast. */
+    public static function positiveInt(string $key, int $default): int
+    {
+        $value = Env::get($key, $default);
+
+        return match (true) {
+            is_int($value) => $value,
+            $value === '' => $default,
+            is_string($value) && preg_match('/^[1-9]\d{0,17}$/', $value) === 1 => (int) $value,
+            default => throw new InvalidArgumentException(sprintf(
+                'Environment variable [%s] must be a positive whole number, got "%s".',
+                $key,
+                is_scalar($value) ? (string) $value : get_debug_type($value),
+            )),
+        };
+    }
 }

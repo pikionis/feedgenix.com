@@ -1,15 +1,5 @@
 import { expect, it } from 'vitest'
-import { formatBytes, formatWait, formatWhen, isDelimiter, isEncoding } from './labels'
-
-it('writes sizes the way people read them', () => {
-  expect(formatBytes(0)).toBe('0 B')
-  expect(formatBytes(1023)).toBe('1023 B')
-  expect(formatBytes(1024)).toBe('1 KB')
-  expect(formatBytes(1536)).toBe('1.5 KB')
-  expect(formatBytes(5 * 1024 * 1024)).toBe('5 MB')
-  expect(formatBytes(2 * 1024 ** 3)).toBe('2 GB')
-  expect(formatBytes(3 * 1024 ** 4)).toBe('3,072 GB')
-})
+import { formatWait, formatWhen, isDelimiter, isEncoding } from './labels'
 
 it('says when, relative to now', () => {
   const now = new Date('2027-01-10T12:00:00Z')

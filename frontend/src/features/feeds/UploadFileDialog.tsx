@@ -19,7 +19,8 @@ export function UploadFileDialog({ feed, onClose }: { feed: Feed; onClose: () =>
     if (file === null) return setError('Choose the file to upload.')
     setError(undefined)
     const outcome = await upload.start(feed.id, file)
-    if ('error' in outcome) return setError(outcome.error)
+    // Over the plan, the upgrade dialog explains; this one steps aside.
+    if ('error' in outcome) return outcome.overPlan ? onClose() : setError(outcome.error)
     if ('import' in outcome) {
       await Promise.all([
         client.invalidateQueries({ queryKey: feedQuery(feed.id).queryKey }),

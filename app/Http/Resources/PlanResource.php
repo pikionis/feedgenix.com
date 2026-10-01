@@ -45,6 +45,9 @@ final class PlanResource extends JsonResource
                 'products_per_month' => $perMonth,
                 'products_per_year' => $perMonth === null ? null : $perMonth * 12,
                 'worker_slots' => PlanCatalog::limit($plan, 'worker_slots'),
+                // The largest feed one import reads, uncompressed.
+                'feed_bytes' => PlanCatalog::limit($plan, 'feed_bytes'),
+                'feed_rows' => PlanCatalog::limit($plan, 'feed_rows'),
             ],
             'overage_credits_per_product' => PlanCatalog::overageCreditsPerProduct($plan),
             'features' => [

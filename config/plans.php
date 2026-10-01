@@ -13,6 +13,8 @@ declare(strict_types=1);
  * - "Products" = new or changed products that need AI work, each counted once per month.
  * - Above the allowance, paid plans continue with an overage fee in credits; Free waits.
  * - Pro carries every strong feature; Ultra adds scale; Custom adds dedicated infrastructure + API/MCP.
+ * - `feed_bytes` / `feed_rows`: the largest feed one import reads, measured uncompressed (a .gz may be
+ *   smaller on the wire). The server ceiling in config/ingest.php can only lower them.
  *
  * null = unlimited. `internal` guards never appear on the pricing page or in any public response.
  */
@@ -34,13 +36,13 @@ return [
                 'languages' => 1,
                 'products_per_month' => 500,
                 'worker_slots' => 1,
+                'feed_bytes' => 2 * 1024 ** 3,
+                'feed_rows' => 5_000_000,
             ],
             'overage' => null, // extra products wait for the next month
             'internal' => [
                 'auto_refresh_per_day' => 0,
                 'manual_refresh_per_day' => 3,
-                'max_rows_per_feed' => 5_000,
-                'max_upload_mb' => 50,
                 'ai_setup_calls_per_day' => 5,
                 'previews_per_day' => 3,
                 // Private beta only: the owner funds AI up to this per workspace until credits ship.
@@ -68,14 +70,14 @@ return [
                 'languages' => 5,
                 'products_per_month' => 50_000,
                 'worker_slots' => 2,
+                'feed_bytes' => 10 * 1024 ** 3,
+                'feed_rows' => 25_000_000,
             ],
             // 10 credits = €0.001 per extra product; break-even against Ultra ≈ 60,000 extra a month.
             'overage' => ['credits_per_product' => 10],
             'internal' => [
                 'auto_refresh_per_day' => 1,
                 'manual_refresh_per_day' => 10,
-                'max_rows_per_feed' => 250_000,
-                'max_upload_mb' => 500,
                 'ai_setup_calls_per_day' => 30,
                 'previews_per_day' => 50,
                 'beta_ai_budget_eur_month' => 30,
@@ -102,13 +104,13 @@ return [
                 'languages' => 10,
                 'products_per_month' => null,
                 'worker_slots' => 4,
+                'feed_bytes' => 50 * 1024 ** 3,
+                'feed_rows' => 100_000_000,
             ],
             'overage' => null, // unlimited products
             'internal' => [
                 'auto_refresh_per_day' => 3,
                 'manual_refresh_per_day' => 20,
-                'max_rows_per_feed' => 1_000_000,
-                'max_upload_mb' => 2_048,
                 'ai_setup_calls_per_day' => 60,
                 'previews_per_day' => 200,
                 'beta_ai_budget_eur_month' => 90,
@@ -135,14 +137,15 @@ return [
                 'languages' => null,
                 'products_per_month' => null,
                 'worker_slots' => 8,
+                // Larger feeds by agreement, through tenants.limits_override.
+                'feed_bytes' => 50 * 1024 ** 3,
+                'feed_rows' => 100_000_000,
             ],
             'overage' => null,
             // Deal-specific values go in tenants.limits_override.
             'internal' => [
                 'auto_refresh_per_day' => 3,
                 'manual_refresh_per_day' => null,
-                'max_rows_per_feed' => null,
-                'max_upload_mb' => 2_048,
                 'ai_setup_calls_per_day' => null,
                 'previews_per_day' => null,
                 'beta_ai_budget_eur_month' => 200,

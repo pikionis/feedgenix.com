@@ -4,19 +4,26 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Feeds\Models\Feed;
+use App\Domain\Ingest\ImportStatus;
+use App\Domain\Ingest\Models\Import;
 use App\Domain\Ingest\Models\UploadSession;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * Removes what abandoned uploads and crashed jobs leave on disk: expired upload sessions with
- * their chunks, job work folders untouched for a day, and staged uploads older than a day (their
- * imports expired long before). Stored feed files are never touched.
+ * Keeps the disk to what is needed:
+ * - expired upload sessions with their chunks;
+ * - job work folders untouched for a day, and staged uploads older than a day (their imports
+ *   expired long before);
+ * - stored feed files beyond the last few of each feed (config ingest.keep_files_per_feed), never
+ *   the one the feed's current profile was read from, nor a file another import still uses.
  */
-#[AsCommand(name: 'ingest:prune', description: 'Delete expired uploads and leftover work files')]
+#[AsCommand(name: 'ingest:prune', description: 'Delete expired uploads, leftover work files and old feed files')]
 #[Signature('ingest:prune {--dry-run : List what would be deleted}')]
 final class PruneIngestFilesCommand extends Command
 {
@@ -65,7 +72,43 @@ final class PruneIngestFilesCommand extends Command
             }
         }
 
+        $tenancy->runAsSystem('prune old feed files', fn () => Feed::query()->select('id')->chunkById(200, function ($feeds) use ($disk): void {
+            foreach ($feeds as $feed) {
+                $this->pruneFeedFiles($disk, $feed->id);
+            }
+        }));
+
         return self::SUCCESS;
+    }
+
+    /** Forgets the stored file of each import beyond the feed's last few, deleting it once nothing uses it. */
+    private function pruneFeedFiles(Filesystem $disk, int $feedId): void
+    {
+        $keep = max(1, (int) config('ingest.keep_files_per_feed'));
+        $profile = Import::query()->where('feed_id', $feedId)->where('status', ImportStatus::Profiled)->max('id');
+        $profileId = is_numeric($profile) ? (int) $profile : null;
+
+        $old = Import::query()
+            ->select(['id', 'blob_path'])
+            ->where('feed_id', $feedId)
+            ->whereNotNull('blob_path')
+            ->orderByDesc('id')
+            ->skip($keep)
+            ->get()
+            ->reject(static fn (Import $import): bool => $import->id === $profileId);
+
+        foreach ($old as $import) {
+            $blob = (string) $import->blob_path;
+            $this->report("file of import {$import->id}");
+            if ($this->dryRun) {
+                continue;
+            }
+
+            Import::query()->whereKey($import->id)->update(['blob_path' => null]);
+            if (! Import::query()->where('blob_path', $blob)->exists()) {
+                $disk->delete($blob);
+            }
+        }
     }
 
     private function report(string $what): void

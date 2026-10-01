@@ -18,3 +18,4 @@ record supersedes them.
 | [0011](0011-sandboxed-units-and-deploy-receiver.md) | Sandboxed services and a forced-command deploy receiver (refines 0009) |
 | [0012](0012-reading-feeds.md) | Reading feeds: recognition by content, UTF-8, formats, never partial |
 | [0013](0013-fetching-feed-urls.md) | Fetching feed URLs: the SSRF policy |
+| [0014](0014-feed-size-per-plan.md) | Feed size per plan, within a server ceiling |

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App;
 
+use App\Domain\Billing\Entitlements;
+use App\Domain\Billing\PlanLimitExceeded;
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Ingest\Actions\Uploads;
 use App\Domain\Ingest\Exceptions\FeedBusy;
+use App\Domain\Ingest\FeedSizeLimit;
 use App\Domain\Ingest\Models\UploadSession;
 use App\Http\Requests\App\CompleteUploadRequest;
 use App\Http\Requests\App\StartUploadRequest;
@@ -19,10 +22,18 @@ use RuntimeException;
 
 final class UploadController
 {
-    /** Start a chunked upload of a feed file (up to the size cap). */
+    /**
+     * Start a chunked upload of a feed file. A file larger than the plan reads answers 402 with the
+     * plan that reads it; larger than this server reads at all, 422.
+     *
+     * @throws PlanLimitExceeded
+     */
     public function start(StartUploadRequest $request, Feed $feed, Uploads $uploads): JsonResponse
     {
-        $session = $uploads->start($feed, (string) $request->validated('filename'), (int) $request->validated('size'));
+        $size = (int) $request->validated('size');
+        FeedSizeLimit::for(Entitlements::for($feed->tenant_id))->assertUploadFits($size);
+
+        $session = $uploads->start($feed, (string) $request->validated('filename'), $size);
 
         return (new UploadSessionResource($session))->response()->setStatusCode(201);
     }

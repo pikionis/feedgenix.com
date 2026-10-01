@@ -42,3 +42,26 @@ it('closes with “Not now”', async () => {
 
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 })
+
+it('says a feed’s size in words, without a bar of bytes', async () => {
+  renderDialog()
+  const message = 'This file is 3 GB; your Free plan reads feeds up to 2 GB. Pro reads feeds up to 10 GB.'
+
+  act(() =>
+    limitHit.emit({
+      error: 'plan_limit',
+      limit: 'feed_bytes',
+      allowed: 2 * 1024 ** 3,
+      used: null,
+      requested: 3 * 1024 ** 3,
+      plan: 'free',
+      upgrade_to: 'pro',
+      message,
+    }),
+  )
+
+  const dialog = await screen.findByRole('dialog')
+  expect(dialog).toHaveTextContent(message)
+  expect(dialog).not.toHaveTextContent('Asked for')
+  expect(await screen.findByText('Feeds up to 10 GB each')).toBeInTheDocument()
+})

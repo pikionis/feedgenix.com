@@ -148,7 +148,7 @@ it('uploads a file into a new feed, then opens it', async () => {
   await user.click(screen.getByRole('button', { name: 'Add feed' }))
 
   expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
-  expect(created).toEqual([{ name: 'Spring catalogue' }])
+  expect(created).toEqual([{ name: 'Spring catalogue', upload_size: 8 }])
 })
 
 it('keeps the new feed when its upload fails, and uploads into it again', async () => {
@@ -191,4 +191,41 @@ it('asks for a file, and refuses an empty one, before creating anything', async 
   await user.click(screen.getByRole('button', { name: 'Add feed' }))
   expect(await screen.findByText('This file is empty.')).toBeInTheDocument()
   expect(created).toEqual([])
+})
+
+it('says how large a file the plan reads', async () => {
+  renderDialog()
+
+  await userEvent.setup().click(await screen.findByLabelText('A file'))
+
+  expect(await screen.findByText(/Up to 2 GB uncompressed on your plan\./)).toBeInTheDocument()
+})
+
+it('lets the upgrade dialog explain a file larger than the plan, before any feed exists', async () => {
+  const message = 'This file is 3 GB; your Free plan reads feeds up to 2 GB. Pro reads feeds up to 10 GB.'
+  acceptFeeds(() =>
+    HttpResponse.json(
+      {
+        error: 'plan_limit',
+        limit: 'feed_bytes',
+        allowed: 2,
+        used: null,
+        requested: 3,
+        plan: 'free',
+        upgrade_to: 'pro',
+        message,
+      },
+      { status: 402 },
+    ),
+  )
+  const dialog = renderDialog()
+
+  const user = await fill('Huge catalogue')
+  await user.click(screen.getByLabelText('A file'))
+  await user.upload(screen.getByLabelText('File'), new File(['sku\nA-1\n'], 'huge.csv'))
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByRole('dialog')).toHaveTextContent(message)
+  expect(dialog.closed()).toBe(true)
+  expect(created).toEqual([{ name: 'Huge catalogue', upload_size: 8 }])
 })

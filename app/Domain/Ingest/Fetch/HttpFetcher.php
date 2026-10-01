@@ -32,8 +32,9 @@ final readonly class HttpFetcher implements Fetcher
         return new self(new DnsResolver, new CurlTransport, FetchSettings::fromConfig());
     }
 
-    public function fetch(string $url, string $destination, ?string $etag = null, ?string $lastModified = null): FetchResult
+    public function fetch(string $url, string $destination, ?string $etag = null, ?string $lastModified = null, ?int $maxBytes = null): FetchResult
     {
+        $maxBytes = min($maxBytes ?? PHP_INT_MAX, $this->settings->maxBytes);
         $current = $url;
         for ($hop = 0; ; $hop++) {
             $target = UrlGuard::check($current);
@@ -53,7 +54,7 @@ final readonly class HttpFetcher implements Fetcher
             }
 
             try {
-                $response = $this->transport->get($target, $address, $headers, $sink, $this->settings->maxBytes, $this->settings);
+                $response = $this->transport->get($target, $address, $headers, $sink, $maxBytes, $this->settings);
             } finally {
                 fclose($sink);
             }

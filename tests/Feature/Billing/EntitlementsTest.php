@@ -64,7 +64,7 @@ it('lets a deal override win over the plan, including unlimited', function (): v
 it('falls back to internal guards and refuses unknown limits', function (): void {
     $tenant = Tenant::factory()->create();
 
-    expect(rights($tenant)->limit('max_upload_mb'))->toBe(50)
+    expect(rights($tenant)->limit('manual_refresh_per_day'))->toBe(3)
         ->and(fn (): ?int => rights($tenant)->limit('no_such_limit'))->toThrow(InvalidArgumentException::class);
 });
 

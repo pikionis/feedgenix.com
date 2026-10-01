@@ -92,7 +92,8 @@ export interface paths {
     /**
      * Create a feed (owner or admin)
      * @description With a URL the first download starts at once; without one the feed waits for an upload. The
-     *     plan's feed limit applies: over it, a 402 names the plan that fits.
+     *     plan's feed limit applies: over it, a 402 names the plan that fits. With `upload_size`, the
+     *     first file must also fit the plan's feed size (402), checked before anything is made.
      */
     post: operations['feeds.store']
     delete?: never
@@ -464,7 +465,10 @@ export interface paths {
     }
     get?: never
     put?: never
-    /** Start a chunked upload of a feed file (up to the size cap) */
+    /**
+     * Start a chunked upload of a feed file. A file larger than the plan reads answers 402 with the
+     *     plan that reads it; larger than this server reads at all, 422
+     */
     post: operations['uploads.start']
     delete?: never
     options?: never
@@ -726,6 +730,9 @@ export interface components {
         products_per_month: number | null
         products_per_year: number | null
         worker_slots: number | null
+        /** @description The largest feed one import reads, uncompressed. */
+        feed_bytes: number | null
+        feed_rows: number | null
       }
       overage_credits_per_product: number | null
       features: {
@@ -789,7 +796,10 @@ export interface components {
       password: string
       password_confirmation: string
     }
-    /** StartUploadRequest */
+    /**
+     * StartUploadRequest
+     * @description Start a chunked upload. Whether the size fits the plan is checked next (402 or 422, FeedSizeLimit).
+     */
     StartUploadRequest: {
       filename: string
       size: number
@@ -799,6 +809,11 @@ export interface components {
       name: string
       /** @description Without a URL the feed is fed by uploads. */
       url?: string | null
+      /**
+       * @description The size of the first file to upload, when known: a file the plan cannot read is
+       *     refused before the feed is made, so nothing is left behind.
+       */
+      upload_size?: number | null
       parse_options?: {
         /** @enum {string|null} */
         encoding:
@@ -945,6 +960,9 @@ export interface components {
           languages: number | null
           products: number | null
           worker_slots: number | null
+          /** @description What one import reads here, uncompressed: the plan's limit within the server's. */
+          feed_bytes: number
+          feed_rows: number
         }
         used: {
           feeds: number
@@ -1862,6 +1880,7 @@ export interface operations {
         }
       }
       401: components['responses']['AuthenticationException']
+      402: components['responses']['PlanLimitExceeded']
       404: components['responses']['ModelNotFoundException']
       422: components['responses']['ValidationException']
     }

@@ -79,19 +79,6 @@ export function isDelimiter(value: string | null): value is Delimiter {
   return value !== null && Object.hasOwn(DELIMITERS, value)
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  const units = ['KB', 'MB', 'GB']
-  let value = bytes / 1024
-  let unit = 0
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024
-    unit++
-  }
-
-  return `${value.toLocaleString('en', { maximumFractionDigits: value < 10 ? 1 : 0 })} ${units[unit]}`
-}
-
 /** "3 minutes ago", "yesterday", for timestamps from the API. */
 export function formatWhen(iso: string | null, now: Date = new Date()): string {
   if (iso === null) return ''

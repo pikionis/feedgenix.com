@@ -63,6 +63,20 @@ final class PlanLimitExceeded extends RuntimeException
         ]);
     }
 
+    /** A file larger than the plan reads; the message comes from the ingest side, which knows the units. */
+    public static function feedSize(string $plan, int $allowedBytes, int $fileBytes, ?string $upgradeTo, string $message): self
+    {
+        return new self($message, [
+            'error' => 'plan_limit',
+            'limit' => 'feed_bytes',
+            'allowed' => $allowedBytes,
+            'used' => null,
+            'requested' => $fileBytes,
+            'plan' => $plan,
+            'upgrade_to' => $upgradeTo,
+        ]);
+    }
+
     public static function feature(string $plan, string $feature, ?string $upgradeTo): self
     {
         $label = self::FEATURES[$feature] ?? $feature;

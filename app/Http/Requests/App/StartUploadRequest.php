@@ -6,6 +6,7 @@ namespace App\Http\Requests\App;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/** Start a chunked upload. Whether the size fits the plan is checked next (402 or 422, FeedSizeLimit). */
 final class StartUploadRequest extends FormRequest
 {
     /**
@@ -15,7 +16,7 @@ final class StartUploadRequest extends FormRequest
     {
         return [
             'filename' => ['required', 'string', 'max:255'],
-            'size' => ['required', 'integer', 'min:1', 'max:'.(int) config('ingest.limits.max_bytes')],
+            'size' => ['required', 'integer', 'min:1'],
         ];
     }
 
@@ -25,7 +26,7 @@ final class StartUploadRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'size.max' => sprintf('The file is larger than %d MB, the most one import can hold.', intdiv((int) config('ingest.limits.max_bytes'), 1024 ** 2)),
+            'size.min' => 'This file is empty.',
         ];
     }
 }

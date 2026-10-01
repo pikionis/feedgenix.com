@@ -59,11 +59,18 @@ it('refuses a gzip bomb before it fills the disk', function (): void {
         ->toBe(UnreadableReason::DecompressionBomb);
 });
 
-it('refuses a gzip larger than the inflate cap', function () use ($csv): void {
+it('calls a gzip larger than the limit once uncompressed too large, not a bomb', function () use ($csv): void {
     $gzip = (string) gzencode(str_repeat($csv, 1000));
 
     expect(refusedBecause(fn (): array => readFeed(feedFile($gzip), limits: testLimits(['maxInflatedBytes' => 1024]))))
-        ->toBe(UnreadableReason::DecompressionBomb);
+        ->toBe(UnreadableReason::TooLarge);
+});
+
+it('calls a zip entry larger than the limit once uncompressed too large, not a bomb', function () use ($csv): void {
+    $zip = zipFile(['products.csv' => str_repeat($csv, 1000)]);
+
+    expect(refusedBecause(fn (): array => readFeed($zip, limits: testLimits(['maxInflatedBytes' => 1024]))))
+        ->toBe(UnreadableReason::TooLarge);
 });
 
 it('takes the feed out of a zip', function () use ($csv): void {

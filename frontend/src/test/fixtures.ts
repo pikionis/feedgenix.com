@@ -31,12 +31,14 @@ const FEATURES_OFF: Plan['features'] = {
   api_mcp: false,
 }
 
+export const GIB = 1024 ** 3
+
 export function plan(key: 'free' | 'pro' | 'ultra' | 'custom'): Plan {
   const table = {
-    free: { name: 'Free', monthly: 0, feeds: 1, languages: 1, products: 500 },
-    pro: { name: 'Pro', monthly: 40, feeds: 5, languages: 5, products: 50_000 },
-    ultra: { name: 'Ultra', monthly: 100, feeds: 20, languages: 10, products: null },
-    custom: { name: 'Custom', monthly: 180, feeds: null, languages: null, products: null },
+    free: { name: 'Free', monthly: 0, feeds: 1, languages: 1, products: 500, gb: 2, rows: 5_000_000 },
+    pro: { name: 'Pro', monthly: 40, feeds: 5, languages: 5, products: 50_000, gb: 10, rows: 25_000_000 },
+    ultra: { name: 'Ultra', monthly: 100, feeds: 20, languages: 10, products: null, gb: 50, rows: 100_000_000 },
+    custom: { name: 'Custom', monthly: 180, feeds: null, languages: null, products: null, gb: 50, rows: 100_000_000 },
   }[key]
   const yearlyPerMonth = table.monthly * 0.75
 
@@ -54,6 +56,8 @@ export function plan(key: 'free' | 'pro' | 'ultra' | 'custom'): Plan {
       products_per_month: table.products,
       products_per_year: table.products === null ? null : table.products * 12,
       worker_slots: 1,
+      feed_bytes: table.gb * GIB,
+      feed_rows: table.rows,
     },
     overage_credits_per_product: key === 'pro' ? 10 : null,
     features:
@@ -77,7 +81,7 @@ export function workspace(overrides: Partial<Workspace> = {}): Workspace {
       interval: 'month',
       paid_until: null,
       period: { start: '2027-01-01T00:00:00+00:00', end: '2027-02-01T00:00:00+00:00' },
-      limits: { feeds: 1, languages: 1, products: 500, worker_slots: 1 },
+      limits: { feeds: 1, languages: 1, products: 500, worker_slots: 1, feed_bytes: 2 * GIB, feed_rows: 5_000_000 },
       used: { feeds: 0, languages: 0 },
       overage: { available: false, enabled: true, credits_per_product: null },
     },

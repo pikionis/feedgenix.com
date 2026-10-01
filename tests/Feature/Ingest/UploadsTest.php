@@ -61,7 +61,10 @@ it('will not complete with a missing chunk, or with a checksum that does not mat
     $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/uploads/{$id}/complete", ['sha256' => str_repeat('0', 64)])
         ->assertUnprocessable()->assertJsonValidationErrors('sha256');
 
-    expect(tenancy()->run($tenant->id, fn (): int => Import::query()->count()))->toBe(0);
+    // The chunks went into the file as it was assembled: this upload is over, and says so.
+    expect(tenancy()->run($tenant->id, fn (): int => Import::query()->count()))->toBe(0)
+        ->and(Storage::disk('local')->allFiles())->toBe([]);
+    $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/uploads/{$id}/complete")->assertStatus(410);
 });
 
 it('refuses files over the size cap before any byte is sent', function (): void {

@@ -230,7 +230,7 @@
             },
             "post": {
                 "operationId": "feeds.store",
-                "description": "With a URL the first download starts at once; without one the feed waits for an upload. The\nplan's feed limit applies: over it, a 402 names the plan that fits.",
+                "description": "With a URL the first download starts at once; without one the feed waits for an upload. The\nplan's feed limit applies: over it, a 402 names the plan that fits. With `upload_size`, the\nfirst file must also fit the plan's feed size (402), checked before anything is made.",
                 "summary": "Create a feed (owner or admin)",
                 "tags": [
                     "Feed"
@@ -267,11 +267,11 @@
                     "402": {
                         "$ref": "#/components/responses/PlanLimitExceeded"
                     },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
             }
@@ -1284,7 +1284,7 @@
         "/v1/feeds/{feed}/uploads": {
             "post": {
                 "operationId": "uploads.start",
-                "summary": "Start a chunked upload of a feed file (up to the size cap)",
+                "summary": "Start a chunked upload of a feed file. A file larger than the plan reads answers 402 with the\nplan that reads it; larger than this server reads at all, 422",
                 "tags": [
                     "Upload"
                 ],
@@ -1328,14 +1328,17 @@
                             }
                         }
                     },
+                    "402": {
+                        "$ref": "#/components/responses/PlanLimitExceeded"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -2365,6 +2368,19 @@
                                     "integer",
                                     "null"
                                 ]
+                            },
+                            "feed_bytes": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "description": "The largest feed one import reads, uncompressed."
+                            },
+                            "feed_rows": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
@@ -2372,7 +2388,9 @@
                             "languages",
                             "products_per_month",
                             "products_per_year",
-                            "worker_slots"
+                            "worker_slots",
+                            "feed_bytes",
+                            "feed_rows"
                         ]
                     },
                     "overage_credits_per_product": {
@@ -2557,6 +2575,7 @@
             },
             "StartUploadRequest": {
                 "type": "object",
+                "description": "Start a chunked upload. Whether the size fits the plan is checked next (402 or 422, FeedSizeLimit).",
                 "properties": {
                     "filename": {
                         "type": "string",
@@ -2564,8 +2583,7 @@
                     },
                     "size": {
                         "type": "integer",
-                        "minimum": 1,
-                        "maximum": 2147483648
+                        "minimum": 1
                     }
                 },
                 "required": [
@@ -2589,6 +2607,14 @@
                         ],
                         "description": "Without a URL the feed is fed by uploads.",
                         "maxLength": 2048
+                    },
+                    "upload_size": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "The size of the first file to upload, when known: a file the plan cannot read is\nrefused before the feed is made, so nothing is left behind.",
+                        "minimum": 1
                     },
                     "parse_options": {
                         "type": "object",
@@ -3019,13 +3045,22 @@
                                             "integer",
                                             "null"
                                         ]
+                                    },
+                                    "feed_bytes": {
+                                        "type": "integer",
+                                        "description": "What one import reads here, uncompressed: the plan's limit within the server's."
+                                    },
+                                    "feed_rows": {
+                                        "type": "integer"
                                     }
                                 },
                                 "required": [
                                     "feeds",
                                     "languages",
                                     "products",
-                                    "worker_slots"
+                                    "worker_slots",
+                                    "feed_bytes",
+                                    "feed_rows"
                                 ]
                             },
                             "used": {

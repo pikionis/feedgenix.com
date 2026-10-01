@@ -117,8 +117,11 @@ final class ZipExtractor
     /** @param array{size: int, comp_size: int} $entry */
     private static function guardDeclaredSize(array $entry, IngestLimits $limits): void
     {
-        if ($entry['size'] > $limits->maxInflatedBytes
-            || ($entry['size'] > $limits->ratioAfterBytes && $entry['size'] > max(1, $entry['comp_size']) * $limits->maxInflateRatio)) {
+        // Larger than the limit is a large feed; a ratio no real feed has is a bomb.
+        if ($entry['size'] > $limits->maxInflatedBytes) {
+            throw UnreadableFeed::because(UnreadableReason::TooLarge, sprintf('Uncompressed, the feed is larger than %s MB.', number_format($limits->maxInflatedBytes / 1024 ** 2)));
+        }
+        if ($entry['size'] > $limits->ratioAfterBytes && $entry['size'] > max(1, $entry['comp_size']) * $limits->maxInflateRatio) {
             throw UnreadableFeed::because(UnreadableReason::DecompressionBomb, 'The zip file expands far beyond any real feed, so it was not read.');
         }
     }

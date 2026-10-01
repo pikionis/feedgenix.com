@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '~/components/ui/button'
 import type { Plan } from '~/lib/api/types'
+import { formatBytes } from '~/lib/format'
 import { cn } from '~/lib/utils'
 import { plansQuery } from '~/features/workspace/queries'
 import { euros, quantity } from './format'
@@ -14,6 +15,7 @@ export function highlights(plan: Plan): string[] {
     plan.limits.products_per_month === null
       ? 'Unlimited products'
       : `${plan.limits.products_per_month.toLocaleString('en')} new or changed products a month`,
+    plan.limits.feed_bytes === null ? 'Feeds of any size' : `Feeds up to ${formatBytes(plan.limits.feed_bytes)} each`,
   ]
   if (plan.features.ai_agent) lines.push('Your own AI agent and private memory')
   if (plan.features.field_instructions) lines.push('Per-field instructions')

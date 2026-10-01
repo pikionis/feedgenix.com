@@ -200,8 +200,12 @@ it('answers 409 while an import of the feed is still running, and frees a feed w
     $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/fetch")
         ->assertStatus(409)->assertJsonPath('error', 'feed_busy');
 
-    // Two hours without progress: the import is over, and the feed can be fetched again.
+    // Three hours in is still within the time a large import may run: still busy.
     DB::table('imports')->where('id', $running->id)->update(['updated_at' => now()->subHours(3)]);
+    $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/fetch")->assertStatus(409);
+
+    // Longer than any import may run: it is over, and the feed can be fetched again.
+    DB::table('imports')->where('id', $running->id)->update(['updated_at' => now()->subMinutes(3 * 60 + 11)]);
     $this->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feedId}/fetch")->assertStatus(202);
 
     expect(tenancy()->run($tenant->id, fn (): string => (string) Import::query()->findOrFail($running->id)->failure_reason))->toBe('interrupted');

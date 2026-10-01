@@ -36,7 +36,7 @@ it('never exposes internal guards, costs or the markup in a public plan', functi
     $public = publicPlan($plan);
     $json = (string) json_encode($public);
 
-    expect(array_keys($public['limits']))->toBe(['feeds', 'languages', 'products_per_month', 'products_per_year', 'worker_slots'])
+    expect(array_keys($public['limits']))->toBe(['feeds', 'languages', 'products_per_month', 'products_per_year', 'worker_slots', 'feed_bytes', 'feed_rows'])
         ->and($json)->not->toContain('internal')
         ->not->toContain('beta_ai_budget')
         ->not->toContain('max_rows')

@@ -24,6 +24,9 @@ final class StoreFeedRequest extends FormRequest
             'name' => ['required', 'string', 'min:1', 'max:120'],
             // Without a URL the feed is fed by uploads.
             'url' => ['nullable', 'string', 'max:2048', self::feedUrl()],
+            // The size of the first file to upload, when known: a file the plan cannot read is
+            // refused before the feed is made, so nothing is left behind.
+            'upload_size' => ['nullable', 'integer', 'min:1', 'prohibits:url'],
             ...$this->parseOptionRules(),
         ];
     }
@@ -43,6 +46,13 @@ final class StoreFeedRequest extends FormRequest
     public function parseOptions(): ParseOptions
     {
         return $this->parseOptionsFrom();
+    }
+
+    public function uploadSize(): ?int
+    {
+        $size = $this->validated('upload_size');
+
+        return is_int($size) || (is_string($size) && ctype_digit($size)) ? (int) $size : null;
     }
 
     /** The SSRF guard's rules for the URL itself (addresses are checked when fetching). */

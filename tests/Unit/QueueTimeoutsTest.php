@@ -35,7 +35,7 @@ function jobTimeouts(): array
 
 it('finds the queued jobs it is meant to check, and reads their timeouts', function (): void {
     expect(jobTimeouts())->toHaveKey(ProcessImport::class)
-        ->and(jobTimeouts()[ProcessImport::class])->toBe(3_600);
+        ->and(jobTimeouts()[ProcessImport::class])->toBe(10_800);
 });
 
 it('has every job declare its timeout', function (): void {

@@ -67,7 +67,13 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
     let feedId = createdFeedId
     if (feedId === null) {
       const { data, error, response } = await api.POST('/v1/feeds', {
-        body: values.source === 'url' ? { name: values.name, url: values.url } : { name: values.name },
+        // With a file, its size goes first: a file the plan cannot read is refused before a feed is made.
+        body:
+          values.source === 'url'
+            ? { name: values.name, url: values.url }
+            : file === null
+              ? { name: values.name }
+              : { name: values.name, upload_size: file.size },
       })
       if (data === undefined) {
         if (response.status === 402) return onClose()
@@ -88,7 +94,10 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
     if (file === null) return
     const outcome = await upload.start(feedId, file)
     if ('import' in outcome) return open(feedId)
-    if ('error' in outcome) form.setError('root.server', { message: outcome.error })
+    if ('error' in outcome) {
+      if (outcome.overPlan) return onClose()
+      form.setError('root.server', { message: outcome.error })
+    }
   })
 
   const busy = isSubmitting || upload.uploading

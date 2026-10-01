@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App;
 
+use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanLimitExceeded;
 use App\Domain\Feeds\Actions\CreateFeed;
 use App\Domain\Feeds\Actions\DeleteFeed;
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Feeds\Models\FeedSource;
 use App\Domain\Ingest\Actions\QueueImport;
+use App\Domain\Ingest\FeedSizeLimit;
 use App\Domain\Ingest\Fetch\UrlGuard;
 use App\Domain\Ingest\ParseOptions;
 use App\Http\Controllers\App\Concerns\ActsInWorkspace;
@@ -38,13 +40,19 @@ final class FeedController
      * Create a feed (owner or admin).
      *
      * With a URL the first download starts at once; without one the feed waits for an upload. The
-     * plan's feed limit applies: over it, a 402 names the plan that fits.
+     * plan's feed limit applies: over it, a 402 names the plan that fits. With `upload_size`, the
+     * first file must also fit the plan's feed size (402), checked before anything is made.
      *
      * @throws PlanLimitExceeded
      */
     public function store(StoreFeedRequest $request, CreateFeed $create, QueueImport $queue): JsonResponse
     {
         $this->authorizeManage($request);
+
+        $uploadSize = $request->uploadSize();
+        if ($uploadSize !== null) {
+            FeedSizeLimit::for(Entitlements::for($this->workspace()))->assertUploadFits($uploadSize, 'upload_size');
+        }
 
         $feed = $create->handle($this->workspace(), $request->name(), $request->url(), $request->parseOptions());
         if ($feed->source === 'url') {

@@ -1,7 +1,8 @@
 import { useId, type ReactNode } from 'react'
 import { Notice } from '~/components/ui/notice'
 import type { FeedImport } from '~/lib/api/types'
-import { DELIMITERS, ENCODING_REASON, FORMAT, formatBytes, isDelimiter, KIND } from './labels'
+import { formatBytes } from '~/lib/format'
+import { DELIMITERS, ENCODING_REASON, FORMAT, isDelimiter, KIND } from './labels'
 
 /** Long cells are cut in the tables; the full value is in the tooltip. */
 const CELL_CHARS = 120

@@ -114,7 +114,9 @@ it('stops at a refusal without retrying, and never completes', async () => {
       : undefined,
   )
 
-  await expect(uploadFile(7, file(), () => {})).rejects.toThrow(new UploadFailed('Chunk 0 must be 4 bytes; 3 arrived.'))
+  await expect(uploadFile(7, file(), () => {})).rejects.toThrow(
+    new UploadFailed('Chunk 0 must be 4 bytes; 3 arrived.', 422),
+  )
   expect(attempts.get(0)).toBe(1)
   expect(completions).toBe(0)
 })
@@ -190,4 +192,27 @@ it('stops sending when cancelled', async () => {
   await expect(uploadFile(7, file(), () => {}, controller.signal)).rejects.toThrow()
   expect(completions).toBe(0)
   expect(attempts.size).toBeLessThan(3)
+})
+
+it('passes on a plan limit at the start, with its status', async () => {
+  const message = 'This file is 3 GB; your Free plan reads feeds up to 2 GB. Pro reads feeds up to 10 GB.'
+  server.use(
+    http.post(apiUrl('/v1/feeds/7/uploads'), () =>
+      HttpResponse.json(
+        {
+          error: 'plan_limit',
+          limit: 'feed_bytes',
+          allowed: 2,
+          used: null,
+          requested: 3,
+          plan: 'free',
+          upgrade_to: 'pro',
+          message,
+        },
+        { status: 402 },
+      ),
+    ),
+  )
+
+  await expect(uploadFile(7, file(), () => {})).rejects.toThrow(new UploadFailed(message, 402))
 })

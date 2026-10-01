@@ -16,13 +16,16 @@ use Throwable;
 
 /**
  * Runs one import in the background, as the workspace that queued it. One attempt: a failed
- * import is re-run by the customer or the schedule, never silently retried mid-way.
+ * import is re-run by the customer or the schedule, never silently retried mid-way. Three hours
+ * cover the largest plan's feed (50 GB: about 50 minutes of reading, plus the download).
  */
-#[Timeout(3_600)]
+#[Timeout(self::TIMEOUT)]
 #[Tries(1)]
 final class ProcessImport implements ShouldQueue
 {
     use Queueable;
+
+    public const int TIMEOUT = 10_800;
 
     public function __construct(
         public readonly int $importId,

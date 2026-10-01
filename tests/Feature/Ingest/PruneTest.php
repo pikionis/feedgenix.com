@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Domain\Ingest\ImportStatus;
+use App\Domain\Ingest\Models\Import;
 use App\Domain\Ingest\Models\UploadSession;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
@@ -85,4 +87,55 @@ it('only lists what it would delete in a dry run', function (): void {
 
 it('runs every night', function (): void {
     $this->artisan('schedule:list')->expectsOutputToContain('ingest:prune')->assertSuccessful();
+});
+
+it('keeps each feed’s last files and its profile’s, and deletes an older file once nothing uses it', function (): void {
+    $disk = Storage::disk('local');
+    $tenant = Tenant::factory()->onPlan('pro')->create();
+    $main = (int) createFeed(owner($tenant), ['name' => 'Main'])->json('feed.id');
+    $other = (int) createFeed(owner($tenant), ['name' => 'Other'])->json('feed.id');
+    $blob = fn (string $name): string => "imports/{$tenant->id}/aa/{$name}";
+    foreach (['A', 'B', 'C', 'D', 'G'] as $name) {
+        $disk->put($blob($name), $name);
+    }
+    $add = fn (int $feedId, ImportStatus $status, string $name): int => tenancy()->run($tenant->id, fn (): int => Import::query()
+        ->create(['feed_id' => $feedId, 'origin' => 'fetch', 'status' => $status, 'blob_path' => $blob($name)])->id);
+
+    $profile = $add($main, ImportStatus::Profiled, 'A');   // older than the last three, but the current profile
+    $shared = $add($main, ImportStatus::Failed, 'B');      // beyond the last three; feed Other still uses B
+    $alone = $add($main, ImportStatus::Failed, 'G');       // beyond the last three, used by nothing else
+    $recent = [$add($main, ImportStatus::Failed, 'C'), $add($main, ImportStatus::Failed, 'D'), $add($main, ImportStatus::Failed, 'C')];
+    $elsewhere = $add($other, ImportStatus::Profiled, 'B');
+
+    $this->artisan('ingest:prune')->expectsOutputToContain("deleted file of import {$alone}")->assertSuccessful();
+
+    $paths = tenancy()->run($tenant->id, fn (): array => Import::query()->pluck('blob_path', 'id')->all());
+    expect($paths[$profile])->toBe($blob('A'))
+        ->and($paths[$shared])->toBeNull()
+        ->and($paths[$alone])->toBeNull()
+        ->and(array_map(fn (int $id): ?string => $paths[$id], $recent))->toBe([$blob('C'), $blob('D'), $blob('C')])
+        ->and($paths[$elsewhere])->toBe($blob('B'))
+        ->and($disk->exists($blob('G')))->toBeFalse();
+    foreach (['A', 'B', 'C', 'D'] as $name) {
+        expect($disk->exists($blob($name)))->toBeTrue();
+    }
+
+    $this->actingAs(owner($tenant))->getJson("/api/v1/imports/{$alone}")->assertJsonPath('import.can_reread', false);
+});
+
+it('only lists the old feed files it would delete in a dry run', function (): void {
+    $disk = Storage::disk('local');
+    $tenant = Tenant::factory()->onPlan('pro')->create();
+    $feedId = (int) createFeed(owner($tenant), ['name' => 'Main'])->json('feed.id');
+    $ids = [];
+    foreach (range(1, 4) as $n) {
+        $disk->put("imports/{$tenant->id}/aa/{$n}", 'x');
+        $ids[] = tenancy()->run($tenant->id, fn (): int => Import::query()
+            ->create(['feed_id' => $feedId, 'origin' => 'fetch', 'status' => ImportStatus::Failed, 'blob_path' => "imports/{$tenant->id}/aa/{$n}"])->id);
+    }
+
+    $this->artisan('ingest:prune', ['--dry-run' => true])->expectsOutputToContain("would delete file of import {$ids[0]}")->assertSuccessful();
+
+    expect($disk->exists("imports/{$tenant->id}/aa/1"))->toBeTrue()
+        ->and(tenancy()->run($tenant->id, fn (): int => Import::query()->whereNull('blob_path')->count()))->toBe(0);
 });

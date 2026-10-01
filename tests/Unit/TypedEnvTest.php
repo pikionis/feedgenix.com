@@ -64,3 +64,20 @@ it('fails fast on a boolean typo instead of silently meaning "off"', function (s
     expect(fn (): bool => TypedEnv::bool('FG_TYPED_ENV_TEST', false))
         ->toThrow(InvalidArgumentException::class, 'must be true or false');
 })->with(['yes', 'on', 'ture', '2']);
+
+it('reads a positive whole number, or the default when unset or empty', function (): void {
+    expect(TypedEnv::positiveInt('FG_TYPED_ENV_TEST', 7))->toBe(7);
+
+    setTestEnv('');
+    expect(TypedEnv::positiveInt('FG_TYPED_ENV_TEST', 7))->toBe(7);
+
+    setTestEnv('10737418240');
+    expect(TypedEnv::positiveInt('FG_TYPED_ENV_TEST', 7))->toBe(10_737_418_240);
+});
+
+it('fails fast on a number it would have to guess', function (string $raw): void {
+    setTestEnv($raw);
+
+    expect(fn (): int => TypedEnv::positiveInt('FG_TYPED_ENV_TEST', 7))
+        ->toThrow(InvalidArgumentException::class, 'must be a positive whole number');
+})->with(['2GB', '-1', '0', '1.5', '1e9', ' 5', '99999999999999999999', 'true']);

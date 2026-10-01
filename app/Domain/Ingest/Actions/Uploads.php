@@ -95,10 +95,16 @@ final readonly class Uploads
 
         $staged = "staging/{$session->tenant_id}/{$session->id}";
         $disk->makeDirectory(dirname($staged));
-        $this->assemble($session, $disk->path($staged));
+        try {
+            $this->assemble($session, $disk->path($staged));
+        } catch (RuntimeException $failure) {
+            $this->abandon($session, $staged);
+
+            throw $failure;
+        }
 
         if ($sha256 !== null && ! hash_equals(strtolower($sha256), (string) hash_file('sha256', $disk->path($staged)))) {
-            $disk->delete($staged);
+            $this->abandon($session, $staged);
 
             throw ValidationException::withMessages(['sha256' => 'The assembled file does not match its checksum. Upload it again.']);
         }
@@ -110,6 +116,10 @@ final readonly class Uploads
         return $import;
     }
 
+    /**
+     * Appends the chunks in order, deleting each once appended: the file never exists twice, which
+     * matters at 50 GB. A failure after this point means uploading again.
+     */
     private function assemble(UploadSession $session, string $destination): void
     {
         $disk = Storage::disk('local');
@@ -120,12 +130,17 @@ final readonly class Uploads
 
         try {
             for ($index = 0; $index < $session->total_chunks; $index++) {
-                $in = fopen($disk->path($session->directory()."/{$index}"), 'rb');
+                $chunk = $disk->path($session->directory()."/{$index}");
+                $in = fopen($chunk, 'rb');
                 if ($in === false) {
                     throw new RuntimeException("Cannot read chunk {$index}.");
                 }
-                stream_copy_to_stream($in, $out);
+                $copied = stream_copy_to_stream($in, $out);
                 fclose($in);
+                if ($copied !== $session->expectedLength($index)) {
+                    throw new RuntimeException("Chunk {$index} could not be appended in full.");
+                }
+                unlink($chunk);
             }
         } finally {
             fclose($out);
@@ -136,6 +151,15 @@ final readonly class Uploads
 
             throw new RuntimeException('The assembled upload has the wrong size.');
         }
+    }
+
+    /** The chunks are gone: this upload cannot complete any more, and says so (410) if asked again. */
+    private function abandon(UploadSession $session, string $staged): void
+    {
+        $disk = Storage::disk('local');
+        $disk->delete($staged);
+        $disk->deleteDirectory($session->directory());
+        $session->forceFill(['expires_at' => now()])->save();
     }
 
     private function assertOpen(UploadSession $session): void

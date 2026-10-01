@@ -123,8 +123,11 @@ final class GzipInflater
 
     private static function guard(int $written, int $compressed, IngestLimits $limits): void
     {
-        if ($written > $limits->maxInflatedBytes
-            || ($written > $limits->ratioAfterBytes && $written > $compressed * $limits->maxInflateRatio)) {
+        // Larger than the limit is a large feed; a ratio no real feed has is a bomb.
+        if ($written > $limits->maxInflatedBytes) {
+            throw UnreadableFeed::because(UnreadableReason::TooLarge, sprintf('Uncompressed, the feed is larger than %s MB.', number_format($limits->maxInflatedBytes / 1024 ** 2)));
+        }
+        if ($written > $limits->ratioAfterBytes && $written > $compressed * $limits->maxInflateRatio) {
             throw UnreadableFeed::because(UnreadableReason::DecompressionBomb, 'The gzip file expands far beyond any real feed, so it was not read.');
         }
     }

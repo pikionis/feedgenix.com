@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Ingest;
 
+use App\Domain\Billing\Entitlements;
 use App\Domain\Feeds\Models\FeedSource;
 use App\Domain\Ingest\Encoding\DetectedEncoding;
 use App\Domain\Ingest\Exceptions\UnreadableFeed;
+use App\Domain\Ingest\Exceptions\UnreadableReason;
 use App\Domain\Ingest\Fetch\Fetcher;
 use App\Domain\Ingest\Fetch\FetchFailed;
+use App\Domain\Ingest\Fetch\FetchFailure;
 use App\Domain\Ingest\Models\Import;
 use App\Domain\Ingest\Models\ImportColumn;
 use App\Domain\Ingest\Profile\ColumnProfile;
@@ -33,6 +36,7 @@ final readonly class ImportRunner
 {
     public function __construct(
         private Fetcher $fetcher,
+        // The server's limits; each import narrows them to its workspace's plan (FeedSizeLimit).
         private IngestLimits $limits,
         private ColumnProfiler $profiler,
     ) {}
@@ -49,10 +53,11 @@ final readonly class ImportRunner
         $disk->makeDirectory($work);
         $workPath = $disk->path($work);
         $conditional = null;
+        $size = FeedSizeLimit::for(Entitlements::for($import->tenant_id), $this->limits);
 
         try {
             $previous = $this->currentProfile($import);
-            [$received, $conditional] = $this->receive($import, $workPath, $previous);
+            [$received, $conditional] = $this->receive($import, $workPath, $previous, $size);
             if ($received === null) {
                 $this->finish($import, ImportStatus::Unchanged, ['reuses_import_id' => $previous?->id]);
                 $this->remember($import, $conditional);
@@ -79,12 +84,18 @@ final readonly class ImportRunner
                 'staging_path' => null,
             ])->save();
 
-            $this->read($import, $disk->path($blob), $workPath);
+            $this->read($import, $disk->path($blob), $workPath, $size->limits());
             $this->remember($import, $conditional);
         } catch (UnreadableFeed $refusal) {
-            $this->fail($import, $refusal->reason->value, $refusal->getMessage());
+            // Size refusals name the plan's limit and what reads more; the reader only knows its cap.
+            $this->fail($import, $refusal->reason->value, match ($refusal->reason) {
+                UnreadableReason::TooLarge => $size->tooLarge(),
+                UnreadableReason::TooManyRows => $size->tooManyRows(),
+                default => $refusal->getMessage(),
+            });
         } catch (FetchFailed $failure) {
-            $this->fail($import, $failure->reason->value, $failure->getMessage(), $failure->retryAfterSeconds);
+            $message = $failure->reason === FetchFailure::TooLarge ? $size->tooLarge() : $failure->getMessage();
+            $this->fail($import, $failure->reason->value, $message, $failure->retryAfterSeconds);
         } finally {
             $disk->deleteDirectory($work);
             if ($import->staging_path !== null && $import->status === ImportStatus::Failed) {
@@ -99,7 +110,7 @@ final readonly class ImportRunner
      *
      * @return array{0: string|null, 1: array{etag: ?string, last_modified: ?string}|null}
      */
-    private function receive(Import $import, string $workPath, ?Import $previous): array
+    private function receive(Import $import, string $workPath, ?Import $previous, FeedSizeLimit $size): array
     {
         $disk = Storage::disk('local');
 
@@ -127,6 +138,7 @@ final readonly class ImportRunner
             $workPath.'/received',
             $conditional ? $source->etag : null,
             $conditional ? $source->last_modified : null,
+            $size->bytes,
         );
 
         $validators = ['etag' => $result->etag, 'last_modified' => $result->lastModified];
@@ -137,12 +149,12 @@ final readonly class ImportRunner
         return [$workPath.'/received', $validators];
     }
 
-    private function read(Import $import, string $path, string $workPath): void
+    private function read(Import $import, string $path, string $workPath, IngestLimits $limits): void
     {
         $options = ParseOptions::fromArray($import->parse_options);
-        $prepared = (new FeedPreparer($this->limits))->prepare($path, $workPath, $options);
-        $reader = ReaderFactory::for($prepared, $options, $this->limits, $workPath !== '' ? $workPath : null);
-        $profile = $this->profiler->profile(LimitedRows::of($reader, $this->limits));
+        $prepared = (new FeedPreparer($limits))->prepare($path, $workPath, $options);
+        $reader = ReaderFactory::for($prepared, $options, $limits, $workPath !== '' ? $workPath : null);
+        $profile = $this->profiler->profile(LimitedRows::of($reader, $limits));
 
         $warnings = new Warnings;
         $warnings->merge($prepared->warnings);

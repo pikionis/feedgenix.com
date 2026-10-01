@@ -1,8 +1,13 @@
+import { useQuery } from '@tanstack/react-query'
 import { Field } from '~/components/ui/field'
-import { formatBytes } from './labels'
+import { workspaceQuery } from '~/features/workspace/queries'
+import { formatBytes } from '~/lib/format'
 import type { UploadProgress } from './upload'
 
-/** Choosing the feed file. Any name works: the format is recognised from the content. */
+/**
+ * Choosing the feed file. Any name works: the format is recognised from the content. The hint says
+ * how large a feed the plan reads (uncompressed); the server checks it before a byte is sent.
+ */
 export function FileField({
   file,
   onChange,
@@ -14,13 +19,19 @@ export function FileField({
   error?: string | undefined
   disabled?: boolean
 }) {
+  const workspace = useQuery(workspaceQuery)
+  const limit = workspace.data?.entitlements.limits.feed_bytes
+  const formats = 'CSV, XML, JSON or Excel (.xlsx), also inside gzip or zip.'
+
   return (
     <Field
       label="File"
       hint={
         file !== null
           ? `${file.name} · ${formatBytes(file.size)}`
-          : 'CSV, XML, JSON or Excel (.xlsx), also inside gzip or zip.'
+          : limit === undefined
+            ? formats
+            : `${formats} Up to ${formatBytes(limit)} uncompressed on your plan.`
       }
       error={error}
     >

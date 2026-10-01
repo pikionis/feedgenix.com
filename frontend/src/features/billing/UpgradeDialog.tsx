@@ -44,7 +44,8 @@ export function UpgradeDialog() {
     >
       {hit !== null && (
         <div className="flex flex-col gap-5">
-          {hit.allowed !== null && (hit.requested ?? hit.used) !== null && (
+          {/* Counted limits get the numbers; a feed's size is said in the message, in GB. */}
+          {UNITS[hit.limit] !== undefined && hit.allowed !== null && (hit.requested ?? hit.used) !== null && (
             <UsageBar
               used={hit.requested ?? hit.used ?? 0}
               allowed={hit.allowed}

@@ -36,7 +36,7 @@ final class FakeFetchNetwork implements Resolver, Transport
     /** @var list<string> */
     public array $lookups = [];
 
-    /** @var list<array{url: string, host: string, address: string, headers: array<string, string>}> */
+    /** @var list<array{url: string, host: string, address: string, headers: array<string, string>, max_bytes: int}> */
     public array $requests = [];
 
     /** @param list<string> ...$answers one list of addresses per lookup */
@@ -76,7 +76,7 @@ final class FakeFetchNetwork implements Resolver, Transport
 
     public function get(Target $target, string $address, array $headers, $sink, int $maxBytes, FetchSettings $settings): TransportResponse
     {
-        $this->requests[] = ['url' => $target->url, 'host' => $target->host, 'address' => $address, 'headers' => $headers];
+        $this->requests[] = ['url' => $target->url, 'host' => $target->host, 'address' => $address, 'headers' => $headers, 'max_bytes' => $maxBytes];
 
         $response = ($this->responses[$target->url] ?? []) !== []
             ? array_shift($this->responses[$target->url])

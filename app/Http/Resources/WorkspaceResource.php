@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanCatalog;
+use App\Domain\Ingest\FeedSizeLimit;
 use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Domain\Tenancy\TenantContext;
 use App\Domain\Translation\Models\Language;
@@ -39,6 +40,7 @@ final class WorkspaceResource extends JsonResource
         $entitlements = Entitlements::for($tenant);
         $plan = $entitlements->plan();
         $period = $entitlements->period();
+        $feedSize = FeedSizeLimit::for($entitlements);
 
         return [
             'workspace' => [
@@ -62,6 +64,9 @@ final class WorkspaceResource extends JsonResource
                     'languages' => $entitlements->limit('languages'),
                     'products' => $entitlements->productAllowance(),
                     'worker_slots' => $entitlements->limit('worker_slots'),
+                    // What one import reads here, uncompressed: the plan's limit within the server's.
+                    'feed_bytes' => $feedSize->bytes,
+                    'feed_rows' => $feedSize->rows,
                 ],
                 'used' => [
                     'feeds' => $entitlements->used('feeds'),

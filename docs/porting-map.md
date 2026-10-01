@@ -278,16 +278,22 @@ the scan, so a file it could not read had no record of its own.
   - `upload_sessions`.
 - **The run:** `queued → fetching → reading → profiled | unchanged | failed`.
   - **One unfinished import per feed**, enforced by a partial unique index; a second request gets
-    409 `feed_busy`. An import unfinished after 2 hours is expired, so a dead job never locks a feed,
-    and the job's `failed()` marks only an unfinished import as `interrupted`, in its own workspace.
+    409 `feed_busy`. An import unfinished for longer than its job may run (plus a margin) is
+    expired, so a dead job never locks a feed, and the job's `failed()` marks only an unfinished
+    import as `interrupted`, in its own workspace.
   - Files are stored once per workspace under their SHA-256 (`imports/{tenant}/{ab}/{sha}`). The
     same bytes read with the same options, or a 304, are `unchanged` and reuse the last profile.
   - ETag and Last-Modified are remembered only after a successful read, and sent only while the feed
     has a readable profile (a 304 must never leave a feed with nothing).
   - A file that could not be read is kept, so it can be **read again** with a corrected encoding,
     delimiter or item path. The choice is saved on the feed for the next import.
-- **Queue:** `ProcessImport` runs once, for up to an hour; every connection's `retry_after` (3,900 s)
-  exceeds the longest job timeout, and a test compares them (a shorter `retry_after` runs a job twice).
+  - **Feed size per plan** (ADR 0014): Free 2 GB, Pro 10 GB, Ultra 50 GB, measured uncompressed,
+    within the server's ceiling. Checked before an upload starts (402 with the plan that reads it),
+    while downloading and while reading. Each feed keeps the files of its last three imports, plus
+    its profile's.
+- **Queue:** `ProcessImport` runs once, for up to three hours (the largest plan's feed); every
+  connection's `retry_after` (11,100 s) exceeds the longest job timeout, and a test compares them (a
+  shorter `retry_after` runs a job twice).
 - **Limits and roles:** feeds count against the plan (paused ones too), checked under the workspace
   row lock (402 naming the plan that fits). Owners and admins manage feeds; members read and import.
   Fetching on demand is rate-limited (10 a minute per user).
