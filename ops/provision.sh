@@ -442,10 +442,17 @@ deny_sudo() {
   printf '# FeedGenix: the app user may run nothing through sudo, whatever other rules grant to ALL.\n# Managed by ops/provision.sh. Sorted last on purpose: for sudo the last matching rule wins.\n%s ALL=(ALL:ALL) !ALL\n' \
     "$FG_USER" >"$WORK/sudoers"
   visudo -cqf "$WORK/sudoers" || die "the FeedGenix sudoers drop-in does not parse; nothing was installed"
+  # Only a configuration that parsed before can be broken by this file; one that already failed
+  # (another file's error or mode) is reported, not blamed on FeedGenix.
+  local parsed_before=0
+  if visudo -cq >/dev/null 2>&1; then parsed_before=1; fi
   install_file "$WORK/sudoers" "$SUDOERS_DENY" 0440 root root
-  if ((FG_CHANGED && !FG_DRY_RUN)) && ! visudo -cq; then
+  if ((FG_CHANGED && !FG_DRY_RUN && parsed_before)) && ! visudo -cq >/dev/null 2>&1; then
     rm -f "$SUDOERS_DENY"
     die "sudoers stopped parsing with $SUDOERS_DENY: it was removed again"
+  fi
+  if ((!parsed_before)); then
+    warn "visudo -c already failed before FeedGenix's file: $(visudo -c 2>&1 | grep -v 'parsed OK$' | head -n 3 | paste -sd' ' -)"
   fi
   ok "$FG_USER may run nothing through sudo ($SUDOERS_DENY)"
 }

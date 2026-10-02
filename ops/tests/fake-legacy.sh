@@ -42,7 +42,7 @@ printf '#!/bin/sh\necho "fake panel wrapper ran"\n' >/usr/bin/fake-panel-wrapper
 chmod 0755 /usr/bin/fake-panel-wrapper
 printf 'ALL ALL=(ALL) NOPASSWD: /usr/bin/fake-panel-wrapper\n' >/etc/sudoers.d/fake-panel
 chmod 0440 /etc/sudoers.d/fake-panel
-visudo -cq
+visudo -cqf /etc/sudoers.d/fake-panel
 
 openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj /CN=legacy.test -addext subjectAltName=DNS:legacy.test \
   -keyout /etc/ssl/private/legacy.key -out /etc/ssl/certs/legacy.pem 2>/dev/null
