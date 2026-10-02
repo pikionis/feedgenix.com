@@ -660,7 +660,7 @@ render_nginx() {
   fi
   FG_IPV6_LISTEN_80='# (no IPv6 on this host)'
   FG_IPV6_LISTEN_443='# (no IPv6 on this host)'
-  if [[ -s /proc/net/if_inet6 ]]; then
+  if host_has_ipv6; then
     FG_IPV6_LISTEN_80='listen [::]:80;'
     FG_IPV6_LISTEN_443="listen [::]:443 ssl${FG_HTTP2_LISTEN};"
   fi

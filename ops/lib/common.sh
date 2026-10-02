@@ -253,6 +253,10 @@ port_owners() {
   ss -ltnpH "sport = :$1" 2>/dev/null | grep -o '(("[^"]*"' | tr -d '("' | sort -u | paste -sd, -
 }
 
+# 0 when the host has a global IPv6 address, so nginx should listen on [::] too. (Not
+# `-s /proc/net/if_inet6`: procfs files report size 0, so that test is always false.)
+host_has_ipv6() { [[ -n $(ip -6 -o addr show scope global 2>/dev/null) ]]; }
+
 # Loopback DNS resolvers from /etc/resolv.conf (systemd-resolved: 127.0.0.53).
 loopback_resolvers() {
   awk '$1 == "nameserver" && $2 ~ /^127\./ { print $2 }' /etc/resolv.conf 2>/dev/null | sort -u

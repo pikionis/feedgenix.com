@@ -189,5 +189,11 @@ ss() { :; }
 check "a free port has no owner" equals "" "$(port_owners 80)"
 unset -f ss
 
+echo "host_has_ipv6"
+check "a global IPv6 address (the beta VPS) means nginx listens on [::] too" \
+  bash -c "ip() { [[ \$* == '-6 -o addr show scope global' ]] && echo '2: eth0 inet6 2a02:4780:41:9ed5::1/48 scope global'; }; $(declare -f host_has_ipv6); host_has_ipv6"
+check "only link-local or loopback IPv6 (nothing global) means IPv4 only" \
+  bash -c "ip() { :; }; $(declare -f host_has_ipv6); ! host_has_ipv6"
+
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 ((failed == 0))
