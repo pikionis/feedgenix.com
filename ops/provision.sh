@@ -429,6 +429,27 @@ setup_user_and_dirs() {
   ok "$FG_ROOT/{releases,shared}, $FG_ETC, $FG_LIB"
 }
 
+# The app user may run nothing through sudo, whatever other sudoers files grant to ALL (the beta
+# VPS's CloudPanel lets every user run its wrapper as root). For sudo the last matching rule wins,
+# and zz- sorts after every other drop-in. A file that breaks sudoers is never left in place.
+SUDOERS_DENY=/etc/sudoers.d/zz-feedgenix
+deny_sudo() {
+  section "sudo"
+  if ! command -v visudo >/dev/null; then
+    ok "sudo is not installed"
+    return 0
+  fi
+  printf '# FeedGenix: the app user may run nothing through sudo, whatever other rules grant to ALL.\n# Managed by ops/provision.sh. Sorted last on purpose: for sudo the last matching rule wins.\n%s ALL=(ALL:ALL) !ALL\n' \
+    "$FG_USER" >"$WORK/sudoers"
+  visudo -cqf "$WORK/sudoers" || die "the FeedGenix sudoers drop-in does not parse; nothing was installed"
+  install_file "$WORK/sudoers" "$SUDOERS_DENY" 0440 root root
+  if ((FG_CHANGED && !FG_DRY_RUN)) && ! visudo -cq; then
+    rm -f "$SUDOERS_DENY"
+    die "sudoers stopped parsing with $SUDOERS_DENY: it was removed again"
+  fi
+  ok "$FG_USER may run nothing through sudo ($SUDOERS_DENY)"
+}
+
 # ---- PostgreSQL ------------------------------------------------------------------------------------
 psql_admin() { runuser -u postgres -- psql -X -q -v ON_ERROR_STOP=1 -p "$FG_PG_PORT" "$@"; }
 pg_cluster_line() { pg_lsclusters --no-header 2>/dev/null | awk -v v="$FG_PG_VERSION" '$1 == v && $2 == "main"'; }
@@ -857,6 +878,7 @@ main() {
   install_packages
   verify_php_modules
   setup_user_and_dirs
+  deny_sudo
   setup_postgres
   setup_services
   install_tools

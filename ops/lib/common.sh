@@ -254,6 +254,20 @@ port_owners() {
   ss -ltnpH "sport = :$1" 2>/dev/null | { grep -o '(("[^"]*"' || true; } | tr -d '("' | sort -u | paste -sd, -
 }
 
+# The commands USER may really run through sudo, one per line; empty when none. Judged by what
+# sudo answers for each command (`sudo -l -U USER CMD`), so a later `!ALL` denial counts, not by the
+# listing, which still shows a rule that a later one overrides. /bin/sh stands in for "ALL".
+sudo_allowed() { # USER
+  local listing cmd
+  command -v sudo >/dev/null 2>&1 || return 0
+  listing=$(sudo -n -l -U "$1" 2>&1 || true)
+  [[ $listing == *'may run the following commands'* ]] || return 0
+  for cmd in /bin/sh $(awk '/may run the following commands/ { f = 1; next }
+    f { for (i = 1; i <= NF; i++) if ($i ~ /^\//) { gsub(",", "", $i); print $i } }' <<<"$listing" | sort -u); do
+    if sudo -n -l -U "$1" "$cmd" >/dev/null 2>&1; then printf '%s\n' "$cmd"; fi
+  done
+}
+
 # 0 when the host has a global IPv6 address, so nginx should listen on [::] too. (Not
 # `-s /proc/net/if_inet6`: procfs files report size 0, so that test is always false.)
 host_has_ipv6() { [[ -n $(ip -6 -o addr show scope global 2>/dev/null) ]]; }

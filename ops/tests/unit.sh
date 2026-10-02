@@ -199,6 +199,27 @@ unset -f ss
 check "a free port is not a failure under errexit and pipefail (a fresh server's preflight)" \
   bash -c "set -Eeuo pipefail; ss() { :; }; $(declare -f port_owners); owners=\$(port_owners 80); [[ -z \$owners ]]"
 
+echo "sudo_allowed"
+cat >"$WORK/sudo-listing" <<'EOF'
+Matching Defaults entries for feedgenix on srv1560229:
+    env_reset, mail_badpass, use_pty
+
+User feedgenix may run the following commands on srv1560229:
+    (ALL) NOPASSWD: /usr/bin/clpctlWrapper
+EOF
+sudo_stub() { # the beta VPS: CloudPanel's "ALL ALL=(ALL) NOPASSWD: /usr/bin/clpctlWrapper"; $1 = deny-all drop-in present
+  printf 'sudo() { if [[ $# -eq 4 ]]; then cat %q; elif [[ $5 == /usr/bin/clpctlWrapper ]]; then %s; else return 1; fi; }' \
+    "$WORK/sudo-listing" "$([[ $1 == denied ]] && echo 'return 1' || echo 'echo /usr/bin/clpctlWrapper')"
+}
+check "the VPS's CloudPanel rule lets every user, feedgenix included, run its wrapper as root" \
+  bash -c "$(sudo_stub allowed); $(declare -f sudo_allowed); [[ \$(sudo_allowed feedgenix) == /usr/bin/clpctlWrapper ]]"
+check "with the deny-all drop-in nothing is allowed, although the listing still shows the rule" \
+  bash -c "$(sudo_stub denied); $(declare -f sudo_allowed); [[ -z \$(sudo_allowed feedgenix) ]]"
+check "a user without any rule may run nothing" \
+  bash -c "sudo() { echo 'User feedgenix is not allowed to run sudo on host.'; }; $(declare -f sudo_allowed); [[ -z \$(sudo_allowed feedgenix) ]]"
+check "a rule for ALL commands is caught through /bin/sh" \
+  bash -c "sudo() { if [[ \$# -eq 4 ]]; then printf 'User feedgenix may run the following commands on h:\n    (ALL) NOPASSWD: ALL\n'; else echo \$5; fi; }; $(declare -f sudo_allowed); [[ \$(sudo_allowed feedgenix) == /bin/sh ]]"
+
 echo "host_has_ipv6"
 check "a global IPv6 address (the beta VPS) means nginx listens on [::] too" \
   bash -c "ip() { [[ \$* == '-6 -o addr show scope global' ]] && echo '2: eth0 inet6 2a02:4780:41:9ed5::1/48 scope global'; }; $(declare -f host_has_ipv6); host_has_ipv6"

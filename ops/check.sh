@@ -138,10 +138,12 @@ check_account() {
   done
   if ((${#bad[@]} == 0)); then pass "not in any privileged group"; else fail "in privileged groups: ${bad[*]}"; fi
 
-  if ! command -v sudo >/dev/null || [[ $(sudo -n -l -U "$FG_USER" 2>&1) == *'not allowed to run sudo'* ]]; then
-    pass "no sudo rights"
+  local allowed
+  allowed=$(sudo_allowed "$FG_USER" | paste -sd' ' -)
+  if [[ -z $allowed ]]; then
+    pass "no sudo rights in effect (a rule for every user, like CloudPanel's, is overridden by /etc/sudoers.d/zz-feedgenix)"
   else
-    fail "$FG_USER has sudo rules (sudo -l -U $FG_USER)"
+    fail "$FG_USER may run as root through sudo: $allowed (provision.sh installs /etc/sudoers.d/zz-feedgenix)"
   fi
 
   local home=/home/$FG_USER keys=/home/$FG_USER/.ssh/authorized_keys

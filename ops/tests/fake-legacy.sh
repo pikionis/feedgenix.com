@@ -36,6 +36,14 @@ chmod 0640 "$legacy/.env"
 # it and sets its own fastcgi_buffers fails nginx -t ("directive is duplicate").
 printf 'fastcgi_buffers 256 16k;\nfastcgi_buffer_size 64k;\nfastcgi_max_temp_file_size 0;\n' >>/etc/nginx/fastcgi_params
 
+# Like the beta VPS's CloudPanel: a sudoers rule that lets every user run a wrapper as root
+# (CloudPanel's is "ALL ALL=(ALL) NOPASSWD: /usr/bin/clpctlWrapper").
+printf '#!/bin/sh\necho "fake panel wrapper ran"\n' >/usr/bin/fake-panel-wrapper
+chmod 0755 /usr/bin/fake-panel-wrapper
+printf 'ALL ALL=(ALL) NOPASSWD: /usr/bin/fake-panel-wrapper\n' >/etc/sudoers.d/fake-panel
+chmod 0440 /etc/sudoers.d/fake-panel
+visudo -cq
+
 openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj /CN=legacy.test -addext subjectAltName=DNS:legacy.test \
   -keyout /etc/ssl/private/legacy.key -out /etc/ssl/certs/legacy.pem 2>/dev/null
 rm -f /etc/nginx/sites-enabled/default

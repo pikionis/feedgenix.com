@@ -20,6 +20,9 @@ every `--dry-run` change nothing.
 
 **Added by provisioning:**
 - the user `feedgenix` (no password, no sudo, home owned by root) and `/srv/feedgenix`;
+- `/etc/sudoers.d/zz-feedgenix` (`feedgenix ALL=(ALL:ALL) !ALL`): even a rule another package grants
+  to every user (CloudPanel's wrapper) does not apply to `feedgenix`. Checked with `visudo` before
+  and after; removed again if sudoers would stop parsing;
 - `/etc/feedgenix`, `/usr/local/lib/feedgenix`, `feedgenix-check` and `feedgenix-artisan`;
 - PostgreSQL 18 with pgvector from the PGDG repository, on its unix socket only;
 - FeedGenix's own PHP-FPM master, Redis, queue worker and scheduler timer, as systemd units in
@@ -128,6 +131,14 @@ workspace.
   - To undo:
     `chown 197609:197121 /var/www/feed-intelligence && chmod 755 /var/www/feed-intelligence && chown 1002:1004 /var/www/feed-intelligence/.env && chmod 664 /var/www/feed-intelligence/.env`
 - MySQL keeps its data in `/home/mysql`. The FeedGenix sandbox hides `/home` entirely (`ProtectHome`).
+- **CloudPanel's sudoers lets every local user run `/usr/bin/clpctlWrapper` as root** (`ALL ALL=(ALL)
+  NOPASSWD: …`). The wrapper runs any `clpctl` command as `clp`, and `clp` has `NOPASSWD: ALL`. So
+  any account on the host can administer CloudPanel. FeedGenix's services cannot use sudo anyway
+  (`NoNewPrivileges`); `/etc/sudoers.d/zz-feedgenix` also shuts out code that runs as `feedgenix`
+  outside them (deploy-time migrations, `feedgenix-artisan`). Narrowing the rule for every other
+  account is the owner's decision, outside FeedGenix.
+- **CloudPanel's `/etc/nginx/fastcgi_params` sets `fastcgi_buffers`**, so FeedGenix's PHP snippet
+  carries its own FastCGI parameters instead of including that file.
 
 ## Legacy permissions
 If `feedgenix-check` reports that the `feedgenix` user can read or list the legacy app, fix it
@@ -192,7 +203,7 @@ systemctl daemon-reload
 pg_dropcluster --stop 18 main    # deletes the FeedGenix database: back it up first
 rm -r /srv/feedgenix /etc/feedgenix /usr/local/lib/feedgenix /var/lib/feedgenix-redis /var/lib/feedgenix-acme \
   /var/lib/feedgenix-ops /etc/nginx/sites-available/feedgenix.conf /etc/nginx/snippets/feedgenix-*.conf \
-  /usr/local/bin/feedgenix-artisan /usr/local/sbin/feedgenix-check
+  /usr/local/bin/feedgenix-artisan /usr/local/sbin/feedgenix-check /etc/sudoers.d/zz-feedgenix
 userdel feedgenix && rm -r /home/feedgenix
 ```
 

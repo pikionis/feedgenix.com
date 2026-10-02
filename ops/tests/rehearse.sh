@@ -402,6 +402,14 @@ if [[ $mode == shared ]]; then
   expect_output "a legacy site that stops answering fails the check" 'FAIL +the legacy site does not answer' feedgenix-check
   systemctl start php8.4-fpm
   expect_ok "all restored: the check passes" wait_until 20 feedgenix-check
+
+  # The panel's rule for every user (fake-legacy.sh) against the deny-all drop-in.
+  expect_fail "feedgenix cannot run the panel's wrapper through sudo" runuser -u feedgenix -- sudo -n /usr/bin/fake-panel-wrapper
+  mv /etc/sudoers.d/zz-feedgenix "$WORK/zz-feedgenix"
+  expect_ok "…but it could without the drop-in" runuser -u feedgenix -- sudo -n /usr/bin/fake-panel-wrapper
+  expect_output "and then the check fails, naming the command" 'FAIL +feedgenix may run as root through sudo: /usr/bin/fake-panel-wrapper' feedgenix-check
+  mv "$WORK/zz-feedgenix" /etc/sudoers.d/zz-feedgenix
+  expect_ok "restored: the check passes" feedgenix-check
 fi
 
 section "The RLS check catches a workspace table without forced row-level security"
