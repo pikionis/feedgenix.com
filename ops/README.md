@@ -118,8 +118,15 @@ workspace.
   Check the survey's "unfinished packages" section again before every provisioning run: if
   `/tmp/cloudpanel` ever exists, the update branch would stop and restart CloudPanel's own services.
 - **The legacy app** runs on the system PHP 8.4-FPM pool `www-data` (127.0.0.1:19000), and its
-  Supervisor workers run as `www-data`. Its `.env` belongs to another user (`user`) with mode 0664,
-  so `www-data` reads it only through the "other" bit; see "Legacy permissions".
+  Supervisor workers run as `www-data`. Its `.env` belonged to another user (`user`) with mode 0664,
+  readable by everyone. **Locked on 2026-10-02** with the owner's go-ahead ("Legacy permissions",
+  second case):
+  - The directory is `750` (group `www-data`); the `.env` is `640 user:www-data`.
+  - `www-data` kept every access it had (9 of 9 checked), and the site answered 200.
+  - Other users can no longer read or list either. That includes `user`, which no legacy process
+    runs as.
+  - To undo:
+    `chown 197609:197121 /var/www/feed-intelligence && chmod 755 /var/www/feed-intelligence && chown 1002:1004 /var/www/feed-intelligence/.env && chmod 664 /var/www/feed-intelligence/.env`
 - MySQL keeps its data in `/home/mysql`. The FeedGenix sandbox hides `/home` entirely (`ProtectHome`).
 
 ## Legacy permissions
