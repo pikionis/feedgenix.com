@@ -399,6 +399,15 @@ if [[ $mode == shared ]]; then
   expect_ok "all restored: the check passes" wait_until 20 feedgenix-check
 fi
 
+section "The RLS check catches a workspace table without forced row-level security"
+pg_port=$(bash -c '. /etc/feedgenix/host.conf && echo "$FG_PG_PORT"')
+psql_admin() { runuser -u postgres -- psql -X -q -v ON_ERROR_STOP=1 -p "$pg_port" -d feedgenix -c "$1"; }
+psql_admin 'ALTER TABLE feeds NO FORCE ROW LEVEL SECURITY'
+expect_output "feeds without forced RLS fails the check (the exemption covers tenant_user only)" \
+  'FAIL +tenant tables without forced row-level security: feeds$' feedgenix-check
+psql_admin 'ALTER TABLE feeds FORCE ROW LEVEL SECURITY'
+expect_ok "restored: the check passes" feedgenix-check
+
 section "The sandbox checks catch a missing sandbox"
 mv /etc/systemd/system/feedgenix-.service.d/10-sandbox.conf "$WORK/sandbox.conf"
 systemctl daemon-reload

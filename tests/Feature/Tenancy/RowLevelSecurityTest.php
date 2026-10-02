@@ -34,6 +34,17 @@ it('runs as a database role that can never bypass row-level security', function 
     expect($role->rolsuper)->toBeFalse()->and($role->rolbypassrls)->toBeFalse();
 });
 
+it('exempts exactly the same tables in feedgenix-check on the server', function (): void {
+    $script = (string) file_get_contents(base_path('ops/check.sh'));
+    preg_match('/^RLS_EXEMPT_TABLES=\(([^)]*)\)$/m', $script, $matches);
+    $onServer = preg_split('/\s+/', trim($matches[1] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    sort($onServer);
+    $here = array_keys(RLS_EXEMPT);
+    sort($here);
+
+    expect($onServer)->toBe($here);
+});
+
 it('forces the tenant policy on every table that holds workspace data', function (): void {
     $tables = DB::select(
         "select table_name from information_schema.columns where table_schema = 'public' and column_name = 'tenant_id' order by table_name",

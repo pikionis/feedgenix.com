@@ -23,6 +23,10 @@ done
 . "$FG_ETC/host.conf"
 cd /
 
+# Tables that carry tenant_id but are read before any workspace context exists (ADR 0002). The same
+# list as RLS_EXEMPT in tests/Feature/Tenancy/RowLevelSecurityTest.php; a Pest test keeps them equal.
+RLS_EXEMPT_TABLES=(tenant_user)
+
 PASSED=0
 FAILED=0
 WARNED=0
@@ -232,12 +236,14 @@ check_services() {
   fi
   if [[ -z $(pg -c 'SHOW listen_addresses') ]]; then pass "PostgreSQL listens on its unix socket only"; else fail "PostgreSQL listens on the network: $(pg -c 'SHOW listen_addresses')"; fi
   if [[ $(pg -d "$FG_USER" -c "SELECT 1 FROM pg_extension WHERE extname = 'vector'") == 1 ]]; then pass "pgvector is installed"; else fail "the vector extension is missing"; fi
-  local loose_tables
+  local loose_tables exempt
+  exempt=$(printf "'%s'," "${RLS_EXEMPT_TABLES[@]}")
   loose_tables=$(pg -d "$FG_USER" -c "SELECT string_agg(c.relname, ' ') FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT (c.relrowsecurity AND c.relforcerowsecurity)
+      AND c.relname NOT IN (${exempt%,})
       AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped)")
   if [[ -z $loose_tables ]]; then
-    pass "every table with tenant_id has row-level security enabled and forced"
+    pass "every table with tenant_id has row-level security enabled and forced (exempt by design: ${RLS_EXEMPT_TABLES[*]})"
   else
     fail "tenant tables without forced row-level security: $loose_tables"
   fi
