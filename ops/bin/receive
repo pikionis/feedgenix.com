@@ -187,8 +187,10 @@ deploy() {
   done
   [[ $(<"$release/REVISION") == "$revision" ]] || fail "the artifact's REVISION is not $revision; nothing changed"
 
-  # nginx (another user) needs to reach public/ and read the SPA build, and nothing else.
-  chmod 0711 "$release/public" "$release/frontend" "$release/frontend/build"
+  # nginx (another user) needs to reach public/ and read the SPA build, and nothing else. The release
+  # directory itself too: unpacking applies the archive's own "./" mode to it (0700 from the build's
+  # mktemp), whatever mkdir set, and nginx's realpath() would then be denied.
+  chmod 0711 "$release" "$release/public" "$release/frontend" "$release/frontend/build"
   find "$release/frontend/build/client" -type d -exec chmod 0755 {} +
   find "$release/frontend/build/client" -type f -exec chmod 0644 {} +
   ln -s "$SHARED/.env" "$release/.env"

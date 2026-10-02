@@ -258,6 +258,8 @@ expect_output "feedgenix-check before any release: a warning, not a failure" 'WA
 expect_ok "…and it passes" feedgenix-check
 expect_ok "deploy $revision" deploy "$artifact" "$revision"
 expect_ok "the health route answers through nginx" healthy
+expect_ok "nginx's user can traverse the live release, but not list it or read its .env" bash -c \
+  "runuser -u www-data -- test -x '$(live)' && ! runuser -u www-data -- ls '$(live)' >/dev/null 2>&1 && ! runuser -u www-data -- test -r '$(live)/.env'"
 expect_ok "GET / is the release's pre-rendered home page" \
   test "$(curl_site "https://$DOMAIN/" | sha256sum)" == "$(tar -xzOf "$artifact" ./frontend/build/client/index.html | sha256sum)"
 expect_ok "an app route gets the SPA shell" test "$(status_of /app/settings)" == 200
