@@ -11,7 +11,10 @@
 # Usage: sudo ops/tests/rehearse.sh shared|dedicated DIST_DIR
 set -Eeuo pipefail
 shopt -s nullglob
-on_error() { printf '\nERROR: %s line %s: %s (exit %s)\n' "${0##*/}" "$1" "$3" "$2" >&2; }
+on_error() {
+  local src=${BASH_SOURCE[1]:-$0}
+  printf '\nERROR: %s line %s: %s (exit %s)\n' "${src##*/}" "$1" "$3" "$2" >&2
+}
 trap 'on_error "$LINENO" "$?" "$BASH_COMMAND"' ERR
 
 mode=${1:?usage: rehearse.sh shared|dedicated DIST_DIR}
@@ -146,7 +149,8 @@ break_code() { printf '<?php this is not PHP\n' >routes/api.php; }
 # a changed PID means something restarted it.
 legacy_state() {
   printf 'site=%s\n' "$(curl -sk --max-time 10 --resolve legacy.test:443:127.0.0.1 https://legacy.test/)"
-  printf 'worker=%s\n' "$(supervisorctl status legacy-worker | awk '{ print $2 }')"
+  # supervisorctl status exits 3 for a stopped program: its state is the answer, not a failure.
+  printf 'worker=%s\n' "$({ supervisorctl status legacy-worker || true; } | awk '{ print $2 }')"
   printf 'pause-flag=%s\n' "$(redis-cli get legacy:pipeline:paused)"
   printf 'freeze=%s\n' "$([[ -f $LEGACY/storage/app/PIPELINE_FROZEN ]] && echo present)"
   printf 'vhost=%s\n' "$(sha256sum </etc/nginx/sites-available/legacy)"
@@ -171,6 +175,13 @@ if [[ $mode == dedicated ]]; then
   # The key-only SSH step needs an administrator key first (it never locks the admin out).
   install -d -m 0700 /root/.ssh
   cat "$WORK/deploy.pub" >>/root/.ssh/authorized_keys
+  # Under sudo, provisioning protects the sudo user's own SSH access, so that user needs a key too.
+  if [[ -n ${SUDO_USER:-} && $SUDO_USER != root ]]; then
+    admin_home=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    install -d -m 0700 -o "$SUDO_USER" -g "$(id -gn "$SUDO_USER")" "$admin_home/.ssh"
+    cat "$WORK/deploy.pub" >>"$admin_home/.ssh/authorized_keys"
+    chown "$SUDO_USER:$(id -gn "$SUDO_USER")" "$admin_home/.ssh/authorized_keys"
+  fi
 else
   legacy_before=$(legacy_state)
 fi
@@ -242,7 +253,9 @@ if [[ $mode == shared ]]; then
 fi
 
 section "Deploy through the forced-command SSH key"
-expect_ok "status before any release" receiver status
+expect_output "status before any release: none is live (not a missing 'current' link)" '^live +none$' receiver status
+expect_output "feedgenix-check before any release: a warning, not a failure" 'WARN +no release is deployed yet' feedgenix-check
+expect_ok "…and it passes" feedgenix-check
 expect_ok "deploy $revision" deploy "$artifact" "$revision"
 expect_ok "the health route answers through nginx" healthy
 expect_ok "GET / is the release's pre-rendered home page" \

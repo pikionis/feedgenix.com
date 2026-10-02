@@ -4,7 +4,10 @@
 # Redis holding a pause flag, a root crontab and an nginx drop-in. The rehearsal then proves that
 # provisioning and deploys never touch any of it. Usage: sudo ops/tests/fake-legacy.sh
 set -Eeuo pipefail
-on_error() { printf '\nERROR: %s line %s: %s (exit %s)\n' "${0##*/}" "$1" "$3" "$2" >&2; }
+on_error() {
+  local src=${BASH_SOURCE[1]:-$0}
+  printf '\nERROR: %s line %s: %s (exit %s)\n' "${src##*/}" "$1" "$3" "$2" >&2
+}
 trap 'on_error "$LINENO" "$?" "$BASH_COMMAND"' ERR
 [[ $EUID -eq 0 ]] || {
   echo "run with sudo" >&2

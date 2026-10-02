@@ -58,7 +58,7 @@ render() {
     [[ -n $name ]] || continue
     [[ -v $name ]] || die "template ${template##*/} uses \${$name}, which is not set"
     names+=("$name")
-  done < <(grep -o '\${FG_[A-Z0-9_]*}' "$template" | tr -d '${}' | sort -u)
+  done < <({ grep -o '\${FG_[A-Z0-9_]*}' "$template" || true; } | tr -d '${}' | sort -u)
 
   if ((${#names[@]} == 0)); then
     cat "$template"

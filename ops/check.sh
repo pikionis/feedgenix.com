@@ -4,7 +4,10 @@
 #   --rebaseline   after the owner deliberately changed the legacy app: record its new fingerprint
 set -Eeuo pipefail
 shopt -s nullglob
-on_error() { printf '\nERROR: %s line %s: %s (exit %s)\n' "${0##*/}" "$1" "$3" "$2" >&2; }
+on_error() {
+  local src=${BASH_SOURCE[1]:-$0}
+  printf '\nERROR: %s line %s: %s (exit %s)\n' "${src##*/}" "$1" "$3" "$2" >&2
+}
 trap 'on_error "$LINENO" "$?" "$BASH_COMMAND"' ERR
 
 for lib in "$(dirname "$(readlink -f "$0")")/lib/common.sh" /usr/local/lib/feedgenix/common.sh; do
@@ -262,7 +265,7 @@ check_site() {
   fi
 
   local live
-  live=$(readlink -f "$FG_ROOT/current" 2>/dev/null || true)
+  live=$(readlink -e "$FG_ROOT/current" 2>/dev/null || true)
   if [[ -z $live ]]; then
     advise "no release is deployed yet"
     return 0

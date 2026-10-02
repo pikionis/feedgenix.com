@@ -62,7 +62,9 @@ lock() {
   flock -n 9 || fail "another deploy or rollback is running"
 }
 
-live_release() { readlink -f "$CURRENT" 2>/dev/null || true; }
+# Empty before the first deploy: -e, because -f names even a missing link (a first deploy that failed
+# its smoke test would then "switch back" to current itself).
+live_release() { readlink -e "$CURRENT" 2>/dev/null || true; }
 
 # All releases, oldest first (ids start with a UTC timestamp).
 releases() {
