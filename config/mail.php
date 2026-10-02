@@ -72,9 +72,10 @@ return [
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
         ],
 
+        // Its own channel (config/logging.php): the transport logs at debug level, below LOG_LEVEL=info.
         'log' => [
             'transport' => 'log',
-            'channel' => env('MAIL_LOG_CHANNEL'),
+            'channel' => env('MAIL_LOG_CHANNEL', 'mail'),
         ],
 
         'array' => [

@@ -75,6 +75,16 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // The log mailer writes every message at debug level. Its own file keeps verification and
+        // reset links readable while LOG_LEVEL=info holds everything else back (ops/README.md).
+        'mail' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/mail.log'),
+            'level' => 'debug',
+            'max_files' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'monthly' => [
             'driver' => 'monthly',
             'path' => storage_path('logs/laravel.log'),

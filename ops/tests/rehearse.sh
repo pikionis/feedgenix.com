@@ -289,7 +289,7 @@ if [[ $code == 201 ]]; then ok "registered with the invite (HTTP 201)"; else
 fi
 verification_url() {
   # The log mailer writes the whole message; undo quoted-printable soft breaks and =3D, then &amp;.
-  sed -e ':a' -e '/=\r\?$/{N;s/=\r\?\n//;ba}' /srv/feedgenix/shared/storage/logs/laravel-*.log 2>/dev/null |
+  sed -e ':a' -e '/=\r\?$/{N;s/=\r\?\n//;ba}' /srv/feedgenix/shared/storage/logs/mail-*.log 2>/dev/null |
     sed -e 's/=3D/=/g' -e 's/&amp;/\&/g' | grep -o "https://$DOMAIN/api/auth/verify-email/[^\"' <>)]*" | tail -n 1
 }
 has_verification_url() { [[ -n $(verification_url) ]]; }

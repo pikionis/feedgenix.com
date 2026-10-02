@@ -164,7 +164,8 @@ sandbox); this closes the gap for code running outside them: deploy-time migrati
 - **Plans:** `feedgenix-artisan tenants:set-plan TENANT pro`
 - **Emails until a mail provider is set up** (verification, password reset): they are written to
   the log.
-  `grep -h 'verify-email\|reset-password' /srv/feedgenix/shared/storage/logs/laravel-*.log | tail`
+  `grep -h 'verify-email\|reset-password' /srv/feedgenix/shared/storage/logs/mail-*.log | tail`
+  (their own `mail` channel: the log mailer writes at debug level, which `LOG_LEVEL=info` would drop)
 - **Logs:**
   - the app: `/srv/feedgenix/shared/storage/logs/`
   - deploys: `/srv/feedgenix/shared/logs/deploys.log`
