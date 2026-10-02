@@ -92,6 +92,10 @@ chmod +x "$WORK/bin/php9.9"
 check "lower case, one per line, without section headers or blank lines" \
   equals $'core\nsimplexml\npdo_pgsql\nzend opcache' "$(PATH="$WORK/bin:$PATH" php_modules 9.9 cli)"
 check "a missing binary loads nothing" equals "" "$(PATH="$WORK/bin:$PATH" php_modules 9.9 fpm)"
+printf '#!/bin/sh\necho "[PHP Modules]"\nexit 1\n' >"$WORK/bin/php9.8"
+chmod +x "$WORK/bin/php9.8"
+check "a PHP that lists nothing and fails is not a failure under errexit and pipefail" \
+  bash -c "set -Eeuo pipefail; PATH='$WORK/bin':\$PATH; $(declare -f php_modules); m=\$(php_modules 9.8 cli); [[ -z \$m ]]"
 
 echo "php_packages_needed"
 all_modules='core pdo_mysql redis intl mbstring dom simplexml xmlreader xmlwriter zip curl bcmath'
@@ -188,6 +192,8 @@ check "another process on 80 is named" equals varnishd "$(port_owners 80)"
 ss() { :; }
 check "a free port has no owner" equals "" "$(port_owners 80)"
 unset -f ss
+check "a free port is not a failure under errexit and pipefail (a fresh server's preflight)" \
+  bash -c "set -Eeuo pipefail; ss() { :; }; $(declare -f port_owners); owners=\$(port_owners 80); [[ -z \$owners ]]"
 
 echo "host_has_ipv6"
 check "a global IPv6 address (the beta VPS) means nginx listens on [::] too" \

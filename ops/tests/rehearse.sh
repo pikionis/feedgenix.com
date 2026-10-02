@@ -11,6 +11,8 @@
 # Usage: sudo ops/tests/rehearse.sh shared|dedicated DIST_DIR
 set -Eeuo pipefail
 shopt -s nullglob
+on_error() { printf '\nERROR: %s line %s: %s (exit %s)\n' "${0##*/}" "$1" "$3" "$2" >&2; }
+trap 'on_error "$LINENO" "$?" "$BASH_COMMAND"' ERR
 
 mode=${1:?usage: rehearse.sh shared|dedicated DIST_DIR}
 dist=$(cd "${2:?usage: rehearse.sh shared|dedicated DIST_DIR}" && pwd)

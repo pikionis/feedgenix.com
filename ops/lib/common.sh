@@ -158,12 +158,12 @@ FG_PHP_MODULES=(pdo_pgsql:pgsql redis:redis intl:intl mbstring:mbstring dom:xml 
   xmlwriter:xml zip:zip curl:curl bcmath:bcmath)
 
 # php_modules VERSION cli|fpm — the modules that PHP binary loads, lower case, one per line; nothing
-# when the binary is missing.
+# when the binary is missing or lists nothing (never a failure: callers run under errexit).
 php_modules() {
   local bin=php$1
   if [[ $2 == fpm ]]; then bin=php-fpm$1; fi
   command -v "$bin" >/dev/null 2>&1 || return 0
-  "$bin" -m 2>/dev/null | grep -v -e '^\[' -e '^$' | tr '[:upper:]' '[:lower:]'
+  { "$bin" -m 2>/dev/null || true; } | { grep -v -e '^\[' -e '^$' || true; } | tr '[:upper:]' '[:lower:]'
 }
 
 # php_packages_needed VERSION — the php<VERSION>-* packages to install: the package of every module
@@ -248,9 +248,10 @@ nginx_sites_layout() {
   fi
 }
 
-# The processes listening on a TCP port, e.g. "nginx" or "varnishd,nginx"; empty when free.
+# The processes listening on a TCP port, e.g. "nginx" or "varnishd,nginx"; empty when free. A free
+# port is not a failure: callers run under errexit and pipefail.
 port_owners() {
-  ss -ltnpH "sport = :$1" 2>/dev/null | grep -o '(("[^"]*"' | tr -d '("' | sort -u | paste -sd, -
+  ss -ltnpH "sport = :$1" 2>/dev/null | { grep -o '(("[^"]*"' || true; } | tr -d '("' | sort -u | paste -sd, -
 }
 
 # 0 when the host has a global IPv6 address, so nginx should listen on [::] too. (Not

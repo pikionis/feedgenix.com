@@ -4,6 +4,8 @@
 # Redis holding a pause flag, a root crontab and an nginx drop-in. The rehearsal then proves that
 # provisioning and deploys never touch any of it. Usage: sudo ops/tests/fake-legacy.sh
 set -Eeuo pipefail
+on_error() { printf '\nERROR: %s line %s: %s (exit %s)\n' "${0##*/}" "$1" "$3" "$2" >&2; }
+trap 'on_error "$LINENO" "$?" "$BASH_COMMAND"' ERR
 [[ $EUID -eq 0 ]] || {
   echo "run with sudo" >&2
   exit 1
@@ -62,11 +64,29 @@ EOF
 
 systemctl daemon-reload
 systemctl restart php8.4-fpm nginx redis-server supervisor
-supervisorctl reread >/dev/null
-supervisorctl update >/dev/null
+# supervisord answers on its socket a moment after systemd starts it (and supervisorctl reports
+# errors on stdout): wait for it rather than race it.
+wait_for() { # SECONDS DESCRIPTION COMMAND…
+  local deadline=$((SECONDS + $1)) what=$2
+  shift 2
+  until "$@" >/dev/null 2>&1; do
+    if ((SECONDS >= deadline)); then
+      echo "fake-legacy.sh: timed out waiting for $what" >&2
+      "$@" >&2 || true
+      exit 1
+    fi
+    sleep 1
+  done
+}
+wait_for 30 supervisord supervisorctl pid
+supervisorctl reread
+supervisorctl update
+wait_for 15 "Redis" redis-cli ping
 redis-cli set legacy:pipeline:paused 1 >/dev/null
 printf '# the frozen legacy app: nothing scheduled\n' | crontab -u root -
 
-curl -sk --resolve legacy.test:443:127.0.0.1 https://legacy.test/ | grep -qx 'legacy ok'
-[[ $(supervisorctl status legacy-worker | awk '{ print $2 }') == STOPPED ]]
+legacy_ok() { [[ $(curl -sk --max-time 5 --resolve legacy.test:443:127.0.0.1 https://legacy.test/) == 'legacy ok' ]]; }
+wait_for 30 "https://legacy.test/ to answer 'legacy ok'" legacy_ok
+worker_stopped() { [[ $(supervisorctl status legacy-worker | awk '{ print $2 }') == STOPPED ]]; }
+wait_for 15 "legacy-worker to be STOPPED" worker_stopped
 echo "legacy stand-in ready: https://legacy.test/ answers, legacy-worker STOPPED, pause flag set"

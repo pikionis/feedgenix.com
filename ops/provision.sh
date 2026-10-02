@@ -13,6 +13,9 @@
 # scripts) unless each one is named with --allow-unfinished after reviewing it (ADR 0015).
 set -Eeuo pipefail
 shopt -s nullglob
+# A failing command never ends a run silently: it is named with its line.
+on_error() { printf '\nERROR: %s line %s: %s (exit %s)\n' "${0##*/}" "$1" "$3" "$2" >&2; }
+trap 'on_error "$LINENO" "$?" "$BASH_COMMAND"' ERR
 
 OPS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/common.sh
