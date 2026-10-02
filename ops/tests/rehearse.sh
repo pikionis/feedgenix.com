@@ -96,7 +96,12 @@ worker_on_live() {
   pid=$(systemctl show --property=MainPID --value feedgenix-worker@default.service)
   [[ $pid != 0 && $(readlink -f "/proc/$pid/cwd") == "$(live)" ]]
 }
-fake_revision() { printf '%s%.0s' "$1" {1..40}; }
+# fake_revision CHAR — a 40-character "sha" of one hex character, e.g. bbbb…b.
+fake_revision() {
+  local s
+  s=$(printf '%40s' '')
+  printf '%s' "${s// /$1}"
+}
 
 # A package dpkg left half-configured, like the beta VPS's control panel (cloudpanel, since July
 # 2026): its postinst fails every time and counts its runs. Any apt install would run it again, so
