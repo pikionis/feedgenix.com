@@ -9,6 +9,8 @@
 #                     installed package unless --allow-upgrades is given.
 #   --mode=dedicated  a fresh server (production): also installs the base stack and hardens the
 #                     host (ufw, fail2ban, unattended upgrades, key-only SSH).
+# In both modes apt never runs while dpkg has unfinished packages (apt would re-run their maintainer
+# scripts) unless each one is named with --allow-unfinished after reviewing it (ADR 0015).
 set -Eeuo pipefail
 shopt -s nullglob
 
@@ -34,6 +36,9 @@ Usage: provision.sh --mode=shared|dedicated --domain=HOST [options]
   --app-env=production|staging  APP_ENV for a new .env (default production: an internet-facing app)
   --indexing=block|allow        search engines (default: block in shared mode, allow in dedicated)
   --allow-upgrades              shared: let apt upgrade already-installed packages
+  --allow-unfinished=PKG[,PKG]  let apt finish these packages dpkg left unfinished: it re-runs their
+                                maintainer scripts, so read them first (the survey lists them).
+                                Their failure is tolerated; nothing else's is
   --skip-dns-check              request the certificate even if DNS does not seem to point here
   --dry-run                     change nothing; print every diff and command
 EOF
@@ -51,6 +56,7 @@ INDEXING=
 EMAIL=
 DEPLOY_KEY=
 ALLOW_UPGRADES=0
+ALLOW_UNFINISHED=
 SKIP_DNS_CHECK=0
 
 for arg in "$@"; do
@@ -66,6 +72,7 @@ for arg in "$@"; do
     --app-env=*) FG_APP_ENV=${arg#*=} ;;
     --indexing=*) INDEXING=${arg#*=} ;;
     --allow-upgrades) ALLOW_UPGRADES=1 ;;
+    --allow-unfinished=*) ALLOW_UNFINISHED=${arg#*=} ;;
     --skip-dns-check) SKIP_DNS_CHECK=1 ;;
     --dry-run) FG_DRY_RUN=1 ;;
     -h | --help)
@@ -113,6 +120,8 @@ preflight() {
   [[ $FG_APP_ENV == production || $FG_APP_ENV == staging ]] || die "--app-env must be production or staging"
   [[ -z $EMAIL || $EMAIL =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || die "--email is not an address"
   [[ -z $DEPLOY_KEY || -f $DEPLOY_KEY ]] || die "--deploy-key file not found: $DEPLOY_KEY"
+  [[ -z $ALLOW_UNFINISHED || $ALLOW_UNFINISHED =~ ^[a-z0-9][a-z0-9+.-]*(,[a-z0-9][a-z0-9+.-]*)*$ ]] ||
+    die "--allow-unfinished takes package names separated by commas (got '$ALLOW_UNFINISHED')"
   if [[ -z $INDEXING ]]; then
     if [[ $FG_MODE == shared ]]; then INDEXING=block; else INDEXING=allow; fi
   fi
@@ -183,8 +192,9 @@ record_legacy_baseline() {
 }
 
 # ---- packages --------------------------------------------------------------------------------------
+# The lock timeout waits out another apt run (a host's own cron) instead of failing on its lock.
 apt_run() {
-  DEBIAN_FRONTEND=noninteractive NEEDRESTART_SUSPEND=1 apt-get -q -y \
+  DEBIAN_FRONTEND=noninteractive NEEDRESTART_SUSPEND=1 apt-get -q -y -o DPkg::Lock::Timeout=300 \
     -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
 }
 
@@ -257,16 +267,43 @@ simulate_install() {
   apt-get -s "${opts[@]}" install --no-install-recommends "$@"
 }
 
+# dpkg's unfinished packages are finished by the next apt run: their maintainer scripts run again, and
+# a script that calls systemctl itself is beyond policy-rc.d. (The beta VPS's control panel package
+# has been half-configured since July 2026; its postinst can restart services and move MySQL's data.)
+# apt runs only when every unfinished package is named with --allow-unfinished, after it was read.
+UNFINISHED=
+guard_unfinished() {
+  UNFINISHED=$(unfinished_packages | paste -sd, -)
+  [[ -n $UNFINISHED ]] || return 0
+  local blockers
+  blockers=$(tr ',' '\n' <<<"$UNFINISHED" | not_in_list "$ALLOW_UNFINISHED" | paste -sd, -)
+  [[ -z $blockers ]] ||
+    die "dpkg left these packages unfinished: $blockers. Any apt install re-runs their maintainer scripts, and apt fails when they fail. Read them (dpkg --audit; /var/lib/dpkg/info/PKG.postinst), then re-run with --allow-unfinished=$UNFINISHED. Nothing was installed."
+  warn "apt will re-run the maintainer scripts of $UNFINISHED (--allow-unfinished): their failure is tolerated, nothing else's"
+}
+
+# apt failed. Accepted only when it was finishing allowed unfinished packages, every package of this
+# run is installed, and no package is unfinished except the allowed ones.
+accept_apt_failure() { # PACKAGES…
+  [[ -n $UNFINISHED ]] || die "apt-get install failed"
+  local pkg left
+  for pkg in "$@"; do
+    installed "$pkg" || die "apt-get install failed: $pkg is not installed"
+  done
+  left=$(unfinished_packages | not_in_list "$ALLOW_UNFINISHED" | paste -sd' ' -)
+  [[ -z $left ]] || die "apt-get install left packages unfinished: $left"
+  warn "apt reported the allowed unfinished package(s) failing again ($(unfinished_packages | paste -sd' ' -)); every package of this run is installed"
+}
+
 install_packages() {
   section "Packages"
   local -a wanted=(
     "postgresql-$FG_PG_VERSION" "postgresql-$FG_PG_VERSION-pgvector" "postgresql-client-$FG_PG_VERSION"
-    redis-server
-    "php$FG_PHP_VERSION-cli" "php$FG_PHP_VERSION-pgsql" "php$FG_PHP_VERSION-redis" "php$FG_PHP_VERSION-intl"
-    "php$FG_PHP_VERSION-mbstring" "php$FG_PHP_VERSION-xml" "php$FG_PHP_VERSION-zip" "php$FG_PHP_VERSION-curl"
-    "php$FG_PHP_VERSION-bcmath"
-    curl gettext-base openssl ca-certificates gnupg
+    redis-server curl gettext-base openssl ca-certificates gnupg
   )
+  local -a php_packages
+  mapfile -t php_packages < <(php_packages_needed "$FG_PHP_VERSION")
+  wanted+=("${php_packages[@]}")
   if [[ $FG_TLS == letsencrypt ]]; then wanted+=(certbot); fi
   if [[ $FG_MODE == dedicated ]]; then wanted+=(nginx "php$FG_PHP_VERSION-fpm" ufw fail2ban unattended-upgrades); fi
 
@@ -275,6 +312,7 @@ install_packages() {
   for pkg in "${wanted[@]}"; do
     installed "$pkg" || missing+=("$pkg")
   done
+  if ((${#missing[@]} > 0)); then guard_unfinished; fi
   if ((${#missing[@]} == 0)); then
     ok "all packages present"
   elif [[ $FG_MODE == shared ]]; then
@@ -325,7 +363,7 @@ install_packages() {
       die "apt would now also: $(tr '\n' ' ' <<<"$disruptions")— nothing was installed"
     fi
   fi
-  apt_run install --no-install-recommends "${missing[@]}"
+  if ! apt_run install --no-install-recommends "${missing[@]}"; then accept_apt_failure "${missing[@]}"; fi
   unfreeze_services
 
   # Default services of packages this run installed (never a pre-existing one): FeedGenix runs its own.
@@ -339,6 +377,17 @@ install_packages() {
     rm -f /etc/nginx/sites-enabled/default
     note "removed nginx's default site"
   fi
+}
+
+# Packages were chosen by missing module; afterwards every module must load, in the CLI and in
+# PHP-FPM (an installed but disabled extension would otherwise surface only as a broken release).
+verify_php_modules() {
+  if ((FG_DRY_RUN)); then return 0; fi
+  local still
+  still=$(php_packages_needed "$FG_PHP_VERSION" | paste -sd' ' -)
+  [[ -z $still ]] ||
+    die "PHP $FG_PHP_VERSION still lacks modules from: $still (installed but disabled? see phpenmod)"
+  ok "PHP $FG_PHP_VERSION CLI and PHP-FPM load every module FeedGenix needs"
 }
 
 # ---- the app user and directories ----------------------------------------------------------------
@@ -800,6 +849,7 @@ main() {
   preflight
   record_legacy_baseline
   install_packages
+  verify_php_modules
   setup_user_and_dirs
   setup_postgres
   setup_services

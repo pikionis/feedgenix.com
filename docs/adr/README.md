@@ -19,3 +19,4 @@ record supersedes them.
 | [0012](0012-reading-feeds.md) | Reading feeds: recognition by content, UTF-8, formats, never partial |
 | [0013](0013-fetching-feed-urls.md) | Fetching feed URLs: the SSRF policy |
 | [0014](0014-feed-size-per-plan.md) | Feed size per plan, within a server ceiling |
+| [0015](0015-unfinished-packages-and-php-modules.md) | Unfinished dpkg packages and PHP modules on a shared host (refines 0011) |

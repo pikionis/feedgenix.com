@@ -50,7 +50,7 @@ echo "  worker user: $(awk '$1 == "user" { gsub(";", "", $2); print $2 }' /etc/n
 echo "  includes: $(grep -Eo '^[[:space:]]*include[[:space:]]+[^;]+' /etc/nginx/nginx.conf | awk '{ print $2 }' | paste -sd' ' -)"
 for f in /etc/nginx/sites-enabled/* /etc/nginx/conf.d/*.conf; do
   echo "  $f"
-  grep -Eh '^[[:space:]]*(listen|server_name)[[:space:]]' "$f" | sed 's/^[[:space:]]*/      /' | sort -u
+  grep -Eh '^[[:space:]]*(listen|server_name|root|fastcgi_pass)[[:space:]]' "$f" | sed 's/^[[:space:]]*/      /' | sort -u
 done
 echo "  nginx.service drop-ins: $(ls /etc/systemd/system/nginx.service.d/ 2>/dev/null | paste -sd' ' -)"
 
@@ -63,9 +63,26 @@ for v in /etc/php/*; do
   grep -EH '^[[:space:]]*(user|group|listen)[[:space:]]*=' /etc/php/"$v"/fpm/pool.d/*.conf 2>/dev/null | sed 's/^/    /'
   echo "    php$v-fpm: $(systemctl is-active "php$v-fpm" 2>/dev/null)"
 done
-echo "  would installing FeedGenix's PHP extensions upgrade or remove anything? (simulation)"
-apt-get -s install --no-install-recommends php8.4-cli php8.4-pgsql php8.4-redis php8.4-intl php8.4-mbstring \
-  php8.4-xml php8.4-zip php8.4-curl php8.4-bcmath 2>&1 | grep -E '^(Inst|Remv|E:)' | sed 's/^/    /'
+# The PHP modules FeedGenix needs (module:package suffix): the same list as FG_PHP_MODULES in lib/common.sh.
+PHP_MODULES=(pdo_pgsql:pgsql redis:redis intl:intl mbstring:mbstring dom:xml simplexml:xml xmlreader:xml xmlwriter:xml zip:zip curl:curl bcmath:bcmath)
+modules_of() { command -v "$1" >/dev/null && "$1" -m 2>/dev/null | grep -v -e '^\[' -e '^$' | tr '[:upper:]' '[:lower:]'; }
+cli_modules=$(modules_of php8.4)
+fpm_modules=$(modules_of php-fpm8.4)
+missing=()
+php_packages=()
+[[ -n $cli_modules ]] || php_packages+=(php8.4-cli)
+for entry in "${PHP_MODULES[@]}"; do
+  if ! grep -qx "${entry%%:*}" <<<"$cli_modules" || ! grep -qx "${entry%%:*}" <<<"$fpm_modules"; then
+    missing+=("${entry%%:*}")
+    php_packages+=("php8.4-${entry#*:}")
+  fi
+done
+mapfile -t php_packages < <(printf '%s\n' "${php_packages[@]}" | sed '/^$/d' | sort -u)
+echo "  PHP 8.4 modules FeedGenix needs that the CLI or PHP-FPM does not load: ${missing[*]:-none}"
+if ((${#php_packages[@]} > 0)); then
+  echo "  simulated install of ${php_packages[*]} (Inst [old] = upgrade, Remv = removal, Conf of another package = dpkg left it unfinished):"
+  apt-get -s install --no-install-recommends "${php_packages[@]}" 2>&1 | grep -E '^(Inst|Remv|Conf|E:)' | sed 's/^/    /'
+fi
 
 h "Packages and apt sources"
 for p in nginx php8.4-fpm postgresql-common postgresql-18 redis-server mysql-server mariadb-server supervisor varnish certbot libpq5 needrestart unattended-upgrades fail2ban ufw; do
@@ -76,6 +93,19 @@ echo "  PGDG configured: $(grep -rqs apt.postgresql.org /etc/apt/sources.list /e
 # shellcheck disable=SC2016 # a literal $nrconf{restart} is the pattern
 echo "  needrestart: $(grep -hE '^\$nrconf\{restart\}' /etc/needrestart/needrestart.conf /etc/needrestart/conf.d/*.conf 2>/dev/null | paste -sd' ' -)"
 echo "  unattended upgrades: $(apt-config dump 2>/dev/null | grep -E 'APT::Periodic::Unattended-Upgrade ' | paste -sd' ' -)"
+
+h "dpkg: unfinished packages (any apt run finishes them: their maintainer scripts run again)"
+unfinished=$(dpkg-query -W -f='${Package} ${Status}\n' 2>/dev/null |
+  awk '$3 != "ok" || ($4 != "installed" && $4 != "not-installed" && $4 != "config-files") { print $1 }' | sort -u)
+if [[ -z $unfinished ]]; then
+  echo "  none"
+else
+  while IFS= read -r p; do
+    echo "  $p $(dpkg-query -W -f='${Version} [${Status}]' "$p" 2>/dev/null); last dpkg entries:"
+    zgrep -h " $p:" /var/log/dpkg.log* 2>/dev/null | sort | tail -n 2 | sed 's/^/      /'
+  done <<<"$unfinished"
+  echo "  read their postinst (/var/lib/dpkg/info/PKG.postinst) before provision.sh --allow-unfinished=$(paste -sd, - <<<"$unfinished")"
+fi
 
 h "PostgreSQL and Redis"
 command -v pg_lsclusters >/dev/null && run pg_lsclusters || echo "  no PostgreSQL"

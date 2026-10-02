@@ -136,6 +136,55 @@ apt_disruptions() {
   awk '/^Inst [^ ]+ \[/ { print "upgrade " $2 } /^Remv / { print "remove " $2 }'
 }
 
+# Packages dpkg left unfinished (half-installed, unpacked, half-configured, awaiting or pending
+# triggers, or flagged for reinstallation), one per line. The next apt run of any kind finishes them:
+# their maintainer scripts run again, and a script that calls systemctl itself is beyond policy-rc.d.
+unfinished_packages() {
+  dpkg-query -W -f='${Package} ${Status}\n' 2>/dev/null |
+    awk '$3 != "ok" || ($4 != "installed" && $4 != "not-installed" && $4 != "config-files") { print $1 }' |
+    sort -u
+}
+
+# The names on stdin that ALLOWED (comma-separated) does not list; whole names only.
+not_in_list() {
+  awk -v allowed="$1" 'BEGIN { n = split(allowed, a, ","); for (i = 1; i <= n; i++) ok[a[i]] = 1 }
+    NF && !($1 in ok) { print $1 }'
+}
+
+# ---- PHP ------------------------------------------------------------------------------------------
+
+# The PHP modules FeedGenix needs (module:package suffix). survey.sh keeps the same list.
+FG_PHP_MODULES=(pdo_pgsql:pgsql redis:redis intl:intl mbstring:mbstring dom:xml simplexml:xml xmlreader:xml
+  xmlwriter:xml zip:zip curl:curl bcmath:bcmath)
+
+# php_modules VERSION cli|fpm — the modules that PHP binary loads, lower case, one per line; nothing
+# when the binary is missing.
+php_modules() {
+  local bin=php$1
+  if [[ $2 == fpm ]]; then bin=php-fpm$1; fi
+  command -v "$bin" >/dev/null 2>&1 || return 0
+  "$bin" -m 2>/dev/null | grep -v -e '^\[' -e '^$' | tr '[:upper:]' '[:lower:]'
+}
+
+# php_packages_needed VERSION — the php<VERSION>-* packages to install: the package of every module
+# the CLI or PHP-FPM does not load yet, and the CLI itself when it is missing. Chosen by what is
+# missing, never by package name: a control panel's PHP build may contain a module without shipping
+# the package Ubuntu would put it in (CloudPanel's PHP 8.4 loads redis; php8.4-redis does not exist).
+php_packages_needed() {
+  local version=$1 cli fpm entry module
+  cli=$(php_modules "$version" cli)
+  fpm=$(php_modules "$version" fpm)
+  {
+    if [[ -z $cli ]]; then printf 'php%s-cli\n' "$version"; fi
+    for entry in "${FG_PHP_MODULES[@]}"; do
+      module=${entry%%:*}
+      if ! grep -qx "$module" <<<"$cli" || ! grep -qx "$module" <<<"$fpm"; then
+        printf 'php%s-%s\n' "$version" "${entry#*:}"
+      fi
+    done
+  } | sort -u
+}
+
 # ---- the legacy app (shared mode) -----------------------------------------------------------------
 
 # 0 when the legacy site answers the local web server with any HTTP status below 500.

@@ -55,6 +55,65 @@ check "an upgrade and a removal are reported, a new install is not" \
 check "a simulation with only new installs reports nothing" \
   equals "" "$(grep -v -e '^Inst libpq5' -e '^Remv' "$WORK/apt-sim" | apt_disruptions)"
 
+echo "unfinished_packages"
+dpkg-query() { # stub: "${Package} ${Status}" lines, as on the beta VPS plus every other state
+  cat <<'EOF'
+nginx install ok installed
+cloudpanel install ok half-configured
+cloud-init hold ok installed
+systemd-timesyncd deinstall ok config-files
+gone purge ok not-installed
+half-thing install ok half-installed
+unpacked-thing install ok unpacked
+awaiting-thing install ok triggers-awaited
+pending-thing install ok triggers-pending
+broken-thing install reinstreq installed
+EOF
+}
+check "half-configured (the VPS's cloudpanel), half-installed, unpacked, trigger states and reinstreq are unfinished" \
+  equals $'awaiting-thing\nbroken-thing\ncloudpanel\nhalf-thing\npending-thing\nunpacked-thing' "$(unfinished_packages)"
+dpkg-query() { printf 'nginx install ok installed\ncloud-init hold ok installed\nold deinstall ok config-files\n'; }
+check "installed, held, removed and purged packages are not unfinished" equals "" "$(unfinished_packages)"
+unset -f dpkg-query
+
+echo "not_in_list (the --allow-unfinished check)"
+check "every unfinished package must be named" equals other "$(printf 'cloudpanel\nother\n' | not_in_list cloudpanel)"
+check "an empty allowance allows nothing" equals $'cloudpanel\nother' "$(printf 'cloudpanel\nother\n' | not_in_list '')"
+check "names match whole, never as a prefix" equals cloudpanel "$(printf 'cloudpanel\n' | not_in_list cloud)"
+check "a list of several names" equals "" "$(printf 'b\na\n' | not_in_list a,b)"
+
+echo "php_modules"
+mkdir -p "$WORK/bin"
+cat >"$WORK/bin/php9.9" <<'EOF'
+#!/bin/sh
+printf '[PHP Modules]\nCore\nSimpleXML\npdo_pgsql\n\n[Zend Modules]\nZend OPcache\n\n'
+EOF
+chmod +x "$WORK/bin/php9.9"
+check "lower case, one per line, without section headers or blank lines" \
+  equals $'core\nsimplexml\npdo_pgsql\nzend opcache' "$(PATH="$WORK/bin:$PATH" php_modules 9.9 cli)"
+check "a missing binary loads nothing" equals "" "$(PATH="$WORK/bin:$PATH" php_modules 9.9 fpm)"
+
+echo "php_packages_needed"
+all_modules='core pdo_mysql redis intl mbstring dom simplexml xmlreader xmlwriter zip curl bcmath'
+php_modules() { tr ' ' '\n' <<<"$all_modules"; } # stub: CloudPanel's PHP 8.4 (redis built in, no pgsql)
+check "CloudPanel's PHP needs only php8.4-pgsql, never the php8.4-redis it does not have" \
+  equals php8.4-pgsql "$(php_packages_needed 8.4)"
+php_modules() { if [[ $2 == fpm ]]; then tr ' ' '\n' <<<"${all_modules/ intl/}"; else tr ' ' '\n' <<<"$all_modules"; fi; }
+check "a module PHP-FPM lacks is needed even when the CLI loads it" \
+  equals $'php8.4-intl\nphp8.4-pgsql' "$(php_packages_needed 8.4)"
+php_modules() { if [[ $2 == cli ]]; then tr ' ' '\n' <<<"${all_modules/ zip/}"; else tr ' ' '\n' <<<"$all_modules"; fi; }
+check "a module the CLI lacks (artisan, the worker) is needed even when PHP-FPM loads it" \
+  equals $'php8.4-pgsql\nphp8.4-zip' "$(php_packages_needed 8.4)"
+php_modules() { :; }
+check "without PHP every package is needed, and the CLI" \
+  equals $'php8.4-bcmath\nphp8.4-cli\nphp8.4-curl\nphp8.4-intl\nphp8.4-mbstring\nphp8.4-pgsql\nphp8.4-redis\nphp8.4-xml\nphp8.4-zip' \
+  "$(php_packages_needed 8.4)"
+php_modules() { tr ' ' '\n' <<<"$all_modules pdo_pgsql"; }
+check "a PHP that loads every module needs nothing" equals "" "$(php_packages_needed 8.4)"
+unset -f php_modules
+check "survey.sh simulates the same PHP modules provision.sh needs" \
+  equals "${FG_PHP_MODULES[*]}" "$(sed -n 's/^PHP_MODULES=(\(.*\))$/\1/p' "$OPS/survey.sh")"
+
 echo "render"
 printf 'server_name ${FG_DOMAIN};\nreturn 301 https://$host$request_uri;\nMAIL_FROM_NAME="${APP_NAME}"\ntry_files $uri =404;\n' >"$WORK/t1"
 check "fills \${FG_*} and leaves nginx's and Laravel's own variables alone" \

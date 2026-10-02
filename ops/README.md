@@ -6,7 +6,7 @@ every `--dry-run` change nothing.
 
 | File | What it does |
 |---|---|
-| `survey.sh` | **Read-only.** The facts the scripts depend on: ports, nginx, PHP, Supervisor, certificates, the legacy app's permissions. No secrets. |
+| `survey.sh` | **Read-only.** The facts the scripts depend on: ports, nginx, PHP and the modules FeedGenix still needs, unfinished dpkg packages, Supervisor, certificates, the legacy app's permissions. No secrets. |
 | `provision.sh` | Idempotent provisioning, `--mode=shared` (the beta VPS, next to the frozen legacy app) or `--mode=dedicated` (a fresh server). **Start with `--dry-run`.** |
 | `check.sh` | `feedgenix-check` on the server: isolation and health, read-only. It runs after every provisioning run and deploy. |
 | `build-artifact.sh` | The release artifact (production `vendor/`, the SPA build, no tests, no `.env`). CI runs it. |
@@ -37,11 +37,19 @@ every `--dry-run` change nothing.
 **Shared things that do change, and how:**
 - **nginx:** a graceful reload after `nginx -t` passes. The legacy site must answer afterwards,
   otherwise FeedGenix's files are reverted.
-- **Packages:** installed with every service start and restart blocked, so nothing restarts. If apt
-  would upgrade or remove any installed package, provisioning stops before installing anything,
-  unless `--allow-upgrades` is given after reviewing the list.
-- **PHP:** new PHP extensions (such as `pdo_pgsql`) also become available to the system PHP. The
-  legacy PHP-FPM loads them only at its next restart, for example after a reboot.
+- **Packages:** installed with every service start and restart blocked (`policy-rc.d`), so no
+  package's own service restarts. If apt would upgrade or remove any installed package, provisioning
+  stops before installing anything, unless `--allow-upgrades` is given after reviewing the list.
+- **Unfinished packages:** `policy-rc.d` cannot stop a maintainer script that calls `systemctl`
+  itself. A package dpkg left unfinished (half-configured, unpacked…) has its script re-run by the
+  next apt install of anything. So provisioning (both modes) refuses to run apt until each one is
+  named with `--allow-unfinished=PKG` after reading its script. Then apt's error from that package
+  is tolerated, and nothing else's: every FeedGenix package must be installed and no other package
+  may be left unfinished.
+- **PHP:** only the modules the PHP CLI or PHP-FPM does not load yet are installed (by module, not by
+  package name: a control panel's PHP may contain a module without Ubuntu's package for it). New
+  extensions (such as `pdo_pgsql`) also become available to the system PHP. The legacy PHP-FPM loads
+  them only at its next restart, for example after a reboot.
 - **Certificate renewal** reloads nginx only after `nginx -t` passes.
 
 ## First setup on the beta VPS
@@ -51,23 +59,27 @@ every `--dry-run` change nothing.
 - add a DNS A record, `staging.feedgenix.com`, pointing to the VPS;
 - give the go-ahead for each step below.
 
-**1. Copy the scripts up and survey (read-only):**
+**1. Survey (read-only; streamed, so not even the script is written to the server):**
 ```bash
-git archive HEAD ops | ssh root@VPS 'rm -rf /root/feedgenix-ops && mkdir -p /root/feedgenix-ops && tar -x -C /root/feedgenix-ops'
-ssh root@VPS 'bash /root/feedgenix-ops/ops/survey.sh' > survey.txt
+ssh root@VPS 'bash -s' < ops/survey.sh > survey.txt
 ```
 
 Read the survey for:
 - ports 80/443 held by nginx;
-- the legacy `.env` not readable by others;
-- no `Inst … [old version]` lines in the PHP simulation;
+- the legacy `.env` not readable by others, and the user its PHP runs as (the vhost's
+  `fastcgi_pass`, then that pool's `user`);
+- no `Inst … [old version]` and no `Remv` lines in the PHP simulation;
+- `Conf` lines for other packages, and the "unfinished packages" section: read each one's
+  `/var/lib/dpkg/info/PKG.postinst` before allowing it (see "The beta VPS" below);
 - no `AllowUsers` that would shut the `feedgenix` user out of SSH.
 
-**2. Dry run** (changes nothing; prints every file diff and command):
+**2. Copy the scripts up, then dry run** (changes nothing; prints every file diff and command):
 ```bash
+git archive HEAD ops | ssh root@VPS 'rm -rf /root/feedgenix-ops && mkdir -p /root/feedgenix-ops && tar -x -C /root/feedgenix-ops'
 ssh root@VPS 'bash /root/feedgenix-ops/ops/provision.sh --mode=shared --domain=staging.feedgenix.com \
-  --legacy-url=https://LEGACY-DOMAIN/ --email=OPS-EMAIL --dry-run'
+  --legacy-url=https://LEGACY-DOMAIN/ [--allow-unfinished=PKG] --dry-run'
 ```
+`--email` is needed only when certbot has no account on the host yet.
 
 **3. Provision** (go-ahead): the same command without `--dry-run`. It ends with `feedgenix-check`.
 Two warnings are expected until the first deploy: "no release is deployed yet", and the self-signed
@@ -93,17 +105,48 @@ certificate if DNS does not point here yet (re-run once it does).
 **5. Check:** `feedgenix-check` on the server shows all PASS. Then the demo: invite, sign up, verify,
 workspace.
 
+## The beta VPS (survey of 2026-10-02)
+- **A CloudPanel host.** nginx, PHP 7.1–8.5 and Varnish come from CloudPanel's apt repository
+  (`+clp-noble`). Its PHP 8.4 already loads every module FeedGenix needs except `pdo_pgsql`; the
+  repository has `php8.4-pgsql`, and `php8.4-redis` does not exist there. nginx workers run as root.
+- **The `cloudpanel` package has been half-configured since 2026-07-29.** Every apt install re-runs
+  its postinst. Because CloudPanel is installed (`/home/clp/htdocs/app/files` exists), the script
+  takes its update branch, which fails at its first command (a missing `/tmp/cloudpanel/…` file),
+  before it restarts anything. Hostinger's weekly `/etc/cron.d/monarx-update` (`apt-get install
+  monarx-*`, Fridays 19:43 UTC) has re-run it that way every week. Provisioning therefore needs
+  `--allow-unfinished=cloudpanel`, and apt ends with that package's error, which is tolerated.
+  Check the survey's "unfinished packages" section again before every provisioning run: if
+  `/tmp/cloudpanel` ever exists, the update branch would stop and restart CloudPanel's own services.
+- **The legacy app** runs on the system PHP 8.4-FPM pool `www-data` (127.0.0.1:19000), and its
+  Supervisor workers run as `www-data`. Its `.env` belongs to another user (`user`) with mode 0664,
+  so `www-data` reads it only through the "other" bit; see "Legacy permissions".
+- MySQL keeps its data in `/home/mysql`. The FeedGenix sandbox hides `/home` entirely (`ProtectHome`).
+
 ## Legacy permissions
 If `feedgenix-check` reports that the `feedgenix` user can read or list the legacy app, fix it
-**with the owner's go-ahead**. First check who owns the files:
+**with the owner's go-ahead**. First check who owns the files and which user the legacy PHP runs as
+(the vhost's `fastcgi_pass`, then that pool's `user =`):
 ```bash
 stat -c '%A %U:%G %n' /var/www/feed-intelligence /var/www/feed-intelligence/.env
 ```
-If the owner or group is the web user (`www-data`), nginx and PHP keep their access, and:
-```bash
-chmod o-rwx /var/www/feed-intelligence
-chmod 640 /var/www/feed-intelligence/.env
-```
+- **If the owner or group is the web user (`www-data`):** nginx and PHP keep their access, and:
+  ```bash
+  chmod o-rwx /var/www/feed-intelligence
+  chmod 640 /var/www/feed-intelligence/.env
+  ```
+- **If the files belong to another user and the web user reads them only as "other"** (the beta VPS:
+  `.env` is `user:user` 0664, and the directory belongs to an unnamed uid): give the web user's group
+  read access, then take it away from everyone else:
+  ```bash
+  stat -c '%a %u:%g %n' /var/www/feed-intelligence /var/www/feed-intelligence/.env   # note them to undo
+  chgrp www-data /var/www/feed-intelligence /var/www/feed-intelligence/.env
+  chmod 750 /var/www/feed-intelligence
+  chmod 640 /var/www/feed-intelligence/.env
+  runuser -u www-data -- test -r /var/www/feed-intelligence/.env && echo "www-data can still read it"
+  ```
+  Then the legacy site must still answer. To undo, restore the noted modes and owners with `chmod`
+  and `chown`.
+
 Then run `feedgenix-check` again. The FeedGenix services cannot see the directory either way (the
 sandbox); this closes the gap for code running outside them: deploy-time migrations and
 `feedgenix-artisan`.
@@ -146,11 +189,14 @@ userdel feedgenix && rm -r /home/feedgenix
 ```
 
 ## How this is tested
-- **`ops/tests/unit.sh`**, anywhere: the apt guard, template rendering, legacy liveness and port
-  detection.
+- **`ops/tests/unit.sh`**, anywhere: the apt guards (upgrades and removals, unfinished packages, the
+  `--allow-unfinished` match), the PHP packages chosen by missing module, template rendering, legacy
+  liveness and port detection.
 - **`ops/tests/rehearse.sh`**, in CI on fresh Ubuntu 24.04 VMs, next to a stand-in legacy app
   (`tests/fake-legacy.sh`) and on a clean server:
-  - It provisions twice; the second run must change nothing.
+  - Next to a half-configured package whose postinst always fails, it refuses to run apt (dry run
+    and real run) until the package is allowed by name, then tolerates only that package's failure.
+  - It provisions twice; the second run must change nothing and run no apt at all.
   - It deploys through the real SSH path.
   - It signs up with an invite, verifies the email and opens the workspace.
   - It tries a release that fails its smoke test, one whose code does not load, a truncated upload,

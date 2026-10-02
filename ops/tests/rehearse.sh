@@ -93,6 +93,24 @@ worker_on_live() {
 }
 fake_revision() { printf '%s%.0s' "$1" {1..40}; }
 
+# A package dpkg left half-configured, like the beta VPS's control panel (cloudpanel, since July
+# 2026): its postinst fails every time and counts its runs. Any apt install would run it again, so
+# provisioning must refuse until it is allowed by name, then tolerate its failure and nothing else's.
+PANEL_RUNS=/var/lib/fake-panel-runs
+make_unfinished_package() {
+  local dir=$WORK/fake-panel
+  install -d "$dir/DEBIAN"
+  printf 'Package: fake-panel\nVersion: 1.0\nArchitecture: all\nMaintainer: FeedGenix rehearsal <ops@feedgenix.test>\nDescription: stand-in for a control panel whose postinst always fails\n' \
+    >"$dir/DEBIAN/control"
+  printf '#!/bin/sh\necho "postinst $*" >>%s\nexit 1\n' "$PANEL_RUNS" >"$dir/DEBIAN/postinst"
+  chmod 0755 "$dir/DEBIAN/postinst"
+  dpkg-deb --build --root-owner-group "$dir" "$WORK/fake-panel.deb" >/dev/null
+  dpkg -i "$WORK/fake-panel.deb" >/dev/null 2>&1 || true
+  [[ $(dpkg-query -W -f='${Status}' fake-panel) == 'install ok half-configured' ]]
+}
+panel_runs() { if [[ -f $PANEL_RUNS ]]; then wc -l <"$PANEL_RUNS"; else echo 0; fi; }
+pg_installed() { [[ $(dpkg-query -W -f='${Status}' postgresql-18 2>/dev/null) == 'install ok installed' ]]; }
+
 # repack REVISION [EDIT-FUNCTION] — the tested artifact as another revision, optionally edited.
 repack() {
   local revision=$1 edit=${2:-} dir
@@ -155,11 +173,22 @@ else
   legacy_before=$(legacy_state)
 fi
 ok "artifact $revision, sshd, a deploy key"
+dry_extra=()
+if [[ $mode == shared ]]; then
+  expect_ok "a half-configured package (fake-panel), like the VPS's control panel" make_unfinished_package
+  runs_before=$(panel_runs)
+fi
 
 section "Dry run: changes nothing"
+if [[ $mode == shared ]]; then
+  expect_output "with a package unfinished the dry run refuses and names the flag" \
+    'dpkg left these packages unfinished: fake-panel\. .*--allow-unfinished=fake-panel\. Nothing was installed' \
+    provision --dry-run
+  dry_extra=(--allow-unfinished=fake-panel)
+fi
 # In shared mode the guard may refuse because apt would upgrade a package the runner image already
 # has; both outcomes are correct, anything else is not.
-if provision --dry-run >"$LOG" 2>&1; then
+if provision --dry-run "${dry_extra[@]}" >"$LOG" 2>&1; then
   grep -q 'would be made. Nothing was changed.' "$LOG" || bad "the dry run did not summarise"
   ok "the dry run completes"
 elif grep -q 'would UPGRADE installed packages' "$LOG"; then
@@ -173,13 +202,26 @@ expect_ok "no /srv/feedgenix, no /etc/feedgenix, no vhost, no policy-rc.d left" 
   bash -c '[[ ! -e /srv/feedgenix && ! -e /etc/feedgenix && ! -e /etc/nginx/sites-available/feedgenix.conf && ! -e /usr/sbin/policy-rc.d ]]'
 if [[ $mode == shared ]]; then
   expect_ok "the legacy app is exactly as before" test "$(legacy_state)" == "$legacy_before"
+  expect_ok "the unfinished package's postinst never ran" test "$(panel_runs)" == "$runs_before"
 fi
 
 section "Provision"
 extra=()
-if [[ $mode == shared ]]; then extra=(--allow-upgrades); fi
+if [[ $mode == shared ]]; then
+  expect_output "provisioning refuses while a package is unfinished" \
+    'dpkg left these packages unfinished: fake-panel' provision --allow-upgrades
+  expect_fail "…and installs nothing" pg_installed
+  expect_ok "…runs no maintainer script and leaves no policy-rc.d" \
+    bash -c "[[ $(panel_runs) == $runs_before && ! -e /usr/sbin/policy-rc.d ]]"
+  extra=(--allow-upgrades --allow-unfinished=fake-panel)
+fi
 expect_ok "provision.sh --mode=$mode" provision "${extra[@]}"
 expect_ok "no policy-rc.d is left behind" test ! -e /usr/sbin/policy-rc.d
+if [[ $mode == shared ]]; then
+  expect_ok "apt re-ran the allowed package's postinst; it failed again and was tolerated" \
+    bash -c "(( $(panel_runs) > $runs_before )) && [[ \$(dpkg-query -W -f='\${Status}' fake-panel) == 'install ok half-configured' ]]"
+  runs_after=$(panel_runs)
+fi
 provision "${extra[@]}" >"$LOG" 2>&1 || {
   cat "$LOG"
   bad "the second run failed"
@@ -187,6 +229,10 @@ provision "${extra[@]}" >"$LOG" 2>&1 || {
 if grep -qx '   0 change(s)' "$LOG"; then ok "a second run changes nothing"; else
   cat "$LOG"
   bad "the second run changed something"
+fi
+if [[ $mode == shared ]]; then
+  expect_ok "a converged host runs no apt at all (the unfinished package's postinst did not run again)" \
+    test "$(panel_runs)" == "$runs_after"
 fi
 if [[ $mode == shared ]]; then
   expect_ok "the legacy app is exactly as before: same processes (none restarted), site, worker, flag, freeze file" \
