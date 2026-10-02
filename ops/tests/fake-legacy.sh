@@ -32,6 +32,10 @@ touch "$legacy/storage/app/PIPELINE_FROZEN"
 chown -R www-data:www-data "$legacy"
 chmod 0640 "$legacy/.env"
 
+# Like the beta VPS's CloudPanel nginx: its fastcgi_params also sets buffers, so a vhost that includes
+# it and sets its own fastcgi_buffers fails nginx -t ("directive is duplicate").
+printf 'fastcgi_buffers 256 16k;\nfastcgi_buffer_size 64k;\nfastcgi_max_temp_file_size 0;\n' >>/etc/nginx/fastcgi_params
+
 openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj /CN=legacy.test -addext subjectAltName=DNS:legacy.test \
   -keyout /etc/ssl/private/legacy.key -out /etc/ssl/certs/legacy.pem 2>/dev/null
 rm -f /etc/nginx/sites-enabled/default

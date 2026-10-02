@@ -155,6 +155,10 @@ check "the vhost serves the release through the current symlink, uncached" \
 render "$OPS/templates/nginx/feedgenix-php.conf" >"$WORK/php.conf"
 check "PHP runs the resolved release path (\$realpath_root) on FeedGenix's own socket" \
   bash -c "grep -q 'SCRIPT_FILENAME \$realpath_root/index.php;' '$WORK/php.conf' && grep -q 'fastcgi_pass unix:/run/feedgenix-php/php-fpm.sock;' '$WORK/php.conf'"
+check "PHP gets FeedGenix's own FastCGI parameters, never the host's fastcgi_params (CloudPanel adds buffers there)" \
+  bash -c "! grep -Eq '^[[:space:]]*include[[:space:]]' '$WORK/php.conf' && [[ \$(grep -c '^fastcgi_buffers ' '$WORK/php.conf') == 1 ]]"
+check "every FastCGI parameter is set once" \
+  bash -c "[[ -z \$(grep -o '^fastcgi_param [A-Z_]*' '$WORK/php.conf' | sort | uniq -d) ]] && grep -q '^fastcgi_param REQUEST_METHOD ' '$WORK/php.conf' && grep -q '^fastcgi_param QUERY_STRING ' '$WORK/php.conf'"
 render "$OPS/templates/systemd/sandbox.conf" >"$WORK/sandbox.conf"
 check "the sandbox denies loopback and the host's own addresses, allowing only the DNS stub" \
   bash -c "grep -qx 'IPAddressDeny=localhost 203.0.113.7/32' '$WORK/sandbox.conf' && grep -qx 'IPAddressAllow=127.0.0.53/32' '$WORK/sandbox.conf'"
