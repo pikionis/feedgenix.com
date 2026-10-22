@@ -1,6 +1,9 @@
-import { Link } from 'react-router'
-import { Logo } from '~/components/brand/logo'
-import { Button } from '~/components/ui/button'
+import { Features } from '~/features/marketing/Features'
+import { Hero } from '~/features/marketing/Hero'
+import { HowItWorks } from '~/features/marketing/HowItWorks'
+import { MarketingFooter } from '~/features/marketing/MarketingFooter'
+import { MarketingNav } from '~/features/marketing/MarketingNav'
+import { Pricing } from '~/features/marketing/Pricing'
 import type { Route } from './+types/home'
 
 export const meta: Route.MetaFunction = () => [
@@ -12,25 +15,26 @@ export const meta: Route.MetaFunction = () => [
   },
 ]
 
+/**
+ * The landing page (the marketing UI kit of the April 2026 design system), pre-rendered at build time.
+ * Layout widths stay in px (1200, 1120, 520, 340 as in the design): the root font is 15px, so the rem
+ * classes an editor suggests instead (max-w-300 …) would render about 6% narrower.
+ */
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-[1200px] flex-col px-6 py-16">
-      <Logo />
-      <h1 className="mt-20 max-w-3xl text-4xl leading-[1.1] font-medium tracking-tight">
-        Ship your catalog in every language your buyers shop in.
-      </h1>
-      <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-        Connect a product feed, review the AI field mapping, translate into the languages you choose and publish a feed
-        URL your channels can pull.
-      </p>
-      <p className="mt-4 max-w-2xl text-muted-foreground">
-        Prices, stock and barcodes pass through untouched. That&rsquo;s the Golden Rule.
-      </p>
-      <div className="mt-10">
-        <Button asChild>
-          <Link to="/app">Open your workspace</Link>
-        </Button>
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-[1200px] px-6 sm:px-10">
+        <MarketingNav />
+        <main>
+          <Hero />
+        </main>
       </div>
-    </main>
+      <Features />
+      <div className="mx-auto max-w-[1200px] px-6 sm:px-10">
+        <HowItWorks />
+        <Pricing />
+      </div>
+      <MarketingFooter />
+    </div>
   )
 }

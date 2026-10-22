@@ -17,6 +17,7 @@
   --color-primary: var(--fg-indigo);
   --color-primary-hover: var(--fg-indigo-600);
   --color-primary-foreground: var(--fg-paper);
+  --color-primary-soft: var(--fg-indigo-100);
   --color-accent: var(--fg-emerald);
   --color-accent-hover: var(--fg-emerald-600);
   --color-hairline: var(--border-hair);

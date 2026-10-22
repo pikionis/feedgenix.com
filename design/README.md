@@ -12,6 +12,19 @@ The visual identity carried over from the April 2026 prototype (git tag `prototy
 - **Fonts:** Inter (400, 500) and JetBrains Mono, self-hosted through `@fontsource`. Never loaded
   from Google.
 
+## The landing page
+`frontend/src/routes/home.tsx` and `frontend/src/features/marketing/` implement the prototype's
+marketing UI kit (`ui_kits/marketing/index.html`): nav, hero with the feed preview, feature cards on
+the Sand band, how it works, pricing and the Ink footer. The look is the kit's; the copy is not.
+- **Only true claims.** The kit's placeholders are gone and must not come back: review scores, a
+  certification, a company name and register number, a demo that does not exist, a former customer's
+  file name, a CLI. Company and legal details arrive with the public launch (M11). A test fails on
+  any of them.
+- **Prices are read live from `/api/plans`.** The page never shows a cost per row, a provider price
+  or the credit markup (owner's pricing rule); a test fails if it does.
+- **Layout widths stay in px** (1200, 1120, 520, 340). The root font is 15px, so the rem classes an
+  editor suggests instead render about 6% narrower.
+
 ## Voice
 - Calm, precise, a little Swiss: an infrastructure tool a serious merchant would trust. No
   exclamation marks, no "wow", "supercharge" or "game-changer".

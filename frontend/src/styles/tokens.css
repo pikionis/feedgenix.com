@@ -77,6 +77,13 @@
   --block-indigo: #4f46e5;
   --block-ink: #1f1d2e;
 
+  /* Feed preview on the landing page (always on Ink, in both themes) */
+  --term-text: #f1efe8;
+  --term-dim: #7a7790;
+  --term-key: #f1c292;
+  --term-value: #a5b4fc;
+  --term-ok: #6ee7c4;
+
   /* Radius */
   --r-xs: 4px;
   --r-sm: 6px;
