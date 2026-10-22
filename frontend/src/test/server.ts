@@ -1,8 +1,9 @@
 import { setupServer } from 'msw/node'
-import { authProviders } from './handlers'
+import { authOptions } from './handlers'
 
 /**
  * The mock network for unit tests: tests add handlers with server.use(), anything unhandled fails.
- * The one default is what the sign-in pages always ask: which methods the server offers (no Google).
+ * The one default is what the sign-in pages always ask: no Google, invite-only sign-up (the server's
+ * own default).
  */
-export const server = setupServer(authProviders(false))
+export const server = setupServer(authOptions())

@@ -7,7 +7,8 @@ import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { Notice } from '~/components/ui/notice'
 import { AuthLayout } from '~/features/auth/AuthLayout'
-import { Divider, GOOGLE_ERRORS, GoogleButton, useGoogleSignIn } from '~/features/auth/google'
+import { Divider, GOOGLE_ERRORS, GoogleButton } from '~/features/auth/google'
+import { useGoogleSignIn, useRegistrationMode } from '~/features/auth/options'
 import { api } from '~/lib/api/client'
 import { applyServerErrors, describeFailure, zodResolver } from '~/lib/forms'
 import { sessionQuery } from '~/lib/session'
@@ -43,10 +44,15 @@ export default function Register() {
     defaultValues: { name: '', email: '', password: '', password_confirmation: '', invite_code: invite },
   })
   const { errors, isSubmitting } = form.formState
+  // The invite field exists only during an invite-only beta; open sign-up never asks for a code. An
+  // invite error from the server always shows the field, so the message never lands on a hidden one.
+  const registration = useRegistrationMode()
+  const needsInvite = registration === 'invite' || errors.invite_code !== undefined
 
   const onSubmit = form.handleSubmit(async (values) => {
+    const code = values.invite_code === '' || registration === 'open' ? null : values.invite_code
     const { data, error, response } = await api.POST('/auth/register', {
-      body: { ...values, invite_code: values.invite_code === '' ? null : values.invite_code, remember: true },
+      body: { ...values, invite_code: code, remember: true },
     })
 
     if (data !== undefined) {
@@ -78,41 +84,55 @@ export default function Register() {
         </>
       }
     >
-      <div className="flex flex-col gap-4">
-        {googleError !== undefined && <Notice tone="error">{googleError}</Notice>}
-        {google && <GoogleButton invite={invite} />}
-      </div>
-      {google && <Divider />}
-      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-        <Field label="Name" error={errors.name?.message}>
-          {(control) => <Input autoComplete="name" {...control} {...form.register('name')} />}
-        </Field>
-        <Field label="Email" error={errors.email?.message}>
-          {(control) => <Input type="email" autoComplete="email" {...control} {...form.register('email')} />}
-        </Field>
-        <Field label="Password" hint="At least 8 characters." error={errors.password?.message}>
-          {(control) => (
-            <Input type="password" autoComplete="new-password" {...control} {...form.register('password')} />
-          )}
-        </Field>
-        <Field label="Repeat the password" error={errors.password_confirmation?.message}>
-          {(control) => (
-            <Input
-              type="password"
-              autoComplete="new-password"
-              {...control}
-              {...form.register('password_confirmation')}
-            />
-          )}
-        </Field>
-        <Field label="Invite code" hint="FeedGenix is invite-only during the beta." error={errors.invite_code?.message}>
-          {(control) => <Input autoComplete="off" spellCheck={false} {...control} {...form.register('invite_code')} />}
-        </Field>
-        {errors.root?.server?.message !== undefined && <Notice tone="error">{errors.root.server.message}</Notice>}
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating your account…' : 'Create account'}
-        </Button>
-      </form>
+      {registration === 'closed' ? (
+        <Notice>Sign-up is closed at the moment. If you already have an account, sign in.</Notice>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4">
+            {googleError !== undefined && <Notice tone="error">{googleError}</Notice>}
+            {google && <GoogleButton invite={invite} />}
+          </div>
+          {google && <Divider />}
+          <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+            <Field label="Name" error={errors.name?.message}>
+              {(control) => <Input autoComplete="name" {...control} {...form.register('name')} />}
+            </Field>
+            <Field label="Email" error={errors.email?.message}>
+              {(control) => <Input type="email" autoComplete="email" {...control} {...form.register('email')} />}
+            </Field>
+            <Field label="Password" hint="At least 8 characters." error={errors.password?.message}>
+              {(control) => (
+                <Input type="password" autoComplete="new-password" {...control} {...form.register('password')} />
+              )}
+            </Field>
+            <Field label="Repeat the password" error={errors.password_confirmation?.message}>
+              {(control) => (
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  {...control}
+                  {...form.register('password_confirmation')}
+                />
+              )}
+            </Field>
+            {needsInvite && (
+              <Field
+                label="Invite code"
+                hint="FeedGenix is invite-only during the beta."
+                error={errors.invite_code?.message}
+              >
+                {(control) => (
+                  <Input autoComplete="off" spellCheck={false} {...control} {...form.register('invite_code')} />
+                )}
+              </Field>
+            )}
+            {errors.root?.server?.message !== undefined && <Notice tone="error">{errors.root.server.message}</Notice>}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating your account…' : 'Create account'}
+            </Button>
+          </form>
+        </>
+      )}
     </AuthLayout>
   )
 }

@@ -172,6 +172,10 @@ sandbox); this closes the gap for code running outside them: deploy-time migrati
 ## Everyday
 - **State:** `feedgenix-check` (as root), or `ssh -i feedgenix-deploy feedgenix@HOST status`.
 - **Beta invites:** `feedgenix-artisan invites:create --email=someone@example.com --note="Alpine Shop"`
+- **Who may sign up:** `FEEDGENIX_REGISTRATION` in `/srv/feedgenix/shared/.env`: `invite` (the
+  private beta, the default), `open` (the launch) or `closed`. The sign-up page asks
+  `/api/auth/options` and shows the invite field only in `invite` mode. Open sign-up only once a
+  mail provider sends the verification emails; until then they go to the mail log.
 - **Plans:** `feedgenix-artisan tenants:set-plan TENANT pro`
 - **Emails until a mail provider is set up** (verification, password reset): they are written to
   the log.

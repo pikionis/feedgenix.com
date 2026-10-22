@@ -45,3 +45,7 @@ export type ReadingOptions = components['schemas']['RereadImportRequest']
 export type Encoding = NonNullable<ReadingOptions['encoding']>
 
 export type Delimiter = NonNullable<ReadingOptions['delimiter']>
+
+export type RegistrationMode = components['schemas']['RegistrationMode']
+
+export type AuthOptions = paths['/auth/options']['get']['responses'][200]['content']['application/json']

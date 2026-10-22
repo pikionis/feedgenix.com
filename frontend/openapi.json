@@ -10,13 +10,13 @@
         }
     ],
     "paths": {
-        "/auth/providers": {
+        "/auth/options": {
             "get": {
-                "operationId": "auth.providers",
-                "description": "`google` is true only when the server has Google OAuth credentials; email and password always work.",
-                "summary": "Sign-in methods",
+                "operationId": "auth.options",
+                "description": "`google` is true only when the server has Google OAuth credentials; email and password always\nwork. `registration` is who may sign up: `open` (anyone), `invite` (with an invite code, during\nthe private beta) or `closed`.",
+                "summary": "Sign-in and sign-up options",
                 "tags": [
-                    "AuthProviders"
+                    "AuthOptions"
                 ],
                 "responses": {
                     "200": {
@@ -28,10 +28,15 @@
                                     "properties": {
                                         "google": {
                                             "type": "boolean"
+                                        },
+                                        "registration": {
+                                            "description": "The enum itself (serialised as its value), so the API contract lists the three modes.",
+                                            "$ref": "#/components/schemas/RegistrationMode"
                                         }
                                     },
                                     "required": [
-                                        "google"
+                                        "google",
+                                        "registration"
                                     ]
                                 }
                             }
@@ -2520,6 +2525,16 @@
                     "password_confirmation"
                 ],
                 "title": "RegisterRequest"
+            },
+            "RegistrationMode": {
+                "type": "string",
+                "description": "Who may create an account (config feedgenix.registration).\n",
+                "enum": [
+                    "open",
+                    "invite",
+                    "closed"
+                ],
+                "title": "RegistrationMode"
             },
             "RereadImportRequest": {
                 "type": "object",

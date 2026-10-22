@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-  '/auth/providers': {
+  '/auth/options': {
     parameters: {
       query?: never
       header?: never
@@ -12,10 +12,12 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Sign-in methods
-     * @description `google` is true only when the server has Google OAuth credentials; email and password always work.
+     * Sign-in and sign-up options
+     * @description `google` is true only when the server has Google OAuth credentials; email and password always
+     *     work. `registration` is who may sign up: `open` (anyone), `invite` (with an invite code, during
+     *     the private beta) or `closed`.
      */
-    get: operations['auth.providers']
+    get: operations['auth.options']
     put?: never
     post?: never
     delete?: never
@@ -781,6 +783,12 @@ export interface components {
       password_confirmation: string
     }
     /**
+     * RegistrationMode
+     * @description Who may create an account (config feedgenix.registration).
+     * @enum {string}
+     */
+    RegistrationMode: 'open' | 'invite' | 'closed'
+    /**
      * RereadImportRequest
      * @description Read the same file again with corrected options (encoding, delimiter, quoting, XML item).
      */
@@ -1087,7 +1095,7 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
-  'auth.providers': {
+  'auth.options': {
     parameters: {
       query?: never
       header?: never
@@ -1103,6 +1111,8 @@ export interface operations {
         content: {
           'application/json': {
             google: boolean
+            /** @description The enum itself (serialised as its value), so the API contract lists the three modes. */
+            registration: components['schemas']['RegistrationMode']
           }
         }
       }

@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { CSRF_COOKIE } from '~/lib/api/csrf'
+import type { AuthOptions } from '~/lib/api/types'
 import { origin } from './fixtures'
 
 /** Sanctum's CSRF endpoint: sets the cookie like the real one would. `onHit` counts calls. */
@@ -12,9 +13,9 @@ export function csrfCookie(token = 'test-token', onHit?: () => void) {
   })
 }
 
-/** The sign-in methods the server offers. Google is off unless a test turns it on (server.ts). */
-export function authProviders(google = false) {
-  return http.get(`${origin}/api/auth/providers`, () => HttpResponse.json({ google }))
+/** What the sign-in pages are offered. Defaults (server.ts): no Google, invite-only sign-up. */
+export function authOptions({ google = false, registration = 'invite' }: Partial<AuthOptions> = {}) {
+  return http.get(`${origin}/api/auth/options`, () => HttpResponse.json({ google, registration }))
 }
 
 export function clearCookies(): void {

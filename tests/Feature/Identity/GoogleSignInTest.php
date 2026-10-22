@@ -149,7 +149,7 @@ describe('without Google credentials', function (): void {
     beforeEach(fn () => config(['services.google.client_id' => null, 'services.google.client_secret' => '']));
 
     it('tells the sign-in page that Google is not offered', function (): void {
-        $this->getJson('/api/auth/providers')->assertOk()->assertExactJson(['google' => false]);
+        $this->getJson('/api/auth/options')->assertOk()->assertJsonPath('google', false);
     });
 
     it('never sends the person to Google, and says why on the sign-in page', function (): void {
@@ -169,10 +169,10 @@ describe('without Google credentials', function (): void {
     it('needs both the id and the secret', function (): void {
         config(['services.google.client_id' => 'only-the-id']);
 
-        $this->getJson('/api/auth/providers')->assertExactJson(['google' => false]);
+        $this->getJson('/api/auth/options')->assertJsonPath('google', false);
     });
 });
 
 it('offers Google when the server has its credentials', function (): void {
-    $this->getJson('/api/auth/providers')->assertOk()->assertExactJson(['google' => true]);
+    $this->getJson('/api/auth/options')->assertOk()->assertJsonPath('google', true);
 });

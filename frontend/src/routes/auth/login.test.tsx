@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { apiUrl, sessionUser } from '~/test/fixtures'
-import { authProvidersQuery } from '~/features/auth/google'
-import { authProviders, csrfCookie } from '~/test/handlers'
+import { authOptionsQuery } from '~/features/auth/options'
+import { authOptions, csrfCookie } from '~/test/handlers'
 import { renderRoutes } from '~/test/render'
 import { server } from '~/test/server'
 import Login from './login'
@@ -102,7 +102,7 @@ it('explains why a Google sign-in came back', async () => {
 
 describe('Google sign-in', () => {
   it('offers Google when the server has its credentials', async () => {
-    server.use(authProviders(true))
+    server.use(authOptions({ google: true }))
     renderLogin()
 
     expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute(
@@ -114,7 +114,7 @@ describe('Google sign-in', () => {
   it('shows no Google button (and no "or") when the server has no Google credentials', async () => {
     const { client } = renderLogin()
 
-    await waitFor(() => expect(client.getQueryState(authProvidersQuery.queryKey)?.status).toBe('success'))
+    await waitFor(() => expect(client.getQueryState(authOptionsQuery.queryKey)?.status).toBe('success'))
     await act(async () => {})
     expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
     expect(screen.queryByText('or')).not.toBeInTheDocument()
