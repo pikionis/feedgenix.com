@@ -31,7 +31,11 @@ function frontendUrl(string $path): string
     return config('feedgenix.frontend_url').$path;
 }
 
-beforeEach(fn () => config(['feedgenix.registration' => 'open']));
+beforeEach(fn () => config([
+    'feedgenix.registration' => 'open',
+    'services.google.client_id' => 'test-client-id',
+    'services.google.client_secret' => 'test-client-secret',
+]));
 
 it('signs up a new person: verified, linked, no password, own workspace', function (): void {
     fakeGoogle();
@@ -138,4 +142,37 @@ it('sends the person back to sign-in when the Google exchange fails', function (
     Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
 
     $this->get('/auth/google/callback')->assertRedirect(frontendUrl('/login?error=google'));
+});
+
+// Staging had no Google credentials: Google answered "Missing required parameter: client_id".
+describe('without Google credentials', function (): void {
+    beforeEach(fn () => config(['services.google.client_id' => null, 'services.google.client_secret' => '']));
+
+    it('tells the sign-in page that Google is not offered', function (): void {
+        $this->getJson('/api/auth/providers')->assertOk()->assertExactJson(['google' => false]);
+    });
+
+    it('never sends the person to Google, and says why on the sign-in page', function (): void {
+        Socialite::shouldReceive('driver')->never();
+
+        $this->get('/auth/google/redirect')->assertRedirect(frontendUrl('/login?error=google_unavailable'));
+    });
+
+    it('keeps the invite: back to sign-up with the code and the reason', function (): void {
+        Socialite::shouldReceive('driver')->never();
+
+        $this->get('/auth/google/redirect?invite=fg-abc')
+            ->assertRedirect(frontendUrl('/register?invite=fg-abc&error=google_unavailable'))
+            ->assertSessionMissing(GoogleController::INVITE_SESSION_KEY);
+    });
+
+    it('needs both the id and the secret', function (): void {
+        config(['services.google.client_id' => 'only-the-id']);
+
+        $this->getJson('/api/auth/providers')->assertExactJson(['google' => false]);
+    });
+});
+
+it('offers Google when the server has its credentials', function (): void {
+    $this->getJson('/api/auth/providers')->assertOk()->assertExactJson(['google' => true]);
 });

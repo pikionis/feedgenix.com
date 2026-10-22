@@ -7,7 +7,7 @@ import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { Notice } from '~/components/ui/notice'
 import { AuthLayout } from '~/features/auth/AuthLayout'
-import { Divider, GOOGLE_ERRORS, GoogleButton } from '~/features/auth/google'
+import { Divider, GOOGLE_ERRORS, GoogleButton, useGoogleSignIn } from '~/features/auth/google'
 import { api } from '~/lib/api/client'
 import { applyServerErrors, describeFailure, zodResolver } from '~/lib/forms'
 import { nextPath, sessionQuery } from '~/lib/session'
@@ -42,6 +42,7 @@ export default function Login() {
   })
 
   const googleError = GOOGLE_ERRORS[search.get('error') ?? '']
+  const google = useGoogleSignIn()
 
   return (
     <AuthLayout
@@ -61,9 +62,9 @@ export default function Login() {
           <Notice tone="success">Your password was reset. Sign in with the new one.</Notice>
         )}
         {googleError !== undefined && <Notice tone="error">{googleError}</Notice>}
-        <GoogleButton />
+        {google && <GoogleButton />}
       </div>
-      <Divider />
+      {google && <Divider />}
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <Field label="Email" error={errors.email?.message}>
           {(control) => <Input type="email" autoComplete="email" {...control} {...form.register('email')} />}

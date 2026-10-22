@@ -11,9 +11,11 @@ export function renderRoutes(routes: Routes, entry: string) {
   const client = createQueryClient()
   client.setDefaultOptions({ queries: { retry: false } })
 
-  return render(
+  const result = render(
     <QueryClientProvider client={client}>
       <Stub initialEntries={[entry]} />
     </QueryClientProvider>,
   )
+
+  return { ...result, client }
 }

@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+  '/auth/providers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Sign-in methods
+     * @description `google` is true only when the server has Google OAuth credentials; email and password always work.
+     */
+    get: operations['auth.providers']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/plans': {
     parameters: {
       query?: never
@@ -1067,6 +1087,27 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
+  'auth.providers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            google: boolean
+          }
+        }
+      }
+    }
+  }
   'catalog.plans': {
     parameters: {
       query?: never

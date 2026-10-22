@@ -1,9 +1,10 @@
-import { screen } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { apiUrl, sessionUser } from '~/test/fixtures'
-import { csrfCookie } from '~/test/handlers'
+import { authProvidersQuery } from '~/features/auth/google'
+import { authProviders, csrfCookie } from '~/test/handlers'
 import { renderRoutes } from '~/test/render'
 import { server } from '~/test/server'
 import Register from './register'
@@ -86,4 +87,32 @@ it('says so when sign-up is closed', async () => {
   await fillAndSubmit()
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Sign-up is closed at the moment.')
+})
+
+describe('Google sign-up', () => {
+  it('carries the invite into the Google link', async () => {
+    server.use(authProviders(true))
+    renderRegister('/register?invite=fg-abc123')
+
+    expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute(
+      'href',
+      '/auth/google/redirect?invite=fg-abc123',
+    )
+  })
+
+  it('offers only email and password when the server has no Google credentials', async () => {
+    const { client } = renderRegister('/register?invite=fg-abc123')
+
+    await waitFor(() => expect(client.getQueryState(authProvidersQuery.queryKey)?.status).toBe('success'))
+    await act(async () => {})
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument()
+  })
+
+  it('keeps the invite code and says why after an unavailable Google sign-up', async () => {
+    renderRegister('/register?invite=fg-abc123&error=google_unavailable')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Use your email and a password')
+    expect(screen.getByLabelText('Invite code')).toHaveValue('fg-abc123')
+  })
 })

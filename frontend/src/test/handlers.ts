@@ -12,6 +12,11 @@ export function csrfCookie(token = 'test-token', onHit?: () => void) {
   })
 }
 
+/** The sign-in methods the server offers. Google is off unless a test turns it on (server.ts). */
+export function authProviders(google = false) {
+  return http.get(`${origin}/api/auth/providers`, () => HttpResponse.json({ google }))
+}
+
 export function clearCookies(): void {
   for (const part of document.cookie.split(';')) {
     const name = part.split('=')[0]?.trim()

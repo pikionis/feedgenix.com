@@ -1,9 +1,10 @@
-import { screen } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { apiUrl, sessionUser } from '~/test/fixtures'
-import { csrfCookie } from '~/test/handlers'
+import { authProvidersQuery } from '~/features/auth/google'
+import { authProviders, csrfCookie } from '~/test/handlers'
 import { renderRoutes } from '~/test/render'
 import { server } from '~/test/server'
 import Login from './login'
@@ -97,4 +98,32 @@ it('explains why a Google sign-in came back', async () => {
   renderLogin('/login?error=conflict')
 
   expect(await screen.findByRole('alert')).toHaveTextContent('already linked to a different Google account')
+})
+
+describe('Google sign-in', () => {
+  it('offers Google when the server has its credentials', async () => {
+    server.use(authProviders(true))
+    renderLogin()
+
+    expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute(
+      'href',
+      '/auth/google/redirect',
+    )
+  })
+
+  it('shows no Google button (and no "or") when the server has no Google credentials', async () => {
+    const { client } = renderLogin()
+
+    await waitFor(() => expect(client.getQueryState(authProvidersQuery.queryKey)?.status).toBe('success'))
+    await act(async () => {})
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
+    expect(screen.queryByText('or')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+  })
+
+  it('says why when a Google sign-in was not possible', async () => {
+    renderLogin('/login?error=google_unavailable')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Google sign-in is not available yet')
+  })
 })

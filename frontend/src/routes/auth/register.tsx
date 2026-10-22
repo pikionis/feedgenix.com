@@ -7,7 +7,7 @@ import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { Notice } from '~/components/ui/notice'
 import { AuthLayout } from '~/features/auth/AuthLayout'
-import { Divider, GOOGLE_ERRORS, GoogleButton } from '~/features/auth/google'
+import { Divider, GOOGLE_ERRORS, GoogleButton, useGoogleSignIn } from '~/features/auth/google'
 import { api } from '~/lib/api/client'
 import { applyServerErrors, describeFailure, zodResolver } from '~/lib/forms'
 import { sessionQuery } from '~/lib/session'
@@ -63,6 +63,7 @@ export default function Register() {
   })
 
   const googleError = GOOGLE_ERRORS[search.get('error') ?? '']
+  const google = useGoogleSignIn()
 
   return (
     <AuthLayout
@@ -79,9 +80,9 @@ export default function Register() {
     >
       <div className="flex flex-col gap-4">
         {googleError !== undefined && <Notice tone="error">{googleError}</Notice>}
-        <GoogleButton invite={invite} />
+        {google && <GoogleButton invite={invite} />}
       </div>
-      <Divider />
+      {google && <Divider />}
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <Field label="Name" error={errors.name?.message}>
           {(control) => <Input autoComplete="name" {...control} {...form.register('name')} />}

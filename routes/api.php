@@ -9,6 +9,7 @@ use App\Http\Controllers\App\ProfileController;
 use App\Http\Controllers\App\TwoFactorController;
 use App\Http\Controllers\App\UploadController;
 use App\Http\Controllers\App\WorkspaceController;
+use App\Http\Controllers\Auth\AuthProvidersController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -29,6 +30,7 @@ Route::get('/plans', [CatalogController::class, 'plans'])->name('catalog.plans')
 Route::get('/languages', [CatalogController::class, 'languages'])->name('catalog.languages');
 
 Route::prefix('auth')->group(function (): void {
+    Route::get('/providers', AuthProvidersController::class)->name('auth.providers');
     Route::post('/register', RegisterController::class)->middleware('throttle:register')->name('auth.register');
     Route::post('/login', [SessionController::class, 'store'])->middleware('throttle:login')->name('auth.login');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])

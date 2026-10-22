@@ -23,11 +23,26 @@ final class GoogleController
 {
     public const string INVITE_SESSION_KEY = 'signup_invite';
 
+    /** Google sign-in is offered only when the server has OAuth credentials for it. */
+    public static function configured(): bool
+    {
+        return filled(config('services.google.client_id')) && filled(config('services.google.client_secret'));
+    }
+
     public function redirect(Request $request): SymfonyRedirect
     {
         $invite = $request->query('invite');
-        if (is_string($invite) && $invite !== '') {
-            $request->session()->put(self::INVITE_SESSION_KEY, mb_substr($invite, 0, 64));
+        $invite = is_string($invite) && $invite !== '' ? mb_substr($invite, 0, 64) : null;
+
+        // Without credentials Google answers "Missing required parameter: client_id": say so here instead.
+        if (! self::configured()) {
+            return redirect()->away($invite === null
+                ? Frontend::url('/login', ['error' => 'google_unavailable'])
+                : Frontend::url('/register', ['invite' => $invite, 'error' => 'google_unavailable']));
+        }
+
+        if ($invite !== null) {
+            $request->session()->put(self::INVITE_SESSION_KEY, $invite);
         }
 
         return Socialite::driver('google')->redirect();

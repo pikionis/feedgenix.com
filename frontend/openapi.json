@@ -10,6 +10,36 @@
         }
     ],
     "paths": {
+        "/auth/providers": {
+            "get": {
+                "operationId": "auth.providers",
+                "description": "`google` is true only when the server has Google OAuth credentials; email and password always work.",
+                "summary": "Sign-in methods",
+                "tags": [
+                    "AuthProviders"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "google": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "google"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/plans": {
             "get": {
                 "operationId": "catalog.plans",
