@@ -24,3 +24,4 @@ record supersedes them.
 | [0017](0017-model-providers.md) | The model providers: Gemini over HTTP, Claude through the official SDK (refines 0004, 0016) |
 | [0018](0018-mapping.md) | Mapping: drafts by column signature, AI per column, one pipeline (refines 0003, 0004) |
 | [0019](0019-catalogue-sync.md) | The catalogue sync: the feed is the truth, one path, guarded removals (refines 0003, 0006) |
+| [0020](0020-translation-engine.md) | The translation engine: work units, fenced writes, checked memory (refines 0005, 0006) |

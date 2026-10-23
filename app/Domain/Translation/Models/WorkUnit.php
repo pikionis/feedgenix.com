@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $field
  * @property string $source_locale
  * @property string $target_locale
- * @property array<string, string> $items product id => source hash
+ * @property array<int|string, string> $items product id => source hash (JSON turns the ids into int keys)
  * @property int $depth splits so far (a misaligned answer splits the unit in two)
  * @property string $status pending, leased, done, failed, held or split
  * @property string|null $lease_token

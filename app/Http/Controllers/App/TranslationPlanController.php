@@ -6,6 +6,7 @@ namespace App\Http\Controllers\App;
 
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Translation\Actions\SaveTranslationPlan;
+use App\Domain\Translation\Actions\StartTranslation;
 use App\Domain\Translation\Exceptions\PlanChanged;
 use App\Domain\Translation\TranslationPlanner;
 use App\Http\Controllers\App\Concerns\ActsInWorkspace;
@@ -56,5 +57,21 @@ final class TranslationPlanController
         }
 
         return (new TranslationPlanResource($plan, $feed))->response()->setStatusCode(200);
+    }
+
+    /**
+     * Start translating the plan as shown (owner or admin): kept fields and the memory's repeats
+     * are written at once; the rest is queued as AI work, within the plan's allowance. 409 on a
+     * stale version.
+     *
+     * @throws PlanChanged
+     */
+    public function start(Request $request, Feed $feed, StartTranslation $start, TranslationPlanner $planner): JsonResponse
+    {
+        $this->authorizeManage($request);
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+        $start->handle($feed, (int) $data['version']);
+
+        return (new TranslationPlanResource($planner->planOf($feed), $feed))->response()->setStatusCode(202);
     }
 }

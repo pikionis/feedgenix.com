@@ -96,6 +96,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         // What a feed translates, into which languages (M4).
         Route::get('/feeds/{feed}/translation-plan', [TranslationPlanController::class, 'show'])->name('translation-plan.show');
         Route::put('/feeds/{feed}/translation-plan', [TranslationPlanController::class, 'update'])->name('translation-plan.update');
+        Route::post('/feeds/{feed}/translation-plan/start', [TranslationPlanController::class, 'start'])->name('translation-plan.start');
         Route::get('/imports/{import}', [FeedImportController::class, 'show'])->name('imports.show');
         Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->name('imports.reread');
     });

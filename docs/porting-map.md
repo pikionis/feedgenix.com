@@ -428,3 +428,18 @@ the scan, so a file it could not read had no record of its own.
   - Chunk checkpoints that resumed stale runs: no checkpoints; the database rows are the state.
 - **Dropped:** the supplier-specific colour guard and enrichment, category brand stripping and taxonomy cleanup (they come back as general normalisers in M12, if at all); the identical-text language analysis.
 - **Proof:** 12 tests; 7 of 7 guard mutants caught.
+
+### M4 · `TranslationRouter`, `TranslationService`, `Quality/{QualityChecker,QualityResult,AlignmentMarker}`, `config/translation_field_rules.php` → `Domain/Translation`, `Domain/Quality`, `config/translation_rules.php` (ADR 0020)
+- **Kept:** the translation memory; batch sizes by field length; the field rules (keep numbers, units, brands and HTML; category levels; Swiss "ss"); a breaker (now the gateway's); numeric, length and brand checks.
+- **Fixed:**
+  - **D12** (answers matched by the number the model wrote): an id per item through the gateway; a misaligned batch splits in two down to depth 6, and an item that never aligns fails visibly.
+  - **D15** (checkpoint resume never resumed): no checkpoints; units in the database are the state, with leases, and a killed worker costs a lease timeout.
+  - The memory stored every answer before checking it and served bad ones for ever: only checked translations are kept, and the field is part of the key.
+  - Numbers were matched as substrings ("100" in "1000"); HTML, scripts and echoes were never checked; hard failures were still saved as translations: whole-token numbers, the same tags in order, the target's script, category levels, echoes flagged, and hard failures stored as `qa_failed`, never published.
+  - Swiss "ss" was prompt-only: enforced in code.
+  - One source language for the whole catalogue: chosen per product.
+  - The daily spend counter in cache and silent empty results at the provider cap: reservations per unit, and holds that resume.
+  - Busy locks dropped chunks until a later re-dispatch: the dispatcher claims what the plan's slots allow, the rest waits in the database.
+- **Changed:** a per-feed plan (translate, keep or skip per field; the workspace's languages) with the work and an estimate in credits before it starts; the allowance counted per product and period.
+- **Dropped:** the marketplace-specific prompt, glossary and few-shot examples (glossaries come back per workspace in M9); the Gemini context cache; the async batch API.
+- **Proof:** 34 tests (plan 6, quality 15, runs 13: renumbered ids, never-aligned items, 429 storms, no credits, allowance on Free and Pro, a killed worker, a source changed in flight, a person's translation, golden fields through en/el/ja/ar/de-CH, Swiss "ss", prompt injection kept as data); 10 of 10 engine guard mutants caught.

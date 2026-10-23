@@ -512,6 +512,27 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds/{feed}/translation-plan/start': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start translating the plan as shown (owner or admin): kept fields and the memory's repeats
+     *     are written at once; the rest is queued as AI work, within the plan's allowance. 409 on a
+     *     stale version
+     */
+    post: operations['translation-plan.start']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/security/two-factor': {
     parameters: {
       query?: never
@@ -2254,6 +2275,40 @@ export interface operations {
     responses: {
       /** @description `TranslationPlanResource` */
       200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            translation_plan: components['schemas']['TranslationPlanResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'translation-plan.start': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          version: number
+        }
+      }
+    }
+    responses: {
+      /** @description `TranslationPlanResource` */
+      202: {
         headers: {
           [name: string]: unknown
         }

@@ -1558,6 +1558,74 @@
                 }
             }
         },
+        "/v1/feeds/{feed}/translation-plan/start": {
+            "post": {
+                "operationId": "translation-plan.start",
+                "summary": "Start translating the plan as shown (owner or admin): kept fields and the memory's repeats\nare written at once; the rest is queued as AI work, within the plan's allowance. 409 on a\nstale version",
+                "tags": [
+                    "TranslationPlan"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "version": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                },
+                                "required": [
+                                    "version"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "`TranslationPlanResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "translation_plan": {
+                                            "$ref": "#/components/schemas/TranslationPlanResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "translation_plan"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/security/two-factor": {
             "get": {
                 "operationId": "two-factor.show",
