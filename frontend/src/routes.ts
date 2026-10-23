@@ -17,6 +17,7 @@ export default [
     route('feeds/:feedId/mapping', 'routes/app/mapping.tsx'),
     route('feeds/:feedId/translation', 'routes/app/translation.tsx'),
     route('feeds/:feedId/products', 'routes/app/products.tsx'),
+    route('feeds/:feedId/publish', 'routes/app/publish.tsx'),
     route('settings', 'routes/app/settings.tsx'),
   ]),
 

@@ -474,3 +474,7 @@ the scan, so a file it could not read had no record of its own.
   - A TSV was served as `text/csv`; feed answers carried cookies and could be indexed: the dialect's type, no session, `noindex, nofollow`, rate limited per token.
 - **Dropped:** the global cache kill switch (pausing an export, or deleting it, is per profile), the admin download routes (the URLs are the download), the preview from the database (the published file is the preview).
 - **Proof:** 19 tests (URLs 8, API and reconciler 11); 19 of 19 guard mutants caught; the ops rehearsal checks that `/f/` reaches Laravel through nginx.
+
+### M5 · New — the publish page (`routes/app/publish.tsx`, `features/publish`), stage 6
+- **What:** each export's feed URLs to copy (and the `.gz` form), the build they serve (products, size), the products a channel would refuse for a missing column, rows a format could not carry, a build the shrink guard held back with "Publish it anyway", failures, earlier builds to serve again, new URLs after asking (the old ones work 72 hours), pause and resume, delete after asking; a new export offers only the formats and files its channel takes. The feed page links to it and stage 6 is live: next once products are in the catalogue (publishing does not wait for the translation), done when a feed URL is live.
+- **Proof:** 8 page tests and the stage tests; the e2e flow now creates an export and pulls its URL from Laravel; 7 of 7 guard mutants caught.

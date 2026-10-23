@@ -21,10 +21,7 @@ const PURPOSE: Record<Stage['key'], string> = {
   publish: 'A feed URL per language',
 }
 
-/**
- * The six stages of a feed and where this feed stands. Publishing is built next, so it says
- * "Coming soon" instead of pretending to run.
- */
+/** The six stages of a feed and where this feed stands. */
 export function pipelineStages(feed: Feed): Stage[] {
   const latest = feed.latest_import
   const status = latest?.status
@@ -89,11 +86,19 @@ export function pipelineStages(feed: Feed): Stage[] {
     }
   })()
 
-  // Publishing is built next: it is next once the translation is done.
-  const publishStage: Omit<Stage, 'key' | 'name'> = {
-    state: translationStage.state === 'done' ? 'next' : 'soon',
-    detail: PURPOSE.publish,
-  }
+  // Publishing needs products in the catalogue; it does not wait for the translation.
+  const publishStage = ((): Omit<Stage, 'key' | 'name'> => {
+    if (feed.exports.published > 0) {
+      return {
+        state: 'done',
+        detail: `${feed.exports.published} ${feed.exports.published === 1 ? 'feed URL' : 'feed URLs'} live`,
+      }
+    }
+    if (feed.exports.count > 0) return { state: 'active', detail: 'Building' }
+    if (run !== null && run.stage !== 'sync') return { state: 'next', detail: PURPOSE.publish }
+
+    return { state: 'soon', detail: PURPOSE.publish }
+  })()
 
   return [
     { key: 'import', name: 'Import', ...importStage },
@@ -105,7 +110,14 @@ export function pipelineStages(feed: Feed): Stage[] {
   ]
 }
 
-const AVAILABLE: ReadonlySet<Stage['key']> = new Set(['import', 'analysis', 'mapping', 'plan', 'translation'])
+const AVAILABLE: ReadonlySet<Stage['key']> = new Set([
+  'import',
+  'analysis',
+  'mapping',
+  'plan',
+  'translation',
+  'publish',
+])
 
 export function PipelineStages({ feed }: { feed: Feed }) {
   const stages = pipelineStages(feed)

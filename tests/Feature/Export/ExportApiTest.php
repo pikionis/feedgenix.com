@@ -45,6 +45,7 @@ it('creates an export with its URLs, builds it at once, and lists it with the pr
         ->and($export['published'])->toMatchArray(['status' => 'published', 'rows' => 5])
         ->and($export['published']['report']['missing']['products-en.tsv']['link'])->toBe(5);
     pull($export['urls'][1]['url'])->assertOk();
+    expect(test()->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feed->id}")->json('feed.exports'))->toBe(['count' => 1, 'published' => 1]);
 
     $list = test()->actingAs(memberOf($tenant, 'member'))->getJson("/api/v1/feeds/{$feed->id}/exports")->assertOk()->json();
     expect(collect($list['exports'])->pluck('name')->all())->toBe(['Google'])

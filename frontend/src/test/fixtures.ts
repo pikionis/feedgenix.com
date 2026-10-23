@@ -1,4 +1,7 @@
 import type {
+  ExportBuild,
+  ExportProfile,
+  ExportsResponse,
   Feed,
   FeedImport,
   ImportSummary,
@@ -157,6 +160,7 @@ export function feed(overrides: Partial<Feed> = {}): Feed {
     profile_import_id: 100,
     mapping_status: null,
     run: null,
+    exports: { count: 0, published: 0 },
     created_at: READ_AT,
     ...overrides,
   }
@@ -407,5 +411,65 @@ export function reviewPage(
       counts: { all: products.length, review: 0, missing: 0, manual: 0 },
       ...meta,
     },
+  }
+}
+
+const TOKEN = 'T'.repeat(40)
+
+export function exportBuild(overrides: Partial<ExportBuild> = {}): ExportBuild {
+  return {
+    id: 90,
+    status: 'published',
+    rows: 5,
+    files: [
+      { name: 'products-de.tsv', locale: 'de', rows: 5, bytes: 2048, gz_bytes: 512 },
+      { name: 'products-en.tsv', locale: 'en', rows: 5, bytes: 2048, gz_bytes: 512 },
+    ],
+    report: { left_out: 0, missing: {}, examples: [] },
+    failure_reason: null,
+    failure_message: null,
+    created_at: READ_AT,
+    published_at: READ_AT,
+    ...overrides,
+  }
+}
+
+/** A live Google Merchant export of a German feed with English. */
+export function exportProfile(overrides: Partial<ExportProfile> = {}): ExportProfile {
+  return {
+    id: 30,
+    name: 'Google',
+    preset: 'google_merchant',
+    preset_label: 'Google Merchant Center',
+    dialect: 'tsv',
+    layout: 'per_language',
+    locales: ['de', 'en'],
+    status: 'active',
+    version: 1,
+    urls: ['de', 'en'].map((locale) => ({
+      file: `products-${locale}.tsv`,
+      locale,
+      url: `${origin}/f/${TOKEN}/products-${locale}.tsv`,
+      gz_url: `${origin}/f/${TOKEN}/products-${locale}.tsv.gz`,
+    })),
+    previous_urls_until: null,
+    published: exportBuild(),
+    latest: exportBuild(),
+    earlier: [],
+    ...overrides,
+  }
+}
+
+export function exportsResponse(exports: ExportProfile[] = [exportProfile()]): ExportsResponse {
+  return {
+    exports,
+    presets: [
+      { key: 'standard', label: 'Every mapped field', dialects: ['csv', 'tsv'], layouts: ['wide', 'per_language'] },
+      { key: 'google_merchant', label: 'Google Merchant Center', dialects: ['tsv'], layouts: ['per_language'] },
+    ],
+    locales: [
+      { code: 'de', name: 'German' },
+      { code: 'en', name: 'English' },
+    ],
   }
 }

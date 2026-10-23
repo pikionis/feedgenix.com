@@ -118,6 +118,23 @@ function FeedView({ feed }: { feed: Feed }) {
       )}
 
       {feed.mapping_status === 'approved' && <TranslationCard feed={feed} />}
+      {feed.mapping_status === 'approved' && feed.run !== null && (
+        <Card className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="font-medium">Publish</h2>
+            <p className="text-sm text-muted-foreground">
+              {feed.exports.published > 0
+                ? `${feed.exports.published} ${feed.exports.published === 1 ? 'feed URL is' : 'feed URLs are'} live.`
+                : 'Feed URLs for your sales channels: Google Merchant Center, or every field as CSV.'}
+            </p>
+          </div>
+          <Button asChild variant={feed.exports.count > 0 ? 'secondary' : 'primary'}>
+            <Link to={`/app/feeds/${feed.id}/publish`}>
+              {feed.exports.count > 0 ? 'Open the feed URLs' : 'Publish the feed'}
+            </Link>
+          </Button>
+        </Card>
+      )}
 
       {latest === null && feed.source === 'upload' && (
         <Card className="flex flex-col items-start gap-3">

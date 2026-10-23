@@ -1029,6 +1029,11 @@ export interface components {
         texts_planned: number
         texts_done: number
       } | null
+      /** @description How many exports the feed has, and how many of them serve a build. */
+      exports: {
+        count: number
+        published: number
+      }
       created_at: string | null
     }
     /**

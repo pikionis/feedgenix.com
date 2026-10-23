@@ -81,3 +81,12 @@ export type ReviewProduct = components['schemas']['ProductReviewResource']
 export type ReviewText = ReviewProduct['texts'][number]
 
 export type QualityFailure = NonNullable<ReviewText['target']>['failures'][number]
+
+/** A feed's exports with the presets and languages (GET /v1/feeds/{feed}/exports). */
+export type ExportsResponse = paths['/v1/feeds/{feed}/exports']['get']['responses'][200]['content']['application/json']
+
+export type ExportProfile = components['schemas']['ExportProfileResource']
+
+export type ExportBuild = NonNullable<ExportProfile['published']>
+
+export type ExportPreset = ExportsResponse['presets'][number]

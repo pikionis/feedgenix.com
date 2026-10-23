@@ -3767,6 +3767,24 @@
                             "texts_done"
                         ]
                     },
+                    "exports": {
+                        "type": "object",
+                        "description": "How many exports the feed has, and how many of them serve a build.",
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "published": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "count",
+                            "published"
+                        ]
+                    },
                     "created_at": {
                         "type": [
                             "string",
@@ -3785,6 +3803,7 @@
                     "profile_import_id",
                     "mapping_status",
                     "run",
+                    "exports",
                     "created_at"
                 ],
                 "title": "FeedResource"

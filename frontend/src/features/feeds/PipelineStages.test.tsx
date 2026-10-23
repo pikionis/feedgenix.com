@@ -135,6 +135,23 @@ describe('pipelineStages', () => {
     expect([stages[3]?.detail, stages[4]?.detail]).toContain(detail)
   })
 
+  it.each([
+    [
+      { count: 0, published: 0 },
+      run({ stage: 'plan', status: 'awaiting_decision' }),
+      'next',
+      'A feed URL per language',
+    ],
+    [{ count: 0, published: 0 }, run({ stage: 'sync', status: 'running' }), 'soon', 'A feed URL per language'],
+    [{ count: 2, published: 0 }, run({ stage: 'done', status: 'done' }), 'active', 'Building'],
+    [{ count: 2, published: 1 }, run({ stage: 'done', status: 'done' }), 'done', '1 feed URL live'],
+    [{ count: 2, published: 2 }, run({ stage: 'translate', status: 'running' }), 'done', '2 feed URLs live'],
+  ])('exports %o with run %o: the publish stage', (exports, latest, state, detail) => {
+    const stages = pipelineStages(feed({ mapping_status: 'approved', run: latest, exports }))
+
+    expect(stages[5]).toMatchObject({ state, detail })
+  })
+
   it('ignores a run of an earlier mapping while the new columns wait for review', () => {
     const stages = pipelineStages(
       feed({ mapping_status: 'draft', run: run({ stage: 'done', status: 'done', texts_planned: 9 }) }),
@@ -148,7 +165,7 @@ function run(overrides: Partial<NonNullable<Feed['run']>> = {}): NonNullable<Fee
   return { stage: 'plan', status: 'awaiting_decision', texts_planned: 0, texts_done: 0, ...overrides }
 }
 
-it('lists the six stages in order and says which are coming', () => {
+it('lists the six stages in order, every one of them real', () => {
   render(<PipelineStages feed={feed()} />)
 
   const steps = within(screen.getByRole('list', { name: 'Pipeline' })).getAllByRole('listitem')
@@ -162,9 +179,7 @@ it('lists the six stages in order and says which are coming', () => {
   ])
   expect(steps[2]).toHaveTextContent('A draft is ready to review')
   expect(steps[2]).not.toHaveTextContent('Coming soon')
-  expect(steps[3]).not.toHaveTextContent('Coming soon')
-  expect(steps[4]).not.toHaveTextContent('Coming soon')
-  expect(steps[5]).toHaveTextContent('Coming soon')
+  for (const step of steps) expect(step).not.toHaveTextContent('Coming soon')
   expect(steps[0]).not.toHaveTextContent('Coming soon')
   expect(steps[1]).toHaveTextContent('Done')
 })

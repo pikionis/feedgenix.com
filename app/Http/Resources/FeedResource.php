@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Domain\Export\Models\ExportProfile;
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Feeds\Models\PipelineRun;
 use App\Domain\Ingest\Models\Import;
@@ -66,6 +67,11 @@ final class FeedResource extends JsonResource
                 'texts_planned' => (int) ($run->counts['planned'] ?? 0),
                 'texts_done' => (int) ($run->counts['texts_done'] ?? 0),
             ] : null,
+            /** How many exports the feed has, and how many of them serve a build. */
+            'exports' => [
+                'count' => ExportProfile::query()->where('feed_id', $feed->id)->count(),
+                'published' => ExportProfile::query()->where('feed_id', $feed->id)->whereNotNull('published_artifact_id')->count(),
+            ],
             'created_at' => $feed->created_at?->toIso8601String(),
         ];
     }

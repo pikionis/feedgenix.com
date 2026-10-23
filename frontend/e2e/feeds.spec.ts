@@ -61,7 +61,7 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await expect(stages.nth(1)).toContainText('Done')
   await expect(stages.nth(2)).toContainText('A draft is ready to review')
   await expect(stages.nth(3)).toContainText('Choose the fields to translate')
-  await expect(stages.nth(5)).toContainText('Coming soon')
+  await expect(stages.nth(5)).toContainText('A feed URL per language')
 
   const columns = page.getByRole('table', { name: 'Columns' })
   await expect(columns.getByRole('row', { name: /^SKU/ })).toContainText('Code')
@@ -122,6 +122,25 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await page.getByRole('link', { name: 'Tools export: translation' }).click()
   await page.getByRole('link', { name: 'Tools export' }).click()
   await expect(stages.nth(4)).toContainText('Waiting')
+
+  // Publishing does not wait for the translation: every mapped field as CSV, its URL serving the build.
+  await page.getByRole('link', { name: 'Publish the feed' }).click()
+  await expect(page.getByRole('heading', { name: 'Publish', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Create the export' }).click()
+  const urls = page.getByRole('list', { name: 'Every mapped field: feed URLs' })
+  await expect(urls).toBeVisible()
+  await expect(page.getByText('Live', { exact: true })).toBeVisible()
+  // Straight from Laravel: the URL's host is the app's, the path is what a channel pulls.
+  const path = new URL(await urls.getByRole('textbox').first().inputValue()).pathname
+  const file = await page.request.get(`http://127.0.0.1:8000${path}`)
+  expect(file.status()).toBe(200)
+  expect(file.headers()['x-robots-tag']).toBe('noindex, nofollow')
+  const csv = await file.text()
+  expect(csv.split('\r\n')[0]).toMatch(/^sku,/)
+  expect(csv).toContain('Marteau de charpentier')
+
+  await page.getByRole('link', { name: 'Tools export' }).click()
+  await expect(stages.nth(5)).toContainText('1 feed URL live')
 })
 
 test('a Google Shopping URL becomes a column profile, and the Free plan stops at one feed', async ({ page }) => {
