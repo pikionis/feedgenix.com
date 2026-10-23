@@ -237,6 +237,84 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds/{feed}/mapping': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * The mapping of the feed's current columns, drafted for free (no AI) on first view
+     * @description 404 `no_profile` until the feed has a profiled import.
+     */
+    get: operations['mapping.show']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/feeds/{feed}/mapping/fields': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Set one field (owner or admin): a column, a composition, or empty. It is checked like every
+     *     suggestion: a refused edit is stored as refused, with the reason. 409 on a stale version
+     */
+    put: operations['mapping.update']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/feeds/{feed}/mapping/suggest': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ask the AI for a better mapping (owner or admin), optionally with corrections in words. The
+     *     worst case is reserved from the workspace's credits first; 409 `insufficient_credits` with
+     *     the numbers when they do not cover it, 409 `ai_unavailable` when AI is off
+     */
+    post: operations['mapping.suggest']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/feeds/{feed}/mapping/approve': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Approve the mapping (owner or admin): it needs the SKU and one text field (422 otherwise) */
+    post: operations['mapping.approve']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/admin/overview': {
     parameters: {
       query?: never
@@ -737,6 +815,58 @@ export interface components {
       password: string
       remember?: boolean
     }
+    /** MappingResource */
+    MappingResource: {
+      id: number
+      feed_id: number
+      /** @enum {string} */
+      status: 'draft' | 'approved'
+      /** @description Send it back with every change: an edit on an older version is refused (409). */
+      version: number
+      source_locale: string | null
+      approved_at: string | null
+      ai: {
+        status: string
+        failure: string | null
+        available: boolean
+        /** @description e.g. ai_disabled, unpriced_model, provider_unavailable */
+        unavailable_reason: string
+        /** @description The most a suggestion can cost, in credits; usually far less is used. */
+        estimate_credits: number
+      }
+      columns: unknown[]
+      fields: {
+        key: string
+        target: string
+        label: string
+        locale: string | null
+        /** @enum {string} */
+        strategy: 'direct' | 'compose' | 'none'
+        source_column: string | null
+        recipe: {
+          sources: unknown[]
+          separator: string
+          label_separator: string
+        } | null
+        /** @description What was suggested and refused, when the field was left empty. */
+        candidate_column: string | null
+        /** @enum {string} */
+        origin: 'heuristic' | 'ai' | 'manual'
+        confidence: number
+        reason: string | null
+        /** @enum {string} */
+        status: 'validated' | 'mapped' | 'needs_input' | 'composed' | 'rejected' | 'cleared'
+        issues: {
+          type: string
+          /** @enum {string} */
+          severity: 'error' | 'warning' | 'info'
+          count: number
+          message: string
+        }[]
+        samples: string[]
+      }[]
+      available_fields: unknown[]
+    }
     /** PlanResource */
     PlanResource: {
       key: string
@@ -897,6 +1027,28 @@ export interface components {
         delimiter: ',' | ';' | '\t' | '|' | null
         quoted: boolean
         xml_item_path: string | null
+      }
+    }
+    /**
+     * UpdateMappingFieldRequest
+     * @description Set one field of a mapping: a column, a composition of columns, or nothing.
+     */
+    UpdateMappingFieldRequest: {
+      /** @description The mapping version you loaded. */
+      version: number
+      /** @description A canonical field key, e.g. `title`. */
+      target: string
+      /** @description BCP-47, for language-specific fields only. */
+      locale?: string | null
+      /** @description The column that fills it alone; omit both column and recipe to leave it empty. */
+      column?: string | null
+      recipe: {
+        sources?: {
+          column: string
+          label?: string | null
+        }[]
+        separator?: string | null
+        label_separator?: string | null
       }
     }
     /**
@@ -1509,6 +1661,148 @@ export interface operations {
           }
         }
       }
+    }
+  }
+  'mapping.show': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `MappingResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            mapping: components['schemas']['MappingResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'mapping.update': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateMappingFieldRequest']
+      }
+    }
+    responses: {
+      /** @description `MappingResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            mapping: components['schemas']['MappingResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'mapping.suggest': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        'application/json': {
+          /** @description Corrections for the AI, in the seller's words. */
+          instructions?: string | null
+        }
+      }
+    }
+    responses: {
+      /** @description `MappingResource` */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            mapping: components['schemas']['MappingResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @constant */
+            error: 'ai_unavailable'
+            reason: string
+            /** @constant */
+            message: 'AI suggestions are not available right now.'
+          }
+        }
+      }
+      422: components['responses']['ValidationException']
+    }
+  }
+  'mapping.approve': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          version: number
+        }
+      }
+    }
+    responses: {
+      /** @description `MappingResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            mapping: components['schemas']['MappingResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
     }
   }
   'admin.overview': {

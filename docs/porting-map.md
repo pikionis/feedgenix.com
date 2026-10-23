@@ -378,3 +378,21 @@ the scan, so a file it could not read had no record of its own.
 - **Fail loud:** an unknown class or kind, a localized field without a mode, a shared field with one, or a key that is not lower snake case refuses to load.
 - **Later:** a workspace's own custom fields (`target_fields`, with the field-selection UI in M4).
 - **Proof:** 19 tests.
+
+### M3 · `MappingService` (generateMapping, composeFields, sanitizeCompositions, enforceStrictComposition, buildFieldReports, isProtectedColumn, refineMapping, validateMapping), `FieldValidator`, `SmartScanner::composeFromRecipe` → `Domain/Mapping` (ADR 0018)
+- **Kept:**
+  - value-aware validation per field (URLs, image paths, barcodes, pure numbers, sizes in a colour, taxonomy ids in a category), with the 30% rule between a warning and a refusal;
+  - "empty rather than wrong": a failed check leaves the field empty with the reason;
+  - composition of scattered columns into one field ("Label: value" lines), with the gates: confidence ≥ 0.5, something composed on the sample rows, no failed validation;
+  - per-field reports for the reviewer (status, sample values, reason, confidence).
+- **Fixed:**
+  - **D6** (a mapping reused by file id across uploads with other columns): mappings are keyed by feed and column signature.
+  - **D7** (refine and save skipped validation): every change, a person's included, goes through one pipeline.
+  - **D8** (letters `[a-zA-ZÀ-ÿ]`, words by `str_word_count`): Unicode letters and words, plus a check that a localized field is written in its locale's script.
+  - `isProtectedColumn` matched `ean`, which never matched `product_ean` or `EAN_Code` (`_` is a word character): column names are split into words (also camelCase and acronyms) before matching.
+  - The prompts sent the first three raw rows, prices and barcodes included: protected columns' values are withheld, by name and by value kind.
+  - Compositions could take protected columns when the post-parse guard missed them: the pipeline drops them, and numeric measurements stay golden.
+  - Two columns claiming one field: the legacy kept whichever came last; close calls now stay empty for the reviewer.
+- **Changed:** one AI call per batch of 40 columns, with an id per column (the gateway's misalignment check applies), instead of one free-form JSON object per feed; Swiss/DeinDeal prompts and the four fixed languages are gone.
+- **Dropped:** the forced `categorie_*` translation for every language; the "translation fields" toggles (they come back as the field selection in M4).
+- **Proof:** 129 tests (columns and languages 47, validator 34, drafts 4, suggestions 22 including a 12-seed property test over random feeds, edits and approval 14, API 8) and 15 of 15 guard mutants caught.

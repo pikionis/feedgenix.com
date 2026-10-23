@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Domain\AI\AiGateway;
+use App\Domain\AI\CallEstimate;
 use App\Domain\AI\Contracts\AiClient;
 use App\Domain\AI\Pricing;
 use App\Domain\AI\Providers\AiEgressGuard;
 use App\Domain\AI\Providers\Providers;
+use App\Domain\AI\Routes;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,6 +27,11 @@ final class AiServiceProvider extends ServiceProvider
             $app->make(Pricing::class),
         ));
         $this->app->bind(AiClient::class, static fn (Application $app): AiClient => AiGateway::build($app));
+        $this->app->bind(CallEstimate::class, static fn (Application $app): CallEstimate => new CallEstimate(
+            Routes::fromConfig($app->make(Pricing::class), $app->make(Providers::class)),
+            $app->make(Pricing::class),
+            (bool) config('ai.enabled', false),
+        ));
     }
 
     public function boot(): void

@@ -701,6 +701,276 @@
                 }
             }
         },
+        "/v1/feeds/{feed}/mapping": {
+            "get": {
+                "operationId": "mapping.show",
+                "description": "404 `no_profile` until the feed has a profiled import.",
+                "summary": "The mapping of the feed's current columns, drafted for free (no AI) on first view",
+                "tags": [
+                    "Mapping"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`MappingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "mapping": {
+                                            "$ref": "#/components/schemas/MappingResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "mapping"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/mapping/fields": {
+            "put": {
+                "operationId": "mapping.update",
+                "summary": "Set one field (owner or admin): a column, a composition, or empty. It is checked like every\nsuggestion: a refused edit is stored as refused, with the reason. 409 on a stale version",
+                "tags": [
+                    "Mapping"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateMappingFieldRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`MappingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "mapping": {
+                                            "$ref": "#/components/schemas/MappingResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "mapping"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/mapping/suggest": {
+            "post": {
+                "operationId": "mapping.suggest",
+                "summary": "Ask the AI for a better mapping (owner or admin), optionally with corrections in words. The\nworst case is reserved from the workspace's credits first; 409 `insufficient_credits` with\nthe numbers when they do not cover it, 409 `ai_unavailable` when AI is off",
+                "tags": [
+                    "Mapping"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "instructions": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "Corrections for the AI, in the seller's words.",
+                                        "maxLength": 2000
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "`MappingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "mapping": {
+                                            "$ref": "#/components/schemas/MappingResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "mapping"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "const": "ai_unavailable"
+                                        },
+                                        "reason": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "AI suggestions are not available right now."
+                                        }
+                                    },
+                                    "required": [
+                                        "error",
+                                        "reason",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/mapping/approve": {
+            "post": {
+                "operationId": "mapping.approve",
+                "summary": "Approve the mapping (owner or admin): it needs the SKU and one text field (422 otherwise)",
+                "tags": [
+                    "Mapping"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "version": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                },
+                                "required": [
+                                    "version"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`MappingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "mapping": {
+                                            "$ref": "#/components/schemas/MappingResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "mapping"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/v1/admin/overview": {
             "get": {
                 "operationId": "admin.overview",
@@ -2347,6 +2617,241 @@
                 ],
                 "title": "LoginRequest"
             },
+            "MappingResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "feed_id": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "approved"
+                        ]
+                    },
+                    "version": {
+                        "type": "integer",
+                        "description": "Send it back with every change: an edit on an older version is refused (409)."
+                    },
+                    "source_locale": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "approved_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ai": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            },
+                            "failure": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "available": {
+                                "type": "boolean"
+                            },
+                            "unavailable_reason": {
+                                "type": "string",
+                                "description": "e.g. ai_disabled, unpriced_model, provider_unavailable"
+                            },
+                            "estimate_credits": {
+                                "type": "integer",
+                                "description": "The most a suggestion can cost, in credits; usually far less is used."
+                            }
+                        },
+                        "required": [
+                            "status",
+                            "failure",
+                            "available",
+                            "unavailable_reason",
+                            "estimate_credits"
+                        ]
+                    },
+                    "columns": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "type": "string"
+                                },
+                                "target": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "locale": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "strategy": {
+                                    "type": "string",
+                                    "enum": [
+                                        "direct",
+                                        "compose",
+                                        "none"
+                                    ]
+                                },
+                                "source_column": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "recipe": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "sources": {
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "separator": {
+                                            "type": "string"
+                                        },
+                                        "label_separator": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "sources",
+                                        "separator",
+                                        "label_separator"
+                                    ]
+                                },
+                                "candidate_column": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "description": "What was suggested and refused, when the field was left empty."
+                                },
+                                "origin": {
+                                    "type": "string",
+                                    "enum": [
+                                        "heuristic",
+                                        "ai",
+                                        "manual"
+                                    ]
+                                },
+                                "confidence": {
+                                    "type": "number"
+                                },
+                                "reason": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "validated",
+                                        "mapped",
+                                        "needs_input",
+                                        "composed",
+                                        "rejected",
+                                        "cleared"
+                                    ]
+                                },
+                                "issues": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string"
+                                            },
+                                            "severity": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "error",
+                                                    "warning",
+                                                    "info"
+                                                ]
+                                            },
+                                            "count": {
+                                                "type": "integer"
+                                            },
+                                            "message": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "type",
+                                            "severity",
+                                            "count",
+                                            "message"
+                                        ]
+                                    }
+                                },
+                                "samples": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "key",
+                                "target",
+                                "label",
+                                "locale",
+                                "strategy",
+                                "source_column",
+                                "recipe",
+                                "candidate_column",
+                                "origin",
+                                "confidence",
+                                "reason",
+                                "status",
+                                "issues",
+                                "samples"
+                            ]
+                        }
+                    },
+                    "available_fields": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "id",
+                    "feed_id",
+                    "status",
+                    "version",
+                    "source_locale",
+                    "approved_at",
+                    "ai",
+                    "columns",
+                    "fields",
+                    "available_fields"
+                ],
+                "title": "MappingResource"
+            },
             "PlanResource": {
                 "type": "object",
                 "properties": {
@@ -2800,6 +3305,87 @@
                     }
                 },
                 "title": "UpdateFeedRequest"
+            },
+            "UpdateMappingFieldRequest": {
+                "type": "object",
+                "description": "Set one field of a mapping: a column, a composition of columns, or nothing.",
+                "properties": {
+                    "version": {
+                        "type": "integer",
+                        "description": "The mapping version you loaded.",
+                        "minimum": 1
+                    },
+                    "target": {
+                        "type": "string",
+                        "description": "A canonical field key, e.g. `title`.",
+                        "maxLength": 48
+                    },
+                    "locale": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "BCP-47, for language-specific fields only.",
+                        "maxLength": 16
+                    },
+                    "column": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The column that fills it alone; omit both column and recipe to leave it empty.",
+                        "maxLength": 1000
+                    },
+                    "recipe": {
+                        "type": "object",
+                        "properties": {
+                            "sources": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "column": {
+                                            "type": "string",
+                                            "maxLength": 1000
+                                        },
+                                        "label": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "maxLength": 60
+                                        }
+                                    },
+                                    "required": [
+                                        "column"
+                                    ]
+                                },
+                                "minItems": 1,
+                                "maxItems": 30
+                            },
+                            "separator": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 10
+                            },
+                            "label_separator": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 10
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "version",
+                    "target",
+                    "recipe"
+                ],
+                "title": "UpdateMappingFieldRequest"
             },
             "UpdatePasswordRequest": {
                 "type": "object",

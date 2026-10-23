@@ -22,3 +22,4 @@ record supersedes them.
 | [0015](0015-unfinished-packages-and-php-modules.md) | Unfinished dpkg packages and PHP modules on a shared host (refines 0011) |
 | [0016](0016-credit-ledger-and-the-beta-ai-budget.md) | The credit ledger as built, and the private-beta AI budget (refines 0004, 0005) |
 | [0017](0017-model-providers.md) | The model providers: Gemini over HTTP, Claude through the official SDK (refines 0004, 0016) |
+| [0018](0018-mapping.md) | Mapping: drafts by column signature, AI per column, one pipeline (refines 0003, 0004) |

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\App\FeedController;
 use App\Http\Controllers\App\FeedImportController;
+use App\Http\Controllers\App\MappingController;
 use App\Http\Controllers\App\ProfileController;
 use App\Http\Controllers\App\TwoFactorController;
 use App\Http\Controllers\App\UploadController;
@@ -85,6 +86,11 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
             Route::put('/feeds/{feed}/uploads/{upload}/chunks/{index}', [UploadController::class, 'chunk'])->whereUuid('upload')->whereNumber('index')->name('uploads.chunk');
             Route::post('/feeds/{feed}/uploads/{upload}/complete', [UploadController::class, 'complete'])->whereUuid('upload')->name('uploads.complete');
         });
+        // The mapping of a feed's columns to canonical fields (M3).
+        Route::get('/feeds/{feed}/mapping', [MappingController::class, 'show'])->name('mapping.show');
+        Route::put('/feeds/{feed}/mapping/fields', [MappingController::class, 'update'])->name('mapping.update');
+        Route::post('/feeds/{feed}/mapping/suggest', [MappingController::class, 'suggest'])->name('mapping.suggest');
+        Route::post('/feeds/{feed}/mapping/approve', [MappingController::class, 'approve'])->name('mapping.approve');
         Route::get('/imports/{import}', [FeedImportController::class, 'show'])->name('imports.show');
         Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->name('imports.reread');
     });

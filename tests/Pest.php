@@ -22,6 +22,7 @@ pest()->afterEach(fn () => cleanIngestScratch())->in('Unit/Ingest', 'Feature/Ing
 
 require_once __DIR__.'/Support/ingest.php';
 require_once __DIR__.'/Support/ai.php';
+require_once __DIR__.'/Support/mapping.php';
 
 function tenancy(): TenantContext
 {
