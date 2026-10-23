@@ -30,6 +30,9 @@
         <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_DATABASE" value="feedgenix_test"/>
         <env name="DB_URL" value=""/>
+        <!-- AI is switched on, with fakes under the real gateway, only by the tests that need it (tests/Support/ai.php). -->
+        <env name="FEEDGENIX_AI_ENABLED" value="false"/>
+        <env name="FEEDGENIX_AI_FAKE" value="false"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

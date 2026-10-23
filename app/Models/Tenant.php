@@ -31,6 +31,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property CarbonImmutable $usage_anchor_at
  * @property array<string, int|null>|null $limits_override
  * @property bool $overage_enabled
+ * @property CarbonImmutable|null $ai_paused_at
+ * @property string|null $ai_paused_reason
  * @property bool $is_internal
  * @property CarbonImmutable|null $frozen_at
  * @property CarbonImmutable|null $created_at

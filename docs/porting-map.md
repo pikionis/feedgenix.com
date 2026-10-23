@@ -328,3 +328,27 @@ the scan, so a file it could not read had no record of its own.
   each become a column profile, and the Free plan stops at one feed. End-to-end runs use the sync
   queue, may fetch from 127.0.0.1, and keep the cache in memory (rate limits are tested in Pest;
   the suite signs up many accounts from one address).
+
+### M3 · `Observability/{EngineCallLogger,PricingService}`, `config/engine_pricing.php` → `Domain/AI/{Gateway/Recorder,Pricing}`, `config/ai.php`; new — the gateway chain and the credit ledger (`Domain/Credits`)
+- **Kept:**
+  - one log row per model call, with tokens, latency and status;
+  - cost from the provider's own usage report and a per-model price list in config.
+- **Fixed:**
+  - **D13** (429s were never retried): `Retry` retries rate limits and outages on the same model, waiting the provider's Retry-After or a full-jitter backoff (base × 2^(attempt − 1), capped). A Retry-After beyond the cap goes back to the pipeline instead of holding a worker. 429s never trip the circuit breaker.
+  - **D14** (daily spend was a cache read-modify-write): every charge is one row-locked, capped `UPDATE` of the work unit's reservation, written in the same database transaction as its `engine_calls` row; balances move only with conditional `UPDATE`s under CHECK constraints (ADR 0016).
+  - Thinking tokens were not billed and cached input had no price: both are billed now, at the prices the provider charges.
+  - Floats for money: prices are decimal strings, costs exact decimals (`brick/math`), the charge rounded up to a whole millicredit.
+  - A model without a price was callable (at a zero cost): it is not callable now.
+- **New:**
+  - The chain of ADR 0004, built in one place (`AiGateway`); an arch test keeps every other class from using a link directly, or a provider:
+    PolicyGate → ReservationGate → Router → CircuitBreaker → Retry → Recorder → ProviderDispatch.
+  - **Policy:** the kill switch (`FEEDGENIX_AI_ENABLED`, off by default), the call's workspace must be the one in context, frozen or AI-paused workspaces and unverified owners are refused, and no reservation means no call.
+  - **Reservations:** the call's worst case on its costliest possible model must fit before anything leaves (no half-done fallback), and again before every attempt.
+  - **Answers:** the returned ids must be exactly the items' ids; missing, extra or renumbered ids are terminal (`misaligned`, billed and recorded, never guessed), and so is a cut-off answer.
+  - **Routing:** per purpose; mapping and quality fall back to Claude, translation never switches models. Unpriced models and providers without credentials are skipped.
+  - **Ledger:** wallets, reservations (expiring, swept every five minutes), append-only transactions, `credits:grant` (the beta AI budget, ADR 0016).
+  - `FakeAiProvider` under the real chain for tests and e2e (`FEEDGENIX_AI_FAKE`, refused in production); the providers themselves arrive with step 2.
+- **Dropped:** the daily USD cap kept in cache (the wallet balance is the hard limit).
+- **Later:** plan model gating (`models`, `model_choice`) with the first user-chosen model (M4); value-schema validation of each answer with the providers (step 2).
+- **Found on the way:** Redis returns cached numbers as strings, so a breaker that checked `is_int()` would never have opened on the servers (the array cache in tests returns ints). A test runs the breaker on a store that behaves like Redis.
+- **Proof:** 106 new tests. Each guard was broken once and its tests failed: 20 of 21 mutants caught. The survivor is the explicit `tenant_id` filter in `ConsumeReservation`; row-level security hides another workspace's reservation without it (the attacker test still passes), which is the point of ADR 0002.

@@ -177,6 +177,12 @@ sandbox); this closes the gap for code running outside them: deploy-time migrati
   `/api/auth/options` and shows the invite field only in `invite` mode. Open sign-up only once a
   mail provider sends the verification emails; until then they go to the mail log.
 - **Plans:** `feedgenix-artisan tenants:set-plan TENANT pro`
+- **AI budget for a beta workspace** (ADR 0016): `feedgenix-artisan credits:grant TENANT 10 --note="beta budget"`
+  adds €10 of credits (100,000). Every model call reserves from that wallet first; nothing is
+  called without it.
+- **AI on or off:** `FEEDGENIX_AI_ENABLED` in `/srv/feedgenix/shared/.env` (off by default; the kill
+  switch refuses every model call). Turn it on only with the provider keys set and every routed
+  model's prices confirmed in `config/ai.php`.
 - **Emails until a mail provider is set up** (verification, password reset): they are written to
   the log.
   `grep -h 'verify-email\|reset-password' /srv/feedgenix/shared/storage/logs/mail-*.log | tail`

@@ -166,6 +166,8 @@ render "$OPS/templates/env.template" >"$WORK/env"
 check "the .env reaches PostgreSQL and Redis over unix sockets only" \
   bash -c "grep -qx 'DB_HOST=/var/run/postgresql' '$WORK/env' && grep -qx 'REDIS_HOST=/run/feedgenix-redis/redis.sock' '$WORK/env' && grep -qx 'DB_PORT=5433' '$WORK/env'"
 check "the .env never enables debug output" grep -qx 'APP_DEBUG=false' "$WORK/env"
+check "a new server starts with AI switched off and never the fake provider" \
+  bash -c "grep -qx 'FEEDGENIX_AI_ENABLED=false' '$WORK/env' && ! grep -q 'FEEDGENIX_AI_FAKE' '$WORK/env'"
 
 echo "legacy_answers"
 curl() { # stub: record the arguments, answer like a live site

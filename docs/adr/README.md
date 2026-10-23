@@ -20,3 +20,4 @@ record supersedes them.
 | [0013](0013-fetching-feed-urls.md) | Fetching feed URLs: the SSRF policy |
 | [0014](0014-feed-size-per-plan.md) | Feed size per plan, within a server ceiling |
 | [0015](0015-unfinished-packages-and-php-modules.md) | Unfinished dpkg packages and PHP modules on a shared host (refines 0011) |
+| [0016](0016-credit-ledger-and-the-beta-ai-budget.md) | The credit ledger as built, and the private-beta AI budget (refines 0004, 0005) |

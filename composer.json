@@ -13,6 +13,7 @@
     "require": {
         "php": "^8.3",
         "bacon/bacon-qr-code": "^3.1",
+        "brick/math": "^1.0",
         "dedoc/scramble": "^0.13.45",
         "halaxa/json-machine": "^1.2",
         "laravel/framework": "^13.17",
