@@ -1,0 +1,65 @@
+{
+  "about": "German ERP export with abbreviations and camelCase.",
+  "header": [
+    "ArtNr",
+    "ProdName",
+    "LangText",
+    "EAN13",
+    "VK_Preis",
+    "Bestand",
+    "BildURL",
+    "Farbe"
+  ],
+  "rows": [
+    [
+      "10001",
+      "Kaffeemühle aus Holz",
+      "Eine Kaffeemühle aus Holz mit einem Mahlwerk aus Keramik für die Küche",
+      "2500000000010",
+      "49.90",
+      "7",
+      "https://img.example/10001.jpg",
+      "Braun"
+    ],
+    [
+      "10002",
+      "Teekanne aus Glas",
+      "Eine Teekanne aus Glas mit einem Sieb für die losen Blätter",
+      "2500000000027",
+      "34.90",
+      "3",
+      "https://img.example/10002.jpg",
+      "Klar"
+    ],
+    [
+      "10003",
+      "Brotkasten",
+      "Ein Brotkasten aus Bambus mit einem Deckel für das Brot und die Brötchen",
+      "2500000000034",
+      "39.00",
+      "0",
+      "https://img.example/10003.jpg",
+      "Natur"
+    ],
+    [
+      "10004",
+      "Gewürzregal",
+      "Ein Regal für die Gewürze mit zwölf Gläsern und einem Halter für die Wand",
+      "2500000000041",
+      "29.00",
+      "12",
+      "https://img.example/10004.jpg",
+      "Weiss"
+    ]
+  ],
+  "expected": {
+    "sku": "ArtNr",
+    "title@de": "ProdName",
+    "description@de": "LangText",
+    "gtin": "EAN13",
+    "price": "VK_Preis",
+    "stock_quantity": "Bestand",
+    "image_link": "BildURL",
+    "color@de": "Farbe"
+  }
+}

@@ -6,6 +6,9 @@ namespace App\Domain\Mapping\Data;
 
 use App\Domain\Ingest\Models\Import;
 use App\Domain\Ingest\Models\ImportColumn;
+use App\Domain\Ingest\Profile\ColumnProfile;
+use App\Domain\Ingest\Profile\FeedProfile;
+use App\Domain\Ingest\Profile\SkuSuggestion;
 use App\Domain\Ingest\Profile\ValueKind;
 use App\Domain\Mapping\ProtectedColumns;
 
@@ -44,6 +47,22 @@ final readonly class MappingInput
         $sku = is_array($import->sku) ? ['column' => (string) $import->sku['column'], 'confidence' => (string) $import->sku['confidence']] : null;
 
         return new self($columns, $import->sample_rows ?? [], $sku);
+    }
+
+    /** Straight from a profile, without an import row (the evals read feeds this way). */
+    public static function fromProfile(FeedProfile $profile): self
+    {
+        $columns = array_map(static fn (ColumnProfile $column): array => [
+            'position' => $column->position,
+            'name' => $column->name,
+            'kind' => $column->kind,
+            'fill_rate' => $column->fillRate,
+            'examples' => $column->examples,
+            'protected' => ProtectedColumns::isProtected($column->name, $column->kind),
+        ], $profile->columns);
+        $sku = $profile->sku instanceof SkuSuggestion ? ['column' => $profile->sku->column, 'confidence' => $profile->sku->confidence] : null;
+
+        return new self($columns, $profile->sampleRows, $sku);
     }
 
     public function has(string $column): bool

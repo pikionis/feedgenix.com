@@ -1,0 +1,47 @@
+{
+  "about": "Columns named Spalte 1 … 5: the free draft must not guess.",
+  "header": [
+    "Spalte 1",
+    "Spalte 2",
+    "Spalte 3",
+    "Spalte 4",
+    "Spalte 5"
+  ],
+  "rows": [
+    [
+      "X-100",
+      "Wanderschuh aus Leder für die Berge",
+      "189.90",
+      "12",
+      "Braun"
+    ],
+    [
+      "X-101",
+      "Regenjacke mit einer Kapuze und Taschen",
+      "149.00",
+      "5",
+      "Rot"
+    ],
+    [
+      "X-102",
+      "Rucksack für die Tagestour mit einem Fach",
+      "89.50",
+      "0",
+      "Grün"
+    ],
+    [
+      "X-103",
+      "Zelt für zwei Personen und die Berge",
+      "329.00",
+      "3",
+      "Gelb"
+    ]
+  ],
+  "expected": {
+    "sku": "Spalte 1",
+    "title@de": "Spalte 2",
+    "price": "Spalte 3",
+    "stock_quantity": "Spalte 4",
+    "color@de": "Spalte 5"
+  }
+}

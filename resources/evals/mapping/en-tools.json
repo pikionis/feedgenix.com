@@ -1,0 +1,60 @@
+{
+  "about": "Short English product names: the language cannot be told, so a person says it.",
+  "set_locale": "en",
+  "header": [
+    "SKU",
+    "Title",
+    "EAN",
+    "Price",
+    "Stock",
+    "Colour",
+    "Image"
+  ],
+  "rows": [
+    [
+      "HT-100",
+      "Claw hammer",
+      "2100000000012",
+      "12.9",
+      "40",
+      "Black",
+      "https://img.example/ht-100.jpg"
+    ],
+    [
+      "HT-101",
+      "Rubber mallet",
+      "2100000000029",
+      "9.5",
+      "12",
+      "Black",
+      "https://img.example/ht-101.jpg"
+    ],
+    [
+      "SD-200",
+      "Screwdriver set",
+      "2100000000036",
+      "24",
+      "0",
+      "",
+      "https://img.example/sd-200.jpg"
+    ],
+    [
+      "TP-300",
+      "Measuring tape 5 m",
+      "2100000000043",
+      "7.25",
+      "85",
+      "Yellow",
+      "https://img.example/tp-300.jpg"
+    ]
+  ],
+  "expected": {
+    "sku": "SKU",
+    "title@en": "Title",
+    "gtin": "EAN",
+    "price": "Price",
+    "stock_quantity": "Stock",
+    "color@en": "Colour",
+    "image_link": "Image"
+  }
+}

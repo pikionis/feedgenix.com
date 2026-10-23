@@ -1,0 +1,45 @@
+{
+  "about": "One column per language, named by its suffix.",
+  "header": [
+    "sku",
+    "title_de",
+    "title_fr",
+    "description_de",
+    "description_fr",
+    "price"
+  ],
+  "rows": [
+    [
+      "ML-1",
+      "Kissenbezug aus Leinen",
+      "Housse de coussin en lin",
+      "Ein weicher Bezug aus Leinen für das Sofa und das Bett",
+      "Une housse douce en lin pour le canapé et le lit",
+      "29.90"
+    ],
+    [
+      "ML-2",
+      "Wolldecke für das Sofa",
+      "Plaid en laine pour le canapé",
+      "Eine warme Decke aus Wolle mit Fransen für die kalten Abende",
+      "Un plaid chaud en laine avec des franges pour les soirées",
+      "89.00"
+    ],
+    [
+      "ML-3",
+      "Vase aus Keramik",
+      "Vase en céramique",
+      "Eine Vase aus Keramik für die getrockneten Blumen und Zweige",
+      "Un vase en céramique pour les fleurs séchées et les branches",
+      "45.00"
+    ]
+  ],
+  "expected": {
+    "sku": "sku",
+    "title@de": "title_de",
+    "title@fr": "title_fr",
+    "description@de": "description_de",
+    "description@fr": "description_fr",
+    "price": "price"
+  }
+}

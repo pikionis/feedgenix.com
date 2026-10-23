@@ -407,3 +407,11 @@ the scan, so a file it could not read had no record of its own.
   - Edits carry the version they were made on; a stale one reloads with an explanation.
 - **New:** the feed page links to the mapping, and the pipeline's mapping stage shows draft or approved.
 - **Proof:** 13 Vitest tests for the page, the stepper's states, and a Playwright step from a fresh Excel upload to an approved mapping; 4 Pest tests for the feed language and the feed's mapping status.
+
+### M3 · New — mapping evals (`resources/evals/mapping`, `Domain/Mapping/Evals`, `mapping:eval`)
+- **Cases:** eight synthetic feeds with known answers (German, English, Google Merchant, French, Greek, abbreviated and camelCase, one column per language, meaningless names). No real data.
+- **Score:** precision and recall per case; a wrong golden field and a protected column in a text field are counted on their own, and the bar for both is zero.
+- **Baseline** (`baseline.json`, the free draft without AI): precision 100%, recall 82.9%. A test fails below it; raise it when the mapper improves, never lower it to let a change pass.
+- **Bounds:** a perfect AI scores 100% on every case, in every script (the pipeline accepts every right answer; D8); a hostile AI that proposes every column into every text and golden field never gets a protected column into text, nor a text column into a golden field.
+- **`mapping:eval --ai --workspace=… [--record]`:** asks the configured model too, through the gateway, paid from that workspace's credits; `--record` keeps the answers so a prompt or model change can be compared (ADR 0004).
+- **Proof:** 6 tests.

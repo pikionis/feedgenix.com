@@ -1,0 +1,83 @@
+{
+  "about": "A French fashion shop with French column names.",
+  "header": [
+    "Référence",
+    "Nom",
+    "Description",
+    "Couleur",
+    "Taille",
+    "Prix",
+    "Stock",
+    "Marque",
+    "Matière",
+    "Code-barres",
+    "Image"
+  ],
+  "rows": [
+    [
+      "MO-10",
+      "Robe d'été en lin",
+      "Une robe légère pour les jours chauds avec une ceinture et des poches",
+      "Bleu",
+      "M",
+      "79.00",
+      "4",
+      "Maison Ode",
+      "Lin",
+      "2300000000016",
+      "https://img.example/mo-10.jpg"
+    ],
+    [
+      "MO-11",
+      "Chemise à rayures",
+      "Une chemise en coton avec des rayures fines pour le bureau et le week-end",
+      "Blanc",
+      "L",
+      "59.00",
+      "10",
+      "Maison Ode",
+      "Coton",
+      "2300000000023",
+      "https://img.example/mo-11.jpg"
+    ],
+    [
+      "MO-12",
+      "Pull en laine",
+      "Un pull chaud en laine mérinos avec un col rond pour l'hiver",
+      "Gris",
+      "S",
+      "99.00",
+      "0",
+      "Maison Ode",
+      "Laine",
+      "2300000000030",
+      "https://img.example/mo-12.jpg"
+    ],
+    [
+      "MO-13",
+      "Jupe plissée",
+      "Une jupe plissée et légère pour les soirées et les jours de fête",
+      "Noir",
+      "XS",
+      "69.00",
+      "6",
+      "Maison Ode",
+      "Polyester",
+      "2300000000047",
+      "https://img.example/mo-13.jpg"
+    ]
+  ],
+  "expected": {
+    "sku": "Référence",
+    "title@fr": "Nom",
+    "description@fr": "Description",
+    "color@fr": "Couleur",
+    "size@fr": "Taille",
+    "price": "Prix",
+    "stock_quantity": "Stock",
+    "brand": "Marque",
+    "material@fr": "Matière",
+    "gtin": "Code-barres",
+    "image_link": "Image"
+  }
+}

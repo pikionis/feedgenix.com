@@ -1,0 +1,96 @@
+{
+  "about": "A German outdoor shop export with plain German column names.",
+  "header": [
+    "Artikelnummer",
+    "EAN",
+    "Titel",
+    "Beschreibung",
+    "Farbe",
+    "Grösse",
+    "Preis CHF",
+    "Lagerbestand",
+    "Bild URL",
+    "Material",
+    "Pflegehinweis"
+  ],
+  "rows": [
+    [
+      "AO-1001",
+      "2000000000015",
+      "Wanderschuh aus Leder",
+      "Robuster Wanderschuh für die Berge und für lange Touren",
+      "Braun",
+      "42",
+      "189.90",
+      "12",
+      "https://img.example/ao-1001.jpg",
+      "Leder",
+      "Mit einem feuchten Tuch reinigen"
+    ],
+    [
+      "AO-1002",
+      "2000000000022",
+      "Regenjacke mit Kapuze",
+      "Leichte Jacke für den Regen mit einer Kapuze und zwei Taschen",
+      "Rot",
+      "M",
+      "149.00",
+      "5",
+      "https://img.example/ao-1002.jpg",
+      "Polyester",
+      "Bei 30 Grad waschen"
+    ],
+    [
+      "AO-1003",
+      "2000000000039",
+      "Rucksack für Touren",
+      "Ein Rucksack für die Tagestour mit einem Fach für die Trinkblase",
+      "Grün",
+      "30 l",
+      "89.50",
+      "0",
+      "https://img.example/ao-1003.jpg",
+      "Nylon",
+      "Von Hand waschen"
+    ],
+    [
+      "AO-1004",
+      "2000000000046",
+      "Zelt für zwei Personen",
+      "Ein leichtes Zelt für zwei Personen und für die Berge",
+      "Gelb",
+      "2P",
+      "329.00",
+      "3",
+      "https://img.example/ao-1004.jpg",
+      "Polyester",
+      "Trocken lagern"
+    ],
+    [
+      "AO-1005",
+      "2000000000053",
+      "Schlafsack für den Winter",
+      "Ein warmer Schlafsack für die kalten Nächte in den Bergen",
+      "Blau",
+      "L",
+      "259.00",
+      "7",
+      "https://img.example/ao-1005.jpg",
+      "Daunen",
+      "Nicht in den Trockner"
+    ]
+  ],
+  "expected": {
+    "sku": "Artikelnummer",
+    "gtin": "EAN",
+    "title@de": "Titel",
+    "description@de": "Beschreibung",
+    "color@de": "Farbe",
+    "size@de": "Grösse",
+    "price": "Preis CHF",
+    "stock_quantity": "Lagerbestand",
+    "image_link": "Bild URL",
+    "material@de": "Material",
+    "care_instructions@de": "Pflegehinweis"
+  }
+}
