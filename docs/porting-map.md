@@ -377,4 +377,4 @@ the scan, so a file it could not read had no record of its own.
 - **`field@locale`** (`FieldRef`): localized fields always name a BCP-47 locale from the registry, matched case-insensitively (`title@de-ch` → `title@de-CH`); golden, pass-through and derived fields never take one.
 - **Fail loud:** an unknown class or kind, a localized field without a mode, a shared field with one, or a key that is not lower snake case refuses to load.
 - **Later:** a workspace's own custom fields (`target_fields`, with the field-selection UI in M4).
-- **Proof:** 25 tests.
+- **Proof:** 19 tests.
