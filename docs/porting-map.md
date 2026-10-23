@@ -352,3 +352,21 @@ the scan, so a file it could not read had no record of its own.
 - **Later:** plan model gating (`models`, `model_choice`) with the first user-chosen model (M4); value-schema validation of each answer with the providers (step 2).
 - **Found on the way:** Redis returns cached numbers as strings, so a breaker that checked `is_int()` would never have opened on the servers (the array cache in tests returns ints). A test runs the breaker on a store that behaves like Redis.
 - **Proof:** 106 new tests. Each guard was broken once and its tests failed: 20 of 21 mutants caught. The survivor is the explicit `tenant_id` filter in `ConsumeReservation`; row-level security hides another workspace's reservation without it (the attacker test still passes), which is the point of ADR 0002.
+
+### M3 · `ClaudeApiClient`, `GeminiApiClient`, `StructuredJson`, `Support/Tenancy/AiEgressGuard`, `Support/Http/Tls` → `Domain/AI/Providers` (ADR 0017)
+- **Kept:** one call per batch of items, JSON in and out; a per-host timeout.
+- **Fixed:**
+  - **D11** (the Gemini key travelled in the URL and leaked through exception messages): the key is in `x-goog-api-key`; no failure message repeats a request or a response body, and SDK exceptions (which hold the request) are never chained.
+  - Claude's `stop_reason` was ignored, so a cut-off or refused answer read as complete: `max_tokens` is truncated, `refusal` and a full context window are terminal.
+  - Gemini's SAFETY, RECITATION and blocked prompts came back as empty answers: they are typed, billed failures now.
+  - Thinking tokens were never counted: Gemini's `thoughtsTokenCount` and Claude's `output_tokens_details.thinking_tokens` are recorded, and billed exactly once.
+  - `StructuredJson` returned `[]` on any failure: invalid JSON, a missing `items` list or an item without a value is `malformed`, a repeated id is `misaligned`.
+  - The egress guard was a denylist of frozen workspaces (fail open): it is an allowlist of callers now (fail closed), on every outbound request.
+  - `Tls` switched certificate checks off locally: verification is always on, and an arch test bans switching it off.
+- **New:**
+  - Claude through the official SDK (`anthropic-ai/sdk`) over Laravel's HTTP client, so the SDK's traffic is guarded and faked like the rest; `claude-opus-5-5` as the reasoning fallback.
+  - Structured outputs on both hosts, with the item ids as an enum; the gateway checks every answer against its value schema (`ValueSchema`) whatever the host promised.
+  - Claude refusal fallbacks, offered only when priced and billed per hop at each model's rate (`BilledUsage`).
+- **Dropped:** the free-tier Gemini path; the per-call key lookup from the database (keys are server configuration).
+- **Later:** the first call on each real key confirms the live request shapes (integrations phase).
+- **Proof:** 71 new tests (Gemini 23, Claude 18, providers under the gateway 15, value schema 13, TLS ban 2). Each guard was broken once: 16 of 16 mutants caught.

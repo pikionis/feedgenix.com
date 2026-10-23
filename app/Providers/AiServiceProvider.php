@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Domain\AI\AiGateway;
 use App\Domain\AI\Contracts\AiClient;
 use App\Domain\AI\Pricing;
+use App\Domain\AI\Providers\AiEgressGuard;
 use App\Domain\AI\Providers\Providers;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -21,7 +22,13 @@ final class AiServiceProvider extends ServiceProvider
         $this->app->scoped(Providers::class, static fn (Application $app): Providers => Providers::fromConfig(
             (bool) config('ai.fake', false),
             $app->isProduction(),
+            $app->make(Pricing::class),
         ));
         $this->app->bind(AiClient::class, static fn (Application $app): AiClient => AiGateway::build($app));
+    }
+
+    public function boot(): void
+    {
+        AiEgressGuard::install();
     }
 }

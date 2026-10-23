@@ -211,7 +211,7 @@ describe('charging', function (): void {
 
         $response = generateAs($tenant, aiRequest($tenant, $reservation->id, AiPurpose::Mapping));
 
-        expect($response->model)->toBe('claude-sonnet-5-5')->and($fakes['gemini']->calls)->toBe([]);
+        expect($response->model)->toBe('claude-opus-5-5')->and($fakes['gemini']->calls)->toBe([]);
     });
 
     it('refuses a prompt that could pass the size its flat price holds for', function (): void {

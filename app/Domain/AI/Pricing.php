@@ -30,10 +30,12 @@ final readonly class Pricing
 
     /**
      * @param  array<string, array{input: BigDecimal, output: BigDecimal, cached_input: BigDecimal, max_input_tokens: int|null}>  $prices
+     * @param  array<string, list<string>>  $fallbacks  model => refusal fallbacks, every one of them priced
      */
     public function __construct(
         private array $prices,
         private BigDecimal $usdToEur,
+        private array $fallbacks = [],
     ) {}
 
     public static function fromConfig(): self
@@ -56,7 +58,28 @@ final readonly class Pricing
             ];
         }
 
-        return new self($prices, self::decimal('ai.usd_to_eur', config('ai.usd_to_eur'), positive: true));
+        // A refusal fallback bills its hop at its own model's rate: offered only when all are priced.
+        $fallbacks = [];
+        foreach ((array) config('ai.models', []) as $model => $entry) {
+            $chain = array_values(array_map(strval(...), (array) (((array) $entry)['refusal_fallbacks'] ?? [])));
+            if ($chain !== [] && isset($prices[(string) $model]) && array_diff($chain, array_keys($prices)) === []) {
+                $fallbacks[(string) $model] = $chain;
+            }
+        }
+
+        return new self($prices, self::decimal('ai.usd_to_eur', config('ai.usd_to_eur'), positive: true), $fallbacks);
+    }
+
+    /** @return list<string> the refusal fallbacks a call on $model may be served by */
+    public function refusalFallbacks(string $model): array
+    {
+        return $this->fallbacks[$model] ?? [];
+    }
+
+    /** @return array<string, list<string>> */
+    public function allRefusalFallbacks(): array
+    {
+        return $this->fallbacks;
     }
 
     /** Only a model with every price confirmed is callable. */
@@ -91,19 +114,23 @@ final readonly class Pricing
      * The most this call can be charged on $model: every input byte a token (a token never covers
      * less than one byte) plus framing, and every allowed output token used (thinking included, which
      * both providers count inside the output limit). A reservation that covers this can never be
-     * overrun.
+     * overrun. With refusal fallbacks every hop may bill in full, so their worst cases add up.
      *
      * @throws AiTerminal when the prompt could pass the size the flat price holds for
      */
     public function worstCase(AiRequest $request, string $model): int
     {
-        $price = $this->prices[$model] ?? throw $this->unpriced($model);
-        $inputTokens = $this->worstCaseInputTokens($request);
-        if ($price['max_input_tokens'] !== null && $inputTokens > $price['max_input_tokens']) {
-            throw new AiTerminal(AiTerminal::PROMPT_TOO_LARGE, 'The prompt is too large for one call; split the unit.');
+        $total = 0;
+        foreach ([$model, ...$this->refusalFallbacks($model)] as $hop) {
+            $price = $this->prices[$hop] ?? throw $this->unpriced($hop);
+            $inputTokens = $this->worstCaseInputTokens($request);
+            if ($price['max_input_tokens'] !== null && $inputTokens > $price['max_input_tokens']) {
+                throw new AiTerminal(AiTerminal::PROMPT_TOO_LARGE, 'The prompt is too large for one call; split the unit.');
+            }
+            $total += $this->charge($hop, new AiUsage(inputTokens: $inputTokens, outputTokens: $request->maxOutputTokens));
         }
 
-        return $this->charge($model, new AiUsage(inputTokens: $inputTokens, outputTokens: $request->maxOutputTokens));
+        return $total;
     }
 
     /** Items travel as JSON (AiRequest::JSON_FLAGS), so their bound is their encoded size, escapes included. */

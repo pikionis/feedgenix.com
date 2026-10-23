@@ -16,6 +16,14 @@ final class AiRetryable extends AiException
 
     public const string CIRCUIT_OPEN = 'circuit_open';
 
+    public const string SERVER_ERROR = 'server_error';
+
+    public const string OVERLOADED = 'overloaded';
+
+    public const string TIMEOUT = 'timeout';
+
+    public const string NETWORK = 'network';
+
     public function __construct(
         string $reason,
         string $message,

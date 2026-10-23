@@ -34,7 +34,10 @@ final readonly class Routes
         }
         $modelProviders = [];
         foreach ((array) config('ai.models', []) as $model => $entry) {
-            $modelProviders[(string) $model] = (string) ((array) $entry)['provider'];
+            $provider = ((array) $entry)['provider'] ?? null;
+            if (is_string($provider)) {
+                $modelProviders[(string) $model] = $provider;
+            }
         }
 
         return new self($routes, $modelProviders, $pricing, $providers);

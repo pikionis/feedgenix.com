@@ -28,8 +28,8 @@ return [
         ],
         'anthropic' => [
             'key' => env('ANTHROPIC_API_KEY'),
-            'base_url' => 'https://api.anthropic.com/v1',
-            'version' => '2023-06-01',
+            // The official SDK sets the API version and the auth header itself.
+            'base_url' => 'https://api.anthropic.com',
             'timeout' => 180,
         ],
     ],
@@ -38,11 +38,16 @@ return [
      * model id => its provider, prices (USD per 1M tokens; thinking tokens are billed as output),
      * the largest prompt the flat price holds for (null: no tier), and the date the price was read.
      * A null price means "not confirmed": the model is not callable.
+     *
+     * Claude only: `effort` (low … max; Opus 5.5 defaults to medium) and `refusal_fallbacks`, the
+     * models Anthropic may serve a policy-declined request with. They are sent only when every one
+     * of them is priced, because each hop is billed at its own model's rate.
      */
     'models' => [
         'gemini-2.5-pro' => ['provider' => 'gemini', 'input' => null, 'output' => null, 'cached_input' => null, 'max_input_tokens' => 200_000, 'priced_on' => null],
         'gemini-2.5-flash' => ['provider' => 'gemini', 'input' => null, 'output' => null, 'cached_input' => null, 'max_input_tokens' => null, 'priced_on' => null],
-        'claude-sonnet-5-5' => ['provider' => 'anthropic', 'input' => null, 'output' => null, 'cached_input' => null, 'max_input_tokens' => null, 'priced_on' => null],
+        'claude-opus-5-5' => ['provider' => 'anthropic', 'input' => null, 'output' => null, 'cached_input' => null, 'max_input_tokens' => null, 'priced_on' => null, 'effort' => 'medium', 'refusal_fallbacks' => ['claude-opus-5']],
+        'claude-opus-5' => ['provider' => 'anthropic', 'input' => null, 'output' => null, 'cached_input' => null, 'max_input_tokens' => null, 'priced_on' => null],
     ],
 
     /*
@@ -50,8 +55,8 @@ return [
      * quality), never for translation (ADR 0004).
      */
     'routes' => [
-        'mapping' => ['gemini-2.5-pro', 'claude-sonnet-5-5'],
-        'quality' => ['gemini-2.5-flash', 'claude-sonnet-5-5'],
+        'mapping' => ['gemini-2.5-pro', 'claude-opus-5-5'],
+        'quality' => ['gemini-2.5-flash', 'claude-opus-5-5'],
         'translation' => ['gemini-2.5-flash'],
     ],
 

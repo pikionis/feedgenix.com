@@ -166,17 +166,17 @@ describe('routing', function (): void {
         $response = generateAs($tenant, aiRequest($tenant, $reservation->id, AiPurpose::Mapping));
 
         expect($response->provider)->toBe('anthropic')
-            ->and($response->model)->toBe('claude-sonnet-5-5')
+            ->and($response->model)->toBe('claude-opus-5-5')
             ->and($fakes['gemini']->calls)->toHaveCount(4)
             ->and($fakes['anthropic']->calls)->toHaveCount(1)
             ->and(array_map(static fn (EngineCall $call): string => $call->model, engineCalls($tenant)))
-            ->toBe(['gemini-2.5-pro', 'gemini-2.5-pro', 'gemini-2.5-pro', 'gemini-2.5-pro', 'claude-sonnet-5-5']);
+            ->toBe(['gemini-2.5-pro', 'gemini-2.5-pro', 'gemini-2.5-pro', 'gemini-2.5-pro', 'claude-opus-5-5']);
     });
 
     it('never switches models for translation, even when its route lists another', function (): void {
         $tenant = aiWorkspace();
         $fakes = fakeAi();
-        config(['ai.routes.translation' => ['gemini-2.5-flash', 'claude-sonnet-5-5']]);
+        config(['ai.routes.translation' => ['gemini-2.5-flash', 'claude-opus-5-5']]);
         $reservation = reserveFor($tenant, 5_000_000);
         $fakes['gemini']->push(...failing(4));
 

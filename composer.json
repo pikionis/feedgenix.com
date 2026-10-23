@@ -12,6 +12,7 @@
     "license": "proprietary",
     "require": {
         "php": "^8.3",
+        "anthropic-ai/sdk": "^1.1",
         "bacon/bacon-qr-code": "^3.1",
         "brick/math": "^1.0",
         "dedoc/scramble": "^0.13.45",

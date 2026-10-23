@@ -27,7 +27,9 @@ use Illuminate\Support\Sleep;
 const TEST_PRICES = [
     'gemini-2.5-pro' => ['provider' => 'gemini', 'input' => '1.25', 'output' => '10', 'cached_input' => '0.3125', 'max_input_tokens' => 200_000, 'priced_on' => 'test'],
     'gemini-2.5-flash' => ['provider' => 'gemini', 'input' => '0.30', 'output' => '2.50', 'cached_input' => '0.075', 'max_input_tokens' => null, 'priced_on' => 'test'],
-    'claude-sonnet-5-5' => ['provider' => 'anthropic', 'input' => '3', 'output' => '15', 'cached_input' => '0.30', 'max_input_tokens' => null, 'priced_on' => 'test'],
+    'claude-opus-5-5' => ['provider' => 'anthropic', 'input' => '3', 'output' => '15', 'cached_input' => '0.30', 'max_input_tokens' => null, 'priced_on' => 'test'],
+    // A refusal fallback target, unpriced unless a test prices it.
+    'claude-opus-5' => ['provider' => 'anthropic', 'input' => null, 'output' => null, 'cached_input' => null, 'max_input_tokens' => null, 'priced_on' => null],
 ];
 
 /**

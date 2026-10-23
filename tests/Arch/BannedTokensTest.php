@@ -15,6 +15,8 @@ dataset('banned patterns', [
     'legacy classification column' => ['/\bid_type_produit\b/i', 'id_type_produit'],
     'legacy supplier names' => ['/\b(?:deindeal|galaxus|pertemba|competec|kuchinox|xinnomix|mathier|vidaxl|beliani|vonsalis)\b/i', 'Galaxus'],
     'hard-coded legacy language set' => ['/[\'"]fr[\'"]\s*,\s*[\'"]de[\'"]\s*,\s*[\'"]en[\'"]\s*,\s*[\'"]it[\'"]/i', "['fr', 'de', 'en', 'it']"],
+    // Legacy Support/Http/Tls switched verification off locally; TLS is always verified (ADR 0004).
+    'TLS verification turned off' => ['/withoutVerifying\s*\(|[\'"]verify[\'"]\s*=>\s*false|CURLOPT_SSL_VERIFY(?:PEER|HOST)\s*[\'"]?\s*(?:=>|,)\s*(?:false|0)/i', '->withoutVerifying()'],
 ]);
 
 /**
