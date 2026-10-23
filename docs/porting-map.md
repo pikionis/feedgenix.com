@@ -370,3 +370,11 @@ the scan, so a file it could not read had no record of its own.
 - **Dropped:** the free-tier Gemini path; the per-call key lookup from the database (keys are server configuration).
 - **Later:** the first call on each real key confirms the live request shapes (integrations phase).
 - **Proof:** 71 new tests (Gemini 23, Claude 18, providers under the gateway 15, value schema 13, TLS ban 2). Each guard was broken once: 16 of 16 mutants caught.
+
+### M3 · New — the canonical schema (`config/canonical_schema.php`, `Domain/Catalog/Schema`, ADR 0003)
+- **Replaces** the legacy `TARGET_FIELDS`: Channable's French column names times four fixed languages (`titre_fr` … `short_description_it`).
+- **Fields** with English keys, in six classes: golden (exactly the ten of rule 1), pass-through, translatable, composable, optimize-only and derived. Each has a value kind for validation, a label and a one-line description for the reviewer and the prompt, a default translation mode for localized fields (sizes are kept), and column-name hints in several languages.
+- **`field@locale`** (`FieldRef`): localized fields always name a BCP-47 locale from the registry, matched case-insensitively (`title@de-ch` → `title@de-CH`); golden, pass-through and derived fields never take one.
+- **Fail loud:** an unknown class or kind, a localized field without a mode, a shared field with one, or a key that is not lower snake case refuses to load.
+- **Later:** a workspace's own custom fields (`target_fields`, with the field-selection UI in M4).
+- **Proof:** 25 tests.
