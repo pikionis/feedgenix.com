@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Translation;
 
+use App\Domain\Feeds\Models\Feed;
 use App\Domain\Feeds\Models\PipelineRun;
 use App\Domain\Translation\Models\WorkUnit;
 
@@ -41,6 +42,9 @@ final class RunProgress
             $held > 0 => ['status' => 'held', 'counts' => [...$counts, 'hold_reasons' => count($holds)], 'warnings' => array_map(static fn (string $reason): array => ['code' => "held_{$reason}", 'message' => self::holdMessage($reason), 'count' => $held], $holds)],
             default => ['status' => 'done', 'stage' => 'done', 'counts' => $counts, 'finished_at' => now()],
         })->save();
+        if ($run->status === 'done') {
+            Feed::contentChanged($run->feed_id);
+        }
     }
 
     private static function holdMessage(string $reason): string

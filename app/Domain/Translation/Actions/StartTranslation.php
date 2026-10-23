@@ -79,6 +79,8 @@ final readonly class StartTranslation
         } else {
             $this->dispatcher->pump($feed->tenant_id);
         }
+        // Kept texts and the memory's repeats were written at once.
+        Feed::contentChanged($feed->id);
 
         return $run->refresh();
     }

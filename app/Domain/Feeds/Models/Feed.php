@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
  * @property string $source url or upload
  * @property string $status active or paused
  * @property array<string, mixed> $parse_options
+ * @property CarbonImmutable|null $content_changed_at when its exports last had something new to show
  * @property CarbonImmutable|null $created_at
  * @property-read FeedSource|null $feedSource
  * @property-read Import|null $latestImport
@@ -41,7 +42,14 @@ class Feed extends Model
     protected $attributes = [
         'status' => 'active',
         'parse_options' => '{}',
+        'content_changed_at' => null,
     ];
+
+    /** The catalogue changed in a way its exports show: the reconciler builds them again (ADR 0022). */
+    public static function contentChanged(int $feedId): void
+    {
+        self::query()->whereKey($feedId)->update(['content_changed_at' => now()]);
+    }
 
     /**
      * @return array<string, string>
@@ -51,6 +59,7 @@ class Feed extends Model
         return [
             'tenant_id' => 'integer',
             'parse_options' => 'array',
+            'content_changed_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

@@ -462,3 +462,15 @@ the scan, so a file it could not read had no record of its own.
   - The formatter ran on every description of every feed: a column transform a preset asks for.
 - **Dropped:** supplier-specific columns and normalisers (colour, composition, size, gender, the category dictionary, Title Case, four category levels, `_intel` headers, the canonical Competec description), the new-products feed, the global cache kill switch.
 - **Proof:** 28 tests (dialects 3, transforms and formatters 6, file checks 8, builds 11); 17 of 17 guard mutants caught.
+
+### M5 · `ExportDownloadController` (publicFeed, publicFeedGz, the kill switch), `BuildSupplierFeed` (shouldRebuild, the lock, the last-known-good copy) → `Http/Controllers/Public/FeedFileController`, `Domain/Export/{Jobs/BuildExportJob,Actions/*}`, `ops:reconcile` (ADR 0023)
+- **Kept:** prebuilt files only; gzip for clients that take it and a `.gz` URL; one build of a feed at a time; a rebuild when the translations are done.
+- **Fixed:**
+  - A request for a missing file queued a build (anyone with the URL could start work): requests never build; 503 with Retry-After until the first build.
+  - Tokens were stored and compared in plain text: hashed for lookup, encrypted for display, rotatable with a 72-hour grace.
+  - A per-supplier cache lock and a copied last-known-good file kept a half-written feed off the URL only in the good case: immutable builds and a pointer (ADR 0022); a unique job per profile; killed builds failed by the reconciler.
+  - Rebuilds waited for translations or a daily timer, so new prices waited too: every change to the catalogue (a new file, a finished run, a person's edit) builds the exports once nothing reads or translates the feed.
+  - No ETag (every poll downloaded the whole feed): the file's SHA-256, and 304.
+  - A TSV was served as `text/csv`; feed answers carried cookies and could be indexed: the dialect's type, no session, `noindex, nofollow`, rate limited per token.
+- **Dropped:** the global cache kill switch (pausing an export, or deleting it, is per profile), the admin download routes (the URLs are the download), the preview from the database (the published file is the preview).
+- **Proof:** 19 tests (URLs 8, API and reconciler 11); 19 of 19 guard mutants caught; the ops rehearsal checks that `/f/` reaches Laravel through nginx.

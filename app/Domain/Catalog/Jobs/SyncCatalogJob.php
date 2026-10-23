@@ -6,6 +6,7 @@ namespace App\Domain\Catalog\Jobs;
 
 use App\Domain\Catalog\CatalogSyncer;
 use App\Domain\Catalog\Events\CatalogSynced;
+use App\Domain\Feeds\Models\Feed;
 use App\Domain\Feeds\Models\PipelineRun;
 use App\Domain\Ingest\Models\Import;
 use App\Domain\Mapping\Models\Mapping;
@@ -65,6 +66,7 @@ final class SyncCatalogJob implements ShouldQueue
             'counts' => $result->counts,
             'warnings' => $result->warnings,
         ])->save();
+        Feed::contentChanged($run->feed_id);
         event(new CatalogSynced($run->id, $run->feed_id));
     }
 

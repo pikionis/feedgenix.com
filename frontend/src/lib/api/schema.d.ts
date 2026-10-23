@@ -101,6 +101,96 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds/{feed}/exports': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** The feed's exports with their URLs and builds, the presets, and the languages an export can hold */
+    get: operations['exports.index']
+    put?: never
+    /** Create an export (owner or admin): it gets its URLs at once and its first build is queued */
+    post: operations['exports.store']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/exports/{export}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete an export (owner or admin): its URLs stop working at once */
+    delete: operations['exports.destroy']
+    options?: never
+    head?: never
+    /**
+     * Change an export (owner or admin): its name, dialect, layout, languages, or pause it. A paused
+     *     export keeps serving its last build. 409 on a stale version
+     */
+    patch: operations['exports.update']
+    trace?: never
+  }
+  '/v1/exports/{export}/build': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Build it now (owner or admin). `allow_shrink` publishes a build the shrink guard would hold back */
+    post: operations['exports.build']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/exports/{export}/token': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** New URLs (owner or admin); the old ones keep working for the grace period */
+    post: operations['exports.rotate']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/exports/{export}/builds/{artifact}/publish': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Serve an earlier build again (owner or admin) */
+    post: operations['exports.publish']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/feeds': {
     parameters: {
       query?: never
@@ -790,6 +880,101 @@ export interface components {
     CompleteUploadRequest: {
       /** @description The SHA-256 of the whole file, when the client computed it: a corrupted upload is caught here. */
       sha256?: string | null
+    }
+    /** ExportProfileResource */
+    ExportProfileResource: {
+      id: number
+      name: string
+      preset: string
+      preset_label: string
+      /** @enum {string} */
+      dialect: 'csv' | 'tsv'
+      /** @enum {string} */
+      layout: 'wide' | 'per_language'
+      locales: string[]
+      /** @enum {string} */
+      status: 'active' | 'paused'
+      /** @description Send it back with a change: a save on an older version is refused (409). */
+      version: number
+      /** @description The public URLs, one per file; the .gz form serves the same build compressed. */
+      urls: {
+        file: string
+        locale: string | null
+        url: string
+        gz_url: string
+      }[]
+      /** @description Until then the URLs before the last new token still work. */
+      previous_urls_until: string | null
+      /** @description The build the URLs serve. */
+      published: {
+        id: number
+        /** @enum {string} */
+        status: 'building' | 'published' | 'superseded' | 'unchanged' | 'rejected' | 'failed'
+        rows: number
+        files: {
+          name: string
+          locale: string | null
+          rows: number
+          bytes: number
+          gz_bytes: number
+        }[]
+        report: {
+          left_out: number
+          missing: {
+            [key: string]: {
+              [key: string]: number
+            }
+          }
+          examples: {
+            file: string
+            sku: string
+            column: string
+            reason: string
+          }[]
+        }
+        failure_reason: string | null
+        failure_message: string | null
+        created_at: string | null
+        published_at: string | null
+      } | null
+      /** @description The latest attempt, published or not (rejected by the shrink guard, failed, building). */
+      latest: {
+        id: number
+        /** @enum {string} */
+        status: 'building' | 'published' | 'superseded' | 'unchanged' | 'rejected' | 'failed'
+        rows: number
+        files: {
+          name: string
+          locale: string | null
+          rows: number
+          bytes: number
+          gz_bytes: number
+        }[]
+        report: {
+          left_out: number
+          missing: {
+            [key: string]: {
+              [key: string]: number
+            }
+          }
+          examples: {
+            file: string
+            sku: string
+            column: string
+            reason: string
+          }[]
+        }
+        failure_reason: string | null
+        failure_message: string | null
+        created_at: string | null
+        published_at: string | null
+      } | null
+      /** @description Earlier builds whose files are kept: publishing one serves it again at once. */
+      earlier: {
+        id: number
+        rows: number
+        published_at: string | null
+      }[]
     }
     /** FeedResource */
     FeedResource: {
@@ -1646,6 +1831,237 @@ export interface operations {
         }
       }
       401: components['responses']['AuthenticationException']
+    }
+  }
+  'exports.index': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            exports: components['schemas']['ExportProfileResource'][]
+            presets: {
+              key: string
+              label: string
+              dialects: ('csv' | 'tsv')[]
+              layouts: ('wide' | 'per_language')[]
+            }[]
+            locales: {
+              code: string
+              name: string
+            }[]
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'exports.store': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          name: string
+          preset: string
+          /** @enum {string} */
+          dialect: 'csv' | 'tsv'
+          /** @enum {string} */
+          layout: 'wide' | 'per_language'
+          locales: string[]
+        }
+      }
+    }
+    responses: {
+      /** @description `ExportProfileResource` */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            export: components['schemas']['ExportProfileResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'exports.destroy': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The export ID */
+        export: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description No content */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'exports.update': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The export ID */
+        export: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          version: number
+          name?: string
+          /** @enum {string} */
+          dialect?: 'csv' | 'tsv'
+          /** @enum {string} */
+          layout?: 'wide' | 'per_language'
+          locales?: string[]
+          /** @enum {string} */
+          status?: 'active' | 'paused'
+        }
+      }
+    }
+    responses: {
+      /** @description `ExportProfileResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            export: components['schemas']['ExportProfileResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'exports.build': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The export ID */
+        export: number
+      }
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        'application/json': {
+          allow_shrink?: boolean
+        }
+      }
+    }
+    responses: {
+      /** @description `ExportProfileResource` */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            export: components['schemas']['ExportProfileResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'exports.rotate': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The export ID */
+        export: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `ExportProfileResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            export: components['schemas']['ExportProfileResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'exports.publish': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The export ID */
+        export: number
+        /** @description The artifact ID */
+        artifact: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `ExportProfileResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            export: components['schemas']['ExportProfileResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
     }
   }
   'feeds.index': {

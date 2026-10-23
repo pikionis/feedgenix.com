@@ -229,6 +229,509 @@
                 }
             }
         },
+        "/v1/feeds/{feed}/exports": {
+            "get": {
+                "operationId": "exports.index",
+                "summary": "The feed's exports with their URLs and builds, the presets, and the languages an export can hold",
+                "tags": [
+                    "Export"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "exports": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ExportProfileResource"
+                                            }
+                                        },
+                                        "presets": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string"
+                                                    },
+                                                    "label": {
+                                                        "type": "string"
+                                                    },
+                                                    "dialects": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "csv",
+                                                                "tsv"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "layouts": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "wide",
+                                                                "per_language"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "required": [
+                                                    "key",
+                                                    "label",
+                                                    "dialects",
+                                                    "layouts"
+                                                ]
+                                            }
+                                        },
+                                        "locales": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "code": {
+                                                        "type": "string"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "code",
+                                                    "name"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "exports",
+                                        "presets",
+                                        "locales"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "exports.store",
+                "summary": "Create an export (owner or admin): it gets its URLs at once and its first build is queued",
+                "tags": [
+                    "Export"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 80
+                                    },
+                                    "preset": {
+                                        "type": "string",
+                                        "maxLength": 32
+                                    },
+                                    "dialect": {
+                                        "type": "string",
+                                        "enum": [
+                                            "csv",
+                                            "tsv"
+                                        ]
+                                    },
+                                    "layout": {
+                                        "type": "string",
+                                        "enum": [
+                                            "wide",
+                                            "per_language"
+                                        ]
+                                    },
+                                    "locales": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "maxLength": 16
+                                        },
+                                        "minItems": 1,
+                                        "maxItems": 50
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "preset",
+                                    "dialect",
+                                    "layout",
+                                    "locales"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`ExportProfileResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "export": {
+                                            "$ref": "#/components/schemas/ExportProfileResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "export"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/exports/{export}": {
+            "patch": {
+                "operationId": "exports.update",
+                "summary": "Change an export (owner or admin): its name, dialect, layout, languages, or pause it. A paused\nexport keeps serving its last build. 409 on a stale version",
+                "tags": [
+                    "Export"
+                ],
+                "parameters": [
+                    {
+                        "name": "export",
+                        "in": "path",
+                        "required": true,
+                        "description": "The export ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "version": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 80
+                                    },
+                                    "dialect": {
+                                        "type": "string",
+                                        "enum": [
+                                            "csv",
+                                            "tsv"
+                                        ]
+                                    },
+                                    "layout": {
+                                        "type": "string",
+                                        "enum": [
+                                            "wide",
+                                            "per_language"
+                                        ]
+                                    },
+                                    "locales": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "maxLength": 16
+                                        },
+                                        "minItems": 1,
+                                        "maxItems": 50
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "active",
+                                            "paused"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "version"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ExportProfileResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "export": {
+                                            "$ref": "#/components/schemas/ExportProfileResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "export"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "exports.destroy",
+                "summary": "Delete an export (owner or admin): its URLs stop working at once",
+                "tags": [
+                    "Export"
+                ],
+                "parameters": [
+                    {
+                        "name": "export",
+                        "in": "path",
+                        "required": true,
+                        "description": "The export ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/exports/{export}/build": {
+            "post": {
+                "operationId": "exports.build",
+                "summary": "Build it now (owner or admin). `allow_shrink` publishes a build the shrink guard would hold back",
+                "tags": [
+                    "Export"
+                ],
+                "parameters": [
+                    {
+                        "name": "export",
+                        "in": "path",
+                        "required": true,
+                        "description": "The export ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "allow_shrink": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "`ExportProfileResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "export": {
+                                            "$ref": "#/components/schemas/ExportProfileResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "export"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/exports/{export}/token": {
+            "post": {
+                "operationId": "exports.rotate",
+                "summary": "New URLs (owner or admin); the old ones keep working for the grace period",
+                "tags": [
+                    "Export"
+                ],
+                "parameters": [
+                    {
+                        "name": "export",
+                        "in": "path",
+                        "required": true,
+                        "description": "The export ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ExportProfileResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "export": {
+                                            "$ref": "#/components/schemas/ExportProfileResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "export"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/exports/{export}/builds/{artifact}/publish": {
+            "post": {
+                "operationId": "exports.publish",
+                "summary": "Serve an earlier build again (owner or admin)",
+                "tags": [
+                    "Export"
+                ],
+                "parameters": [
+                    {
+                        "name": "export",
+                        "in": "path",
+                        "required": true,
+                        "description": "The export ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "artifact",
+                        "in": "path",
+                        "required": true,
+                        "description": "The artifact ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ExportProfileResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "export": {
+                                            "$ref": "#/components/schemas/ExportProfileResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "export"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/feeds": {
             "get": {
                 "operationId": "feeds.index",
@@ -2608,6 +3111,418 @@
                     }
                 },
                 "title": "CompleteUploadRequest"
+            },
+            "ExportProfileResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "preset": {
+                        "type": "string"
+                    },
+                    "preset_label": {
+                        "type": "string"
+                    },
+                    "dialect": {
+                        "type": "string",
+                        "enum": [
+                            "csv",
+                            "tsv"
+                        ]
+                    },
+                    "layout": {
+                        "type": "string",
+                        "enum": [
+                            "wide",
+                            "per_language"
+                        ]
+                    },
+                    "locales": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "paused"
+                        ]
+                    },
+                    "version": {
+                        "type": "integer",
+                        "description": "Send it back with a change: a save on an older version is refused (409)."
+                    },
+                    "urls": {
+                        "type": "array",
+                        "description": "The public URLs, one per file; the .gz form serves the same build compressed.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "file": {
+                                    "type": "string"
+                                },
+                                "locale": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "url": {
+                                    "type": "string"
+                                },
+                                "gz_url": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "file",
+                                "locale",
+                                "url",
+                                "gz_url"
+                            ]
+                        }
+                    },
+                    "previous_urls_until": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Until then the URLs before the last new token still work."
+                    },
+                    "published": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "The build the URLs serve.",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "building",
+                                    "published",
+                                    "superseded",
+                                    "unchanged",
+                                    "rejected",
+                                    "failed"
+                                ]
+                            },
+                            "rows": {
+                                "type": "integer"
+                            },
+                            "files": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "locale": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "rows": {
+                                            "type": "integer"
+                                        },
+                                        "bytes": {
+                                            "type": "integer"
+                                        },
+                                        "gz_bytes": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "name",
+                                        "locale",
+                                        "rows",
+                                        "bytes",
+                                        "gz_bytes"
+                                    ]
+                                }
+                            },
+                            "report": {
+                                "type": "object",
+                                "properties": {
+                                    "left_out": {
+                                        "type": "integer"
+                                    },
+                                    "missing": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    },
+                                    "examples": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "file": {
+                                                    "type": "string"
+                                                },
+                                                "sku": {
+                                                    "type": "string"
+                                                },
+                                                "column": {
+                                                    "type": "string"
+                                                },
+                                                "reason": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "file",
+                                                "sku",
+                                                "column",
+                                                "reason"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "left_out",
+                                    "missing",
+                                    "examples"
+                                ]
+                            },
+                            "failure_reason": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "failure_message": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "created_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "published_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "status",
+                            "rows",
+                            "files",
+                            "report",
+                            "failure_reason",
+                            "failure_message",
+                            "created_at",
+                            "published_at"
+                        ]
+                    },
+                    "latest": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "The latest attempt, published or not (rejected by the shrink guard, failed, building).",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "building",
+                                    "published",
+                                    "superseded",
+                                    "unchanged",
+                                    "rejected",
+                                    "failed"
+                                ]
+                            },
+                            "rows": {
+                                "type": "integer"
+                            },
+                            "files": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "locale": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "rows": {
+                                            "type": "integer"
+                                        },
+                                        "bytes": {
+                                            "type": "integer"
+                                        },
+                                        "gz_bytes": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "name",
+                                        "locale",
+                                        "rows",
+                                        "bytes",
+                                        "gz_bytes"
+                                    ]
+                                }
+                            },
+                            "report": {
+                                "type": "object",
+                                "properties": {
+                                    "left_out": {
+                                        "type": "integer"
+                                    },
+                                    "missing": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    },
+                                    "examples": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "file": {
+                                                    "type": "string"
+                                                },
+                                                "sku": {
+                                                    "type": "string"
+                                                },
+                                                "column": {
+                                                    "type": "string"
+                                                },
+                                                "reason": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "file",
+                                                "sku",
+                                                "column",
+                                                "reason"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "left_out",
+                                    "missing",
+                                    "examples"
+                                ]
+                            },
+                            "failure_reason": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "failure_message": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "created_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "published_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "status",
+                            "rows",
+                            "files",
+                            "report",
+                            "failure_reason",
+                            "failure_message",
+                            "created_at",
+                            "published_at"
+                        ]
+                    },
+                    "earlier": {
+                        "type": "array",
+                        "description": "Earlier builds whose files are kept: publishing one serves it again at once.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "rows": {
+                                    "type": "integer"
+                                },
+                                "published_at": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "rows",
+                                "published_at"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "preset",
+                    "preset_label",
+                    "dialect",
+                    "layout",
+                    "locales",
+                    "status",
+                    "version",
+                    "urls",
+                    "previous_urls_until",
+                    "published",
+                    "latest",
+                    "earlier"
+                ],
+                "title": "ExportProfileResource"
             },
             "FeedResource": {
                 "type": "object",

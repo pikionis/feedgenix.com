@@ -269,6 +269,8 @@ expect_ok "GET / is the release's pre-rendered home page" \
   test "$(curl_site "https://$DOMAIN/" | sha256sum)" == "$(tar -xzOf "$artifact" ./frontend/build/client/index.html | sha256sum)"
 expect_ok "an app route gets the SPA shell" test "$(status_of /app/settings)" == 200
 expect_ok "a missing asset is a 404, not the SPA shell" test "$(status_of /assets/missing.js)" == 404
+expect_ok "a feed URL reaches Laravel: an unknown token is a 404, not the SPA shell"   test "$(status_of /f/0000000000000000000000000000000000000000/products.csv)" == 404
+expect_output "a feed URL asks search engines to stay away" '^x-robots-tag: noindex, nofollow'   curl_site -I "https://$DOMAIN/f/0000000000000000000000000000000000000000/products.csv"
 expect_output "responses carry HSTS" '^strict-transport-security: max-age=31536000' curl_site -I "https://$DOMAIN/"
 if [[ $mode == shared ]]; then
   expect_output "the beta asks search engines to stay away" '^x-robots-tag: noindex' curl_site -I "https://$DOMAIN/"

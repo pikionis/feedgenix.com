@@ -24,6 +24,7 @@ const PUBLIC_ROUTES = [
     'auth/google/redirect' => 'Google sign-in',
     'auth/google/callback' => 'Google sign-in',
     'sanctum/csrf-cookie' => 'the CSRF cookie the SPA needs before its first POST',
+    'f/{token}/{file}' => 'feed URLs that sales channels pull: the 40-character token is the key (rate limited, noindex)',
 ];
 
 /** @return list<RouteDefinition> */

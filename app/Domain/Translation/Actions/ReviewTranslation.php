@@ -7,6 +7,7 @@ namespace App\Domain\Translation\Actions;
 use App\Domain\Catalog\Models\Product;
 use App\Domain\Catalog\Models\ProductText;
 use App\Domain\Catalog\Schema\CanonicalSchema;
+use App\Domain\Feeds\Models\Feed;
 use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Domain\Translation\Exceptions\SourceChanged;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,7 @@ final readonly class ReviewTranslation
                 'created_at' => now(), 'updated_at' => now(),
             ]], ['tenant_id', 'field', 'source_locale', 'target_locale', 'source_hash'], ['value', 'prompt', 'model', 'updated_at']);
         });
+        Feed::contentChanged($product->feed_id);
     }
 
     /**
@@ -82,6 +84,7 @@ final readonly class ReviewTranslation
                 'created_at' => now(), 'updated_at' => now(),
             ]);
         });
+        Feed::contentChanged($product->feed_id);
     }
 
     /** Hand the text back to the AI: the next run translates it again, without the memory's answer. */
@@ -99,6 +102,7 @@ final readonly class ReviewTranslation
             }
             $target->delete();
         });
+        Feed::contentChanged($product->feed_id);
     }
 
     /** A text field, and a language of the workspace. */

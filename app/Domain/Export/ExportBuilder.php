@@ -72,7 +72,7 @@ final readonly class ExportBuilder
         $filled = $this->filled($profile->feed_id);
         $report = new ExportReport;
         $files = [];
-        foreach ($this->files($profile, $dialect) as $name => $locale) {
+        foreach (FeedUrls::files($profile) as $name => $locale) {
             $columns = $this->plan->columns($profile, $filled, $locale);
             $rows = $this->write($scratch.'/'.$name, $profile, $columns, $dialect, $report, $name);
             FileChecks::rows($scratch.'/'.$name, $columns, $dialect, $rows);
@@ -120,20 +120,6 @@ final readonly class ExportBuilder
         $this->prune($profile);
 
         return $artifact;
-    }
-
-    /** @return array<string, string|null> file name => its language (null: every language, in columns) */
-    private function files(ExportProfile $profile, Dialect $dialect): array
-    {
-        if ($profile->layout === 'wide') {
-            return ["products.{$dialect->extension()}" => null];
-        }
-        $files = [];
-        foreach ($profile->locales as $locale) {
-            $files["products-{$locale}.{$dialect->extension()}"] = $locale;
-        }
-
-        return $files;
     }
 
     /** @return list<string> the fields the feed's approved mapping fills */

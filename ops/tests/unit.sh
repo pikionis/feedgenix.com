@@ -152,6 +152,8 @@ check "host.conf sources back to the same values (a URL with & and ? survives)" 
 render "$OPS/templates/nginx/feedgenix.conf" >"$WORK/site.conf"
 check "the vhost serves the release through the current symlink, uncached" \
   bash -c "grep -q 'root /srv/feedgenix/current/frontend/build/client;' '$WORK/site.conf' && grep -q 'open_file_cache off;' '$WORK/site.conf'"
+check "feed URLs (/f/) reach Laravel, not the SPA shell" \
+  bash -c "grep -A2 'location ^~ /f/ {' '$WORK/site.conf' | grep -q 'include /etc/nginx/snippets/feedgenix-php.conf;'"
 render "$OPS/templates/nginx/feedgenix-php.conf" >"$WORK/php.conf"
 check "PHP runs the resolved release path (\$realpath_root) on FeedGenix's own socket" \
   bash -c "grep -q 'SCRIPT_FILENAME \$realpath_root/index.php;' '$WORK/php.conf' && grep -q 'fastcgi_pass unix:/run/feedgenix-php/php-fpm.sock;' '$WORK/php.conf'"

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\App\ExportController;
 use App\Http\Controllers\App\FeedController;
 use App\Http\Controllers\App\FeedImportController;
 use App\Http\Controllers\App\MappingController;
@@ -104,6 +105,15 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::put('/products/{product}/texts/{field}/{locale}', [ProductTextController::class, 'update'])->name('product-texts.update');
         Route::post('/products/{product}/texts/{field}/{locale}/approve', [ProductTextController::class, 'approve'])->name('product-texts.approve');
         Route::delete('/products/{product}/texts/{field}/{locale}', [ProductTextController::class, 'destroy'])->name('product-texts.destroy');
+
+        // Exports and their feed URLs (M5).
+        Route::get('/feeds/{feed}/exports', [ExportController::class, 'index'])->name('exports.index');
+        Route::post('/feeds/{feed}/exports', [ExportController::class, 'store'])->name('exports.store');
+        Route::patch('/exports/{export}', [ExportController::class, 'update'])->name('exports.update');
+        Route::delete('/exports/{export}', [ExportController::class, 'destroy'])->name('exports.destroy');
+        Route::post('/exports/{export}/build', [ExportController::class, 'build'])->name('exports.build');
+        Route::post('/exports/{export}/token', [ExportController::class, 'rotate'])->name('exports.rotate');
+        Route::post('/exports/{export}/builds/{artifact}/publish', [ExportController::class, 'publish'])->name('exports.publish');
         Route::get('/imports/{import}', [FeedImportController::class, 'show'])->name('imports.show');
         Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->name('imports.reread');
     });
