@@ -7,6 +7,7 @@ namespace App\Domain\Ingest;
 use App\Domain\Billing\Entitlements;
 use App\Domain\Feeds\Models\FeedSource;
 use App\Domain\Ingest\Encoding\DetectedEncoding;
+use App\Domain\Ingest\Events\ImportProfiled;
 use App\Domain\Ingest\Exceptions\UnreadableFeed;
 use App\Domain\Ingest\Exceptions\UnreadableReason;
 use App\Domain\Ingest\Fetch\Fetcher;
@@ -197,6 +198,9 @@ final readonly class ImportRunner
                 'warnings' => $warnings->all(),
             ]);
         });
+
+        // After the commit: the next stages read the stored profile.
+        event(new ImportProfiled($import->id));
     }
 
     /** The received bytes, kept once per workspace and content (imports/{tenant}/{ab}/{sha256}). */

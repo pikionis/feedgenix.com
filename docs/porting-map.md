@@ -415,3 +415,16 @@ the scan, so a file it could not read had no record of its own.
 - **Bounds:** a perfect AI scores 100% on every case, in every script (the pipeline accepts every right answer; D8); a hostile AI that proposes every column into every text and golden field never gets a protected column into text, nor a text column into a golden field.
 - **`mapping:eval --ai --workspace=… [--record]`:** asks the configured model too, through the gateway, paid from that workspace's credits; `--record` keeps the answers so a prompt or model change can be compared (ADR 0004).
 - **Proof:** 6 tests.
+
+### M4 · `SmartScanner` (scan, scanChunk, finalizeChunkedScan, invalidateStaleTranslations, composeFromRecipe, disappear guard, isEffectivelyEmpty) → `Domain/Catalog/CatalogSyncer`, `products`, `product_texts`, `pipeline_runs` (ADR 0019)
+- **Kept:** compositions from recipes; stale translations when their source changes; the disappear guard (30% of a catalogue over 50); manual translations never overwritten.
+- **Fixed:**
+  - **D9** (identical texts in several languages unset everywhere but one, short ones lost): language columns are kept as mapped.
+  - **D10** (the parallel path's disappear step had no guard): one path; a failed sync never reaches the removal step.
+  - The merge kept every old value for ever: a blanked cell removes the value, and its translations become stale.
+  - `empty()` dropped a literal "0"; placeholders like "n/a" were stored as text and translated: golden values are kept exactly, and texts that are only placeholders or empty markup are not texts.
+  - Two `isEffectivelyEmpty` that disagreed (placeholders vs HTML): one, `EmptyValue`, knowing both.
+  - N+1 lookups per row and a chunk path that re-parsed the whole file per chunk: chunks of 500 with one lookup and bulk upserts each.
+  - Chunk checkpoints that resumed stale runs: no checkpoints; the database rows are the state.
+- **Dropped:** the supplier-specific colour guard and enrichment, category brand stripping and taxonomy cleanup (they come back as general normalisers in M12, if at all); the identical-text language analysis.
+- **Proof:** 13 tests; 7 of 7 guard mutants caught.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Mapping\Actions;
 
+use App\Domain\Mapping\Events\MappingApproved;
 use App\Domain\Mapping\Exceptions\MappingChanged;
 use App\Domain\Mapping\Exceptions\MappingIncomplete;
 use App\Domain\Mapping\Models\Mapping;
@@ -35,6 +36,7 @@ final class ApproveMapping
         }
 
         $mapping->forceFill(['status' => 'approved', 'approved_by' => $by->id, 'approved_at' => now()])->save();
+        event(new MappingApproved($mapping->id));
 
         return $mapping;
     }
