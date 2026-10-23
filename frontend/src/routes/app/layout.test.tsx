@@ -1,7 +1,7 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { expect, it } from 'vitest'
-import { apiUrl, sessionUser } from '~/test/fixtures'
+import { apiUrl, sessionUser, workspace } from '~/test/fixtures'
 import { renderRoutes } from '~/test/render'
 import { server } from '~/test/server'
 import AppLayout, { clientLoader } from './layout'
@@ -36,7 +36,10 @@ it('sends a visitor without a session to sign in', async () => {
 })
 
 it('shows the workspace to a signed-in member', async () => {
-  server.use(http.get(apiUrl('/v1/auth/user'), () => HttpResponse.json({ user: sessionUser() })))
+  server.use(
+    http.get(apiUrl('/v1/auth/user'), () => HttpResponse.json({ user: sessionUser() })),
+    http.get(apiUrl('/v1/workspace'), () => HttpResponse.json(workspace())),
+  )
 
   renderApp('/app')
 
@@ -45,9 +48,31 @@ it('shows the workspace to a signed-in member', async () => {
   expect(screen.queryByText(/Verify your address/)).not.toBeInTheDocument()
 })
 
+it('has one navigation and one sign-out, with the plan and its usage', async () => {
+  server.use(
+    http.get(apiUrl('/v1/auth/user'), () => HttpResponse.json({ user: sessionUser() })),
+    http.get(apiUrl('/v1/workspace'), () => HttpResponse.json(workspace())),
+  )
+
+  renderApp('/app')
+
+  const nav = await screen.findByRole('navigation', { name: 'Workspace' })
+  expect(
+    within(nav)
+      .getAllByRole('link')
+      .map((link) => link.textContent),
+  ).toEqual(['Overview', 'Feeds', 'Settings'])
+  expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(1)
+  expect(screen.getByText('Free plan')).toBeInTheDocument()
+  // The fixture's Free plan: 0 of 1 feed, 0 of 1 language.
+  const feedsUsed = await screen.findByText('Feeds', { selector: 'dt' })
+  expect(feedsUsed.nextElementSibling).toHaveTextContent('0 of 1')
+})
+
 it('asks an unverified member to verify the address', async () => {
   server.use(
     http.get(apiUrl('/v1/auth/user'), () => HttpResponse.json({ user: sessionUser({ email_verified: false }) })),
+    http.get(apiUrl('/v1/workspace'), () => HttpResponse.json(workspace())),
   )
 
   renderApp('/app')

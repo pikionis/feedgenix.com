@@ -54,6 +54,14 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Tools export' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'What we read' })).toBeVisible()
 
+  // The six stages: import and analysis done, mapping next, nothing later pretending to run.
+  const stages = page.getByRole('list', { name: 'Pipeline' }).getByRole('listitem')
+  await expect(stages).toHaveCount(6)
+  await expect(stages.nth(0)).toContainText('Done')
+  await expect(stages.nth(1)).toContainText('Done')
+  await expect(stages.nth(2)).toContainText('Next · coming soon')
+  await expect(stages.nth(5)).toContainText('Coming soon')
+
   const columns = page.getByRole('table', { name: 'Columns' })
   await expect(columns.getByRole('row', { name: /^SKU/ })).toContainText('Code')
   await expect(columns.getByRole('row', { name: /^EAN/ })).toContainText('GTIN')

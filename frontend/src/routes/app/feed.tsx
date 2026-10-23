@@ -10,6 +10,7 @@ import { feedErrorMessage } from '~/features/feeds/errors'
 import { ImportHistory } from '~/features/feeds/ImportHistory'
 import { ImportProfile } from '~/features/feeds/ImportProfile'
 import { formatWait, formatWhen } from '~/features/feeds/labels'
+import { PipelineStages } from '~/features/feeds/PipelineStages'
 import { feedQuery, feedsQuery, importQuery, isRunning, NotFound } from '~/features/feeds/queries'
 import { ReadingOptionsForm } from '~/features/feeds/ReadingOptionsForm'
 import { StatusBadge } from '~/features/feeds/StatusBadge'
@@ -93,6 +94,10 @@ function FeedView({ feed }: { feed: Feed }) {
           </div>
         </div>
       </div>
+
+      <Card>
+        <PipelineStages feed={feed} />
+      </Card>
 
       {latest === null && feed.source === 'upload' && (
         <Card className="flex flex-col items-start gap-3">
