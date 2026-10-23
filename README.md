@@ -4,9 +4,9 @@ AI feed intelligence for e-commerce catalogues. Connect a product feed, review t
 translate it into the languages you choose and publish a feed URL your channels can pull. Prices,
 stock and barcodes pass through untouched.
 
-> Status: milestone M1: identity, tenancy, entitlements, and the scripts for the beta server
-> (`ops/`, not yet run on it). See `docs/adr/` for the decisions and `docs/porting-map.md` for the
-> build order.
+> Status: private beta on staging. Done: identity, tenancy, entitlements, ingest, the AI gateway and
+> credits, the AI mapping (M1–M3). In progress (M4): the catalogue, the translation plan and engine,
+> and their pages. See `docs/adr/` for the decisions and `docs/porting-map.md` for the build order.
 
 ## Stack
 - **Backend:** Laravel 13, PHP 8.3+, PostgreSQL 18 (+ pgvector), Redis on servers, Sanctum.
@@ -29,6 +29,8 @@ cp .env.example .env            # set DB_PASSWORD
 php artisan key:generate
 php artisan migrate
 php artisan serve               # http://127.0.0.1:8000
+php artisan queue:work          # imports, catalogue reads and translations run on the queue
+php artisan schedule:work       # ops:reconcile every minute: leases, holds, waiting files
 
 # frontend (proxies /api to :8000, same origin)
 cd frontend

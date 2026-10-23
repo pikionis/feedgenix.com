@@ -533,6 +533,27 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds/{feed}/catalog/sync': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Read the feed's current file into the catalogue again (owner or admin): after a read that
+     *     failed, or for a mapping approved before the catalogue existed. A run still working is left
+     *     to finish. 409 when the current columns have no approved mapping
+     */
+    post: operations['translation-plan.sync']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/security/two-factor': {
     parameters: {
       query?: never
@@ -751,6 +772,16 @@ export interface components {
        * @enum {string|null}
        */
       mapping_status: 'draft' | 'approved' | null
+      /** @description The latest run through the catalogue and the translation: null before the mapping is first approved. */
+      run: {
+        /** @enum {string} */
+        stage: 'sync' | 'plan' | 'translate' | 'export' | 'done'
+        /** @enum {string} */
+        status: 'queued' | 'running' | 'awaiting_decision' | 'held' | 'done' | 'failed'
+        /** @description Texts this run sends to AI, and how many of them are done. */
+        texts_planned: number
+        texts_done: number
+      } | null
       created_at: string | null
     }
     /**
@@ -1087,25 +1118,37 @@ export interface components {
       /** @description Send it back with a change: a save on an older version is refused (409). */
       version: number
       /** @description False until someone saves it: these are the defaults. */
-      saved: string
-      fields: string
+      saved: boolean
+      /** @description Each text field the feed has, with the languages its products provide it in. */
+      fields: {
+        field: string
+        label: string
+        /** @enum {string} */
+        mode: 'translate' | 'keep' | 'skip'
+        sources: {
+          locale: string
+          products: number
+        }[]
+      }[]
       target_locales: string[]
       workspace_locales: {
         code: string
         name: string
       }[]
+      /**
+       * @description Per field and target language: the texts with no fresh translation yet, and how many
+       *     of those are repeats the translation memory covers at no cost.
+       */
       work: {
         field: string
         target_locale: string
         /** @enum {string} */
         mode: 'translate' | 'keep'
-        /** @description Texts with no fresh translation yet. */
-        texts: string
-        /** @description Of those, repeats the translation memory covers at no cost. */
-        memory: string
+        texts: number
+        memory: number
       }[]
       estimate: {
-        available: string
+        available: boolean
         /** @description Why there is no estimate: ai_disabled, unpriced_model, provider_unavailable. */
         unavailable_reason: string | null
         about_credits: number | null
@@ -2266,7 +2309,9 @@ export interface operations {
         'application/json': {
           version: number
           /** @description field => translate, keep or skip */
-          fields: ('translate' | 'keep' | 'skip')[]
+          fields: {
+            [key: string]: 'translate' | 'keep' | 'skip'
+          }
           /** @description BCP-47 codes of the workspace's languages. */
           target_locales: string[]
         }
@@ -2321,6 +2366,46 @@ export interface operations {
       401: components['responses']['AuthenticationException']
       404: components['responses']['ModelNotFoundException']
       422: components['responses']['ValidationException']
+    }
+  }
+  'translation-plan.sync': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `TranslationPlanResource` */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            translation_plan: components['schemas']['TranslationPlanResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @constant */
+            error: 'mapping_not_approved'
+            /** @constant */
+            message: 'Approve the mapping first: the products are read through it.'
+          }
+        }
+      }
     }
   }
   'two-factor.show': {

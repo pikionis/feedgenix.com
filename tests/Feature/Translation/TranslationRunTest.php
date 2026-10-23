@@ -7,6 +7,7 @@ use App\Domain\AI\Data\AiRequest;
 use App\Domain\AI\Exceptions\AiRetryable;
 use App\Domain\Catalog\Models\ProductText;
 use App\Domain\Credits\Actions\GrantCredits;
+use App\Domain\Ingest\Models\Import;
 use App\Domain\Translation\Models\TranslationMemory;
 use App\Domain\Translation\Models\WorkUnit;
 use App\Domain\Translation\UnitExecutor;
@@ -40,6 +41,8 @@ it('translates the plan through the gateway, keeps the kept fields, and finishes
         ->and($titles['AO-1001'])->toBe(['value' => '[en] Wanderschuh aus Leder', 'status' => 'ready', 'origin' => 'ai'])
         ->and(targetsOf($tenant, 'fr', 'size')['AO-1002'])->toBe(['value' => 'M', 'status' => 'ready', 'origin' => 'source'])
         ->and(unitStatuses($tenant))->toBe(['done' => count($fakes['gemini']->calls)])
+        ->and($plan['run']['counts']['texts_done'])->toBe($plan['run']['counts']['planned'])
+        ->and($plan['run']['counts']['planned'])->toBeGreaterThan(5)
         ->and(walletOf($tenant)?->reserved)->toBe(0)
         ->and(tenancy()->run($tenant->id, fn (): int => DB::table('usage_products')->count()))->toBe(5);
 });
@@ -84,7 +87,9 @@ it('splits a batch whose ids come back renumbered, and never writes an answer to
     $titles = targetsOf($tenant, 'en');
     expect($titles['AO-1001']['value'])->toBe('[en] Wanderschuh aus Leder')
         ->and($titles['AO-1005']['value'])->toBe('[en] Schlafsack für den Winter')
-        ->and(unitStatuses($tenant))->toHaveKey('split');
+        ->and(unitStatuses($tenant))->toHaveKey('split')
+        // Progress counts each text once: a split unit's texts are in its halves.
+        ->and(latestRun($tenant, $feed)->counts['texts_done'])->toBe(latestRun($tenant, $feed)->counts['planned']);
 });
 
 it('fails an item that can never be aligned, visibly, and writes nothing for it', function (): void {
@@ -97,7 +102,9 @@ it('fails an item that can never be aligned, visibly, and writes nothing for it'
     expect(targetsOf($tenant, 'en'))->toBe([])
         ->and(unitStatuses($tenant)['failed'] ?? 0)->toBeGreaterThan(0)
         ->and($plan['run']['status'])->toBe('done')
-        ->and($plan['run']['counts']['units_failed'])->toBeGreaterThan(0);
+        ->and($plan['run']['counts']['units_failed'])->toBeGreaterThan(0)
+        ->and($plan['run']['counts']['texts_failed'])->toBe($plan['run']['counts']['planned'])
+        ->and($plan['run']['counts']['texts_done'])->toBe(0);
 });
 
 it('comes back later after a 429 storm, and finishes once the provider answers', function (): void {
@@ -107,9 +114,11 @@ it('comes back later after a 429 storm, and finishes once the provider answers',
 
     $plan = startTranslation($tenant, $feed);
 
+    $feedRun = fn (): array => test()->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feed->id}")->assertOk()->json('feed.run');
     expect($plan['run']['status'])->toBe('running')
         ->and(targetsOf($tenant, 'en'))->toBe([])
-        ->and(unitStatuses($tenant))->toHaveKey('pending');
+        ->and(unitStatuses($tenant))->toHaveKey('pending')
+        ->and($feedRun())->toBe(['stage' => 'translate', 'status' => 'running', 'texts_planned' => $plan['run']['counts']['planned'], 'texts_done' => 0]);
 
     (fn (): array => $this->script = [])->call($fakes['gemini']);
     $fakes['gemini']->push(...array_fill(0, 200, translator()));
@@ -117,7 +126,8 @@ it('comes back later after a 429 storm, and finishes once the provider answers',
     Artisan::call('ops:reconcile', [], new BufferedOutput);
 
     expect(targetsOf($tenant, 'en'))->toHaveCount(5)
-        ->and(latestRun($tenant, $feed)->status)->toBe('done');
+        ->and(latestRun($tenant, $feed)->status)->toBe('done')
+        ->and($feedRun())->toBe(['stage' => 'done', 'status' => 'done', 'texts_planned' => $plan['run']['counts']['planned'], 'texts_done' => $plan['run']['counts']['planned']]);
 });
 
 it('holds the work without credits, and resumes it by itself once they are there', function (): void {
@@ -247,4 +257,55 @@ it('keeps text that tries to instruct the model inside the items, as data', func
     expect($request->prompt->instructions)->not->toContain('HACKED')
         ->and($request->prompt->system)->not->toContain('HACKED')
         ->and(collect($request->items)->pluck('text')->implode(' '))->toContain('HACKED');
+});
+
+it('reads a file that arrived while the feed was translating once the translation is done, and only once', function (): void {
+    [$tenant, $feed] = translatingWorkspace(['en']);
+    $tenant->forceFill(['limits_override' => ['worker_slots' => 0]])->save();
+    startTranslation($tenant, $feed);
+    $translating = latestRun($tenant, $feed);
+
+    // The new file waits: one run at a time, and this one is still translating.
+    uploadFeed(owner($tenant), $feed->id, str_replace('Wanderschuh aus Leder', 'Wanderschuh aus Wildleder', ALPINE_SHOP_CSV), 'export.csv')->assertStatus(202);
+    Artisan::call('ops:reconcile', [], new BufferedOutput);
+    expect(latestRun($tenant, $feed)->id)->toBe($translating->id);
+
+    // The translation finishes; the next pass reads the waiting file.
+    $tenant->forceFill(['limits_override' => null])->save();
+    Artisan::call('ops:reconcile', [], new BufferedOutput);
+    expect(latestRun($tenant, $feed)->status)->toBe('done');
+    Artisan::call('ops:reconcile', [], new BufferedOutput);
+    $read = latestRun($tenant, $feed);
+    $profile = tenancy()->run($tenant->id, fn (): ?int => Import::query()->where('feed_id', $feed->id)->where('status', 'profiled')->max('id'));
+
+    expect($read->id)->not->toBe($translating->id)
+        ->and($read->import_id)->toBe($profile)
+        ->and([$read->stage, $read->status])->toBe(['plan', 'awaiting_decision'])
+        ->and(textsOf($tenant, productsOf($tenant, $feed)['AO-1001'])['title@de']->value)->toBe('Wanderschuh aus Wildleder');
+
+    // Read once: later passes start nothing more, also once that run is translated.
+    Artisan::call('ops:reconcile', [], new BufferedOutput);
+    expect(latestRun($tenant, $feed)->id)->toBe($read->id);
+    startTranslation($tenant, $feed);
+    Artisan::call('ops:reconcile', [], new BufferedOutput);
+    expect(latestRun($tenant, $feed)->id)->toBe($read->id)
+        ->and(latestRun($tenant, $feed)->status)->toBe('done');
+});
+
+it('reads the products again on request, and refuses without an approved mapping or the right role', function (): void {
+    $tenant = aiWorkspace();
+    $feed = profiledFeed($tenant);
+    $url = "/api/v1/feeds/{$feed->id}/catalog/sync";
+
+    test()->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feed->id}/mapping")->assertOk();
+    test()->actingAs(owner($tenant))->postJson($url)->assertStatus(409)->assertJsonPath('error', 'mapping_not_approved');
+
+    approveMapping($tenant, $feed);
+    $first = latestRun($tenant, $feed);
+    tenancy()->run($tenant->id, fn () => $first->forceFill(['status' => 'failed', 'failure_reason' => 'sync_failed'])->save());
+    test()->actingAs(memberOf($tenant, 'member'))->postJson($url)->assertForbidden();
+
+    $plan = test()->actingAs(owner($tenant))->postJson($url)->assertStatus(202)->json('translation_plan');
+    expect($plan['run']['id'])->not->toBe($first->id)
+        ->and([$plan['run']['stage'], $plan['run']['status']])->toBe(['plan', 'awaiting_decision']);
 });

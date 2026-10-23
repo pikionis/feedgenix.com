@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App;
 
+use App\Domain\Catalog\Actions\StartCatalogSync;
 use App\Domain\Feeds\Models\Feed;
+use App\Domain\Mapping\Actions\DraftMapping;
+use App\Domain\Mapping\Models\Mapping;
 use App\Domain\Translation\Actions\SaveTranslationPlan;
 use App\Domain\Translation\Actions\StartTranslation;
 use App\Domain\Translation\Exceptions\PlanChanged;
@@ -38,7 +41,11 @@ final class TranslationPlanController
         $this->authorizeManage($request);
         $data = $request->validate([
             'version' => ['required', 'integer', 'min:1'],
-            /** field => translate, keep or skip */
+            /**
+             * field => translate, keep or skip
+             *
+             * @var array<string, 'translate'|'keep'|'skip'>
+             */
             'fields' => ['present', 'array'],
             'fields.*' => ['string', 'in:translate,keep,skip'],
             /** BCP-47 codes of the workspace's languages. */
@@ -71,6 +78,23 @@ final class TranslationPlanController
         $this->authorizeManage($request);
         $data = $request->validate(['version' => ['required', 'integer', 'min:1']]);
         $start->handle($feed, (int) $data['version']);
+
+        return (new TranslationPlanResource($planner->planOf($feed), $feed))->response()->setStatusCode(202);
+    }
+
+    /**
+     * Read the feed's current file into the catalogue again (owner or admin): after a read that
+     * failed, or for a mapping approved before the catalogue existed. A run still working is left
+     * to finish. 409 when the current columns have no approved mapping.
+     */
+    public function sync(Request $request, Feed $feed, DraftMapping $drafts, StartCatalogSync $start, TranslationPlanner $planner): JsonResponse
+    {
+        $this->authorizeManage($request);
+        $mapping = Mapping::query()->find($drafts->current($feed)?->id);
+        if (! $mapping instanceof Mapping || ! $mapping->isApproved()) {
+            return response()->json(['error' => 'mapping_not_approved', 'message' => 'Approve the mapping first: the products are read through it.'], 409);
+        }
+        $start->forMapping($mapping);
 
         return (new TranslationPlanResource($planner->planOf($feed), $feed))->response()->setStatusCode(202);
     }

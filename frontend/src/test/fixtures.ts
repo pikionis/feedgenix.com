@@ -5,8 +5,10 @@ import type {
   LimitHit,
   Mapping,
   MappingField,
+  PipelineRun,
   Plan,
   SessionUser,
+  TranslationPlan,
   Workspace,
 } from '~/lib/api/types'
 
@@ -151,7 +153,44 @@ export function feed(overrides: Partial<Feed> = {}): Feed {
     latest_import: importSummary(),
     profile_import_id: 100,
     mapping_status: null,
+    run: null,
     created_at: READ_AT,
+    ...overrides,
+  }
+}
+
+export function pipelineRun(overrides: Partial<PipelineRun> = {}): PipelineRun {
+  return {
+    id: 40,
+    stage: 'plan',
+    status: 'awaiting_decision',
+    counts: { created: 5 },
+    warnings: [],
+    failure_message: null,
+    ...overrides,
+  }
+}
+
+/** A German feed with titles and sizes, English and French in the workspace, English chosen. */
+export function translationPlan(overrides: Partial<TranslationPlan> = {}): TranslationPlan {
+  return {
+    version: 2,
+    saved: true,
+    fields: [
+      { field: 'title', label: 'Title', mode: 'translate', sources: [{ locale: 'de', products: 5 }] },
+      { field: 'size', label: 'Size', mode: 'keep', sources: [{ locale: 'de', products: 5 }] },
+    ],
+    target_locales: ['en'],
+    workspace_locales: [
+      { code: 'en', name: 'English' },
+      { code: 'fr', name: 'French' },
+    ],
+    work: [
+      { field: 'title', target_locale: 'en', mode: 'translate', texts: 5, memory: 2 },
+      { field: 'size', target_locale: 'en', mode: 'keep', texts: 5, memory: 0 },
+    ],
+    estimate: { available: true, unavailable_reason: null, about_credits: 1200, at_most_credits: 4800 },
+    run: pipelineRun(),
     ...overrides,
   }
 }

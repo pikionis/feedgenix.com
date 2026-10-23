@@ -5,26 +5,32 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Domain\Billing\Entitlements;
+use App\Domain\Catalog\Actions\StartCatalogSync;
+use App\Domain\Feeds\Models\PipelineRun;
+use App\Domain\Ingest\ImportStatus;
+use App\Domain\Ingest\Models\Import;
 use App\Domain\Tenancy\TenantContext;
 use App\Domain\Translation\Models\WorkUnit;
 use App\Domain\Translation\RunProgress;
 use App\Domain\Translation\WorkDispatcher;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
  * The one reconciler (ADR 0006), every minute on one server. It never fetches a feed and never
  * calls AI. Each pass: expired leases go back to pending; units held for credits or AI are tried
  * again after five minutes (the executor holds them again if the cause remains); units held for
- * the allowance resume in a new period; runs whose units are all finished advance; then the
- * dispatcher pumps every workspace.
+ * the allowance resume in a new period; runs whose units are all finished advance; a file that
+ * arrived while its feed was busy is read now that it is free (ADR 0019); then the dispatcher
+ * pumps every workspace.
  */
 #[AsCommand(name: 'ops:reconcile', description: 'Requeue expired leases, release cleared holds, advance finished runs, pump the AI work')]
 final class ReconcileCommand extends Command
 {
     private const array RETRY_HOLDS = ['credits', 'ai_disabled', 'unpriced_model', 'provider_unavailable', 'ai_paused', 'reservation_exhausted', 'owner_unverified'];
 
-    public function handle(TenantContext $context, WorkDispatcher $dispatcher): int
+    public function handle(TenantContext $context, WorkDispatcher $dispatcher, StartCatalogSync $sync): int
     {
         $touched = $context->runAsSystem('reconcile AI work', function (): array {
             $runs = [];
@@ -55,6 +61,21 @@ final class ReconcileCommand extends Command
                 $context->run((int) $tenant, static fn () => RunProgress::refresh($runId));
             }
         }
+
+        // The feed's current file is newer than any run read, and nothing runs: read it now.
+        $waiting = $context->runAsSystem('find files that arrived while their feed was busy', static fn (): array => DB::select(<<<'SQL'
+            SELECT f.tenant_id, latest.id AS import_id
+            FROM feeds f
+            CROSS JOIN LATERAL (SELECT max(i.id) AS id FROM imports i WHERE i.feed_id = f.id AND i.status = ?) latest
+            WHERE latest.id > (SELECT coalesce(max(r.import_id), 0) FROM pipeline_runs r WHERE r.feed_id = f.id)
+              AND EXISTS (SELECT 1 FROM pipeline_runs r WHERE r.feed_id = f.id)
+              AND NOT EXISTS (SELECT 1 FROM pipeline_runs r WHERE r.feed_id = f.id AND r.status IN (?, ?, ?, ?))
+            SQL, [ImportStatus::Profiled->value, ...PipelineRun::UNFINISHED]));
+        $started = 0;
+        foreach ($waiting as $row) {
+            $started += (int) $context->run((int) $row->tenant_id, static fn (): bool => ($import = Import::query()->find($row->import_id)) instanceof Import && $sync->forImport($import) instanceof PipelineRun);
+        }
+        $this->line("Started {$started} deferred catalogue read(s).");
 
         $this->line('Dispatched '.$dispatcher->pump().' unit(s).');
 

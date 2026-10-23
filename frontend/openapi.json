@@ -1497,9 +1497,9 @@
                                         "minimum": 1
                                     },
                                     "fields": {
-                                        "type": "array",
+                                        "type": "object",
                                         "description": "field => translate, keep or skip",
-                                        "items": {
+                                        "additionalProperties": {
                                             "type": "string",
                                             "enum": [
                                                 "translate",
@@ -1616,6 +1616,76 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/feeds/{feed}/catalog/sync": {
+            "post": {
+                "operationId": "translation-plan.sync",
+                "summary": "Read the feed's current file into the catalogue again (owner or admin): after a read that\nfailed, or for a mapping approved before the catalogue existed. A run still working is left\nto finish. 409 when the current columns have no approved mapping",
+                "tags": [
+                    "TranslationPlan"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "`TranslationPlanResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "translation_plan": {
+                                            "$ref": "#/components/schemas/TranslationPlanResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "translation_plan"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "const": "mapping_not_approved"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Approve the mapping first: the products are read through it."
+                                        }
+                                    },
+                                    "required": [
+                                        "error",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
@@ -2357,6 +2427,49 @@
                             null
                         ]
                     },
+                    "run": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "The latest run through the catalogue and the translation: null before the mapping is first approved.",
+                        "properties": {
+                            "stage": {
+                                "type": "string",
+                                "enum": [
+                                    "sync",
+                                    "plan",
+                                    "translate",
+                                    "export",
+                                    "done"
+                                ]
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "queued",
+                                    "running",
+                                    "awaiting_decision",
+                                    "held",
+                                    "done",
+                                    "failed"
+                                ]
+                            },
+                            "texts_planned": {
+                                "type": "integer",
+                                "description": "Texts this run sends to AI, and how many of them are done."
+                            },
+                            "texts_done": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "stage",
+                            "status",
+                            "texts_planned",
+                            "texts_done"
+                        ]
+                    },
                     "created_at": {
                         "type": [
                             "string",
@@ -2374,6 +2487,7 @@
                     "latest_import",
                     "profile_import_id",
                     "mapping_status",
+                    "run",
                     "created_at"
                 ],
                 "title": "FeedResource"
@@ -3653,11 +3767,55 @@
                         "description": "Send it back with a change: a save on an older version is refused (409)."
                     },
                     "saved": {
-                        "type": "string",
+                        "type": "boolean",
                         "description": "False until someone saves it: these are the defaults."
                     },
                     "fields": {
-                        "type": "string"
+                        "type": "array",
+                        "description": "Each text field the feed has, with the languages its products provide it in.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "field": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                        "translate",
+                                        "keep",
+                                        "skip"
+                                    ]
+                                },
+                                "sources": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "locale": {
+                                                "type": "string"
+                                            },
+                                            "products": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "required": [
+                                            "locale",
+                                            "products"
+                                        ]
+                                    }
+                                }
+                            },
+                            "required": [
+                                "field",
+                                "label",
+                                "mode",
+                                "sources"
+                            ]
+                        }
                     },
                     "target_locales": {
                         "type": "array",
@@ -3685,6 +3843,7 @@
                     },
                     "work": {
                         "type": "array",
+                        "description": "Per field and target language: the texts with no fresh translation yet, and how many\nof those are repeats the translation memory covers at no cost.",
                         "items": {
                             "type": "object",
                             "properties": {
@@ -3702,12 +3861,10 @@
                                     ]
                                 },
                                 "texts": {
-                                    "type": "string",
-                                    "description": "Texts with no fresh translation yet."
+                                    "type": "integer"
                                 },
                                 "memory": {
-                                    "type": "string",
-                                    "description": "Of those, repeats the translation memory covers at no cost."
+                                    "type": "integer"
                                 }
                             },
                             "required": [
@@ -3723,7 +3880,7 @@
                         "type": "object",
                         "properties": {
                             "available": {
-                                "type": "string"
+                                "type": "boolean"
                             },
                             "unavailable_reason": {
                                 "type": [

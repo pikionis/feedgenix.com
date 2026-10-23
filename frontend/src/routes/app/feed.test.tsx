@@ -250,3 +250,26 @@ it('says a feed of another workspace does not exist', async () => {
 
   expect(await screen.findByText('This feed does not exist')).toBeInTheDocument()
 })
+
+it('follows the translation from the feed page, and leads to it', async () => {
+  const translating = { stage: 'translate', status: 'running', texts_planned: 40, texts_done: 10 } as const
+  serveFeed(
+    feed({ mapping_status: 'approved', run: translating }),
+    feed({ mapping_status: 'approved', run: { ...translating, stage: 'done', status: 'done', texts_done: 40 } }),
+  )
+  renderFeed()
+
+  expect(await screen.findByText('Translating: 10 of 40 texts.')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'See the progress' })).toHaveAttribute('href', '/app/feeds/7/translation')
+  // Polled while it works, until it is done.
+  expect(await screen.findByText(/^Translated\./, {}, { timeout: 4000 })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Open the translation' })).toBeInTheDocument()
+})
+
+it('offers no translation before the mapping is approved', async () => {
+  serveFeed(feed({ mapping_status: 'draft' }))
+  renderFeed()
+
+  expect(await screen.findByRole('link', { name: 'Review the mapping' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Translation' })).not.toBeInTheDocument()
+})

@@ -61,3 +61,10 @@ export type MappingColumn = Mapping['columns'][number]
 export type CanonicalField = Mapping['available_fields'][number]
 
 export type FieldClass = components['schemas']['FieldClass']
+
+/** A feed's translation plan, its work, estimate and latest run (GET /v1/feeds/{feed}/translation-plan). */
+export type TranslationPlan = components['schemas']['TranslationPlanResource']
+
+export type TranslationMode = TranslationPlan['fields'][number]['mode']
+
+export type PipelineRun = NonNullable<TranslationPlan['run']>

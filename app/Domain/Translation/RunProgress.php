@@ -21,12 +21,21 @@ final class RunProgress
             return;
         }
 
-        $units = WorkUnit::query()->where('run_id', $runId)->selectRaw('status, count(*) AS n')->groupBy('status')->pluck('n', 'status')->map(static fn (mixed $value): int => (int) $value)->all();
+        // A split unit's texts are counted in its halves (the split unit's own status is "split").
+        $rows = WorkUnit::query()->where('run_id', $runId)
+            ->selectRaw('status, count(*) AS n, sum((SELECT count(*) FROM jsonb_object_keys(items))) AS texts')->groupBy('status')->get();
+        $units = $rows->mapWithKeys(static fn (WorkUnit $row): array => [$row->status => (int) $row->getAttribute('n')])->all();
+        $texts = $rows->mapWithKeys(static fn (WorkUnit $row): array => [$row->status => (int) $row->getAttribute('texts')])->all();
         $open = ($units['pending'] ?? 0) + ($units['leased'] ?? 0);
         $held = $units['held'] ?? 0;
         $holds = WorkUnit::query()->where('run_id', $runId)->where('status', 'held')->distinct()->pluck('hold_reason')->filter()->values()->all();
 
-        $counts = [...$run->counts, 'units_done' => $units['done'] ?? 0, 'units_failed' => $units['failed'] ?? 0, 'units_held' => $held, 'units_open' => $open];
+        $counts = [
+            ...$run->counts,
+            'units_done' => $units['done'] ?? 0, 'units_failed' => $units['failed'] ?? 0, 'units_held' => $held, 'units_open' => $open,
+            'texts_done' => $texts['done'] ?? 0, 'texts_failed' => $texts['failed'] ?? 0, 'texts_held' => $texts['held'] ?? 0,
+            'texts_open' => ($texts['pending'] ?? 0) + ($texts['leased'] ?? 0),
+        ];
         $run->forceFill(match (true) {
             $open > 0 => ['status' => 'running', 'counts' => $counts],
             $held > 0 => ['status' => 'held', 'counts' => [...$counts, 'hold_reasons' => count($holds)], 'warnings' => array_map(static fn (string $reason): array => ['code' => "held_{$reason}", 'message' => self::holdMessage($reason), 'count' => $held], $holds)],

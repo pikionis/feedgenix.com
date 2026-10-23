@@ -50,11 +50,15 @@ final class TranslationPlanResource extends JsonResource
             /** Send it back with a change: a save on an older version is refused (409). */
             'version' => $plan->version,
             /** False until someone saves it: these are the defaults. */
-            'saved' => $plan->exists,
+            'saved' => (bool) $plan->exists,
+            /**
+             * Each text field the feed has, with the languages its products provide it in.
+             *
+             * @var list<array{field: string, label: string, mode: 'translate'|'keep'|'skip', sources: list<array{locale: string, products: int}>}>
+             */
             'fields' => $sources->map(static fn ($group, $field): array => [
                 'field' => (string) $field,
                 'label' => $schema->has((string) $field) ? $schema->get((string) $field)->label : (string) $field,
-                /** @var 'translate'|'keep'|'skip' */
                 'mode' => (string) ($plan->fields[(string) $field] ?? 'translate'),
                 'sources' => $group->map(static fn (array $source): array => ['locale' => $source['locale'], 'products' => $source['products']])->values()->all(),
             ])->values()->all(),
@@ -62,18 +66,21 @@ final class TranslationPlanResource extends JsonResource
             'target_locales' => $plan->target_locales,
             'workspace_locales' => TenantLanguage::query()->orderBy('language_code')->pluck('language_code')
                 ->map(static fn (string $code): array => ['code' => $code, 'name' => (string) ($names[$code] ?? $code)])->values()->all(),
+            /**
+             * Per field and target language: the texts with no fresh translation yet, and how many
+             * of those are repeats the translation memory covers at no cost.
+             *
+             * @var list<array{field: string, target_locale: string, mode: 'translate'|'keep', texts: int, memory: int}>
+             */
             'work' => collect($work)->map(static fn (array $line): array => [
                 'field' => $line['field'],
                 'target_locale' => $line['target_locale'],
-                /** @var 'translate'|'keep' */
                 'mode' => $line['mode'],
-                /** Texts with no fresh translation yet. */
-                'texts' => $line['texts'],
-                /** Of those, repeats the translation memory covers at no cost. */
-                'memory' => $line['memory'],
+                'texts' => (int) $line['texts'],
+                'memory' => (int) $line['memory'],
             ])->values()->all(),
             'estimate' => [
-                'available' => $estimate['available'],
+                'available' => (bool) $estimate['available'],
                 /**
                  * Why there is no estimate: ai_disabled, unpriced_model, provider_unavailable.
                  *

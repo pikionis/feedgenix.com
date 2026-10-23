@@ -60,7 +60,7 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await expect(stages.nth(0)).toContainText('Done')
   await expect(stages.nth(1)).toContainText('Done')
   await expect(stages.nth(2)).toContainText('A draft is ready to review')
-  await expect(stages.nth(3)).toContainText('Coming soon')
+  await expect(stages.nth(3)).toContainText('Choose the fields to translate')
   await expect(stages.nth(5)).toContainText('Coming soon')
 
   const columns = page.getByRole('table', { name: 'Columns' })
@@ -82,8 +82,34 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await page.getByRole('button', { name: 'Approve the mapping' }).click()
   await expect(page.getByText(/Changing a field sends it back to draft/)).toBeVisible()
 
+  // Approving reads the products into the catalogue; the translation plan waits for a choice.
   await page.getByRole('link', { name: 'Tools export' }).click()
-  await expect(page.getByRole('list', { name: 'Pipeline' }).getByRole('listitem').nth(2)).toContainText('Approved')
+  await expect(stages.nth(2)).toContainText('Approved')
+  await expect(stages.nth(3)).toContainText('Choose and start')
+
+  // The plan: a language first (a new workspace has none), then the texts and the work.
+  await page.getByRole('link', { name: 'Plan the translation' }).click()
+  await expect(page.getByRole('heading', { name: 'Translation', exact: true })).toBeVisible()
+  await expect(page.getByText('Your workspace has no languages yet.')).toBeVisible()
+  await page.getByRole('link', { name: 'Add one in the settings' }).click()
+  await page.getByLabel('Add a language').selectOption('fr')
+  await page.getByRole('button', { name: 'Save languages' }).click()
+  await expect(page.getByRole('list', { name: 'Selected target languages' })).toContainText('French')
+  await page.goBack()
+  await page.reload()
+
+  await page.getByRole('checkbox', { name: 'French' }).check()
+  await expect(page.getByRole('checkbox', { name: 'French' })).toBeChecked()
+  await expect(page.getByLabel('Title')).toHaveValue('translate')
+  await expect(page.getByRole('table')).toContainText('French')
+  // AI is off here: no estimate, and the work waits instead of failing.
+  await expect(page.getByText(/AI is not switched on yet/)).toBeVisible()
+  await page.getByRole('button', { name: 'Start translating' }).click()
+  await expect(page.getByRole('heading', { name: 'Waiting' })).toBeVisible()
+  await expect(page.getByText(/Some texts wait/)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Tools export' }).click()
+  await expect(stages.nth(4)).toContainText('Waiting')
 })
 
 test('a Google Shopping URL becomes a column profile, and the Free plan stops at one feed', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { feed, importSummary } from '~/test/fixtures'
+import type { Feed } from '~/lib/api/types'
 import { PipelineStages, pipelineStages, type StageState } from './PipelineStages'
 
 const states = (f: Parameters<typeof pipelineStages>[0]): StageState[] => pipelineStages(f).map((stage) => stage.state)
@@ -110,8 +111,42 @@ describe('pipelineStages', () => {
       const later = pipelineStages(feed({ latest_import: importSummary({ status }) })).slice(2)
       expect(later.every((stage) => stage.state === 'next' || stage.state === 'soon')).toBe(true)
     }
+    const translated = pipelineStages(feed({ mapping_status: 'approved', run: run({ stage: 'done', status: 'done' }) }))
+    expect(translated[5]?.state).toBe('next')
+  })
+
+  it.each([
+    [null, ['next', 'soon'], 'Choose the fields to translate'],
+    [run({ stage: 'sync', status: 'running' }), ['active', 'soon'], 'Reading the products'],
+    [run({ stage: 'sync', status: 'failed' }), ['failed', 'soon'], 'Reading the products failed'],
+    [run({ stage: 'plan', status: 'awaiting_decision' }), ['active', 'soon'], 'Choose and start'],
+    [
+      run({ stage: 'translate', status: 'running', texts_planned: 1200, texts_done: 300 }),
+      ['done', 'active'],
+      '300 of 1,200 texts',
+    ],
+    [run({ stage: 'translate', status: 'held', texts_planned: 1200, texts_done: 300 }), ['done', 'active'], 'Waiting'],
+    [run({ stage: 'done', status: 'done', texts_planned: 1200, texts_done: 1200 }), ['done', 'done'], '1,200 texts'],
+    [run({ stage: 'done', status: 'done' }), ['done', 'done'], 'Up to date'],
+  ])('an approved mapping with run %o: the plan and translation stages', (latest, expected, detail) => {
+    const stages = pipelineStages(feed({ mapping_status: 'approved', run: latest }))
+
+    expect(stages.slice(3, 5).map((stage) => stage.state)).toEqual(expected)
+    expect([stages[3]?.detail, stages[4]?.detail]).toContain(detail)
+  })
+
+  it('ignores a run of an earlier mapping while the new columns wait for review', () => {
+    const stages = pipelineStages(
+      feed({ mapping_status: 'draft', run: run({ stage: 'done', status: 'done', texts_planned: 9 }) }),
+    )
+
+    expect(stages.slice(3).map((stage) => stage.state)).toEqual(['soon', 'soon', 'soon'])
   })
 })
+
+function run(overrides: Partial<NonNullable<Feed['run']>> = {}): NonNullable<Feed['run']> {
+  return { stage: 'plan', status: 'awaiting_decision', texts_planned: 0, texts_done: 0, ...overrides }
+}
 
 it('lists the six stages in order and says which are coming', () => {
   render(<PipelineStages feed={feed()} />)
@@ -127,7 +162,8 @@ it('lists the six stages in order and says which are coming', () => {
   ])
   expect(steps[2]).toHaveTextContent('A draft is ready to review')
   expect(steps[2]).not.toHaveTextContent('Coming soon')
-  expect(steps[3]).toHaveTextContent('Coming soon')
+  expect(steps[3]).not.toHaveTextContent('Coming soon')
+  expect(steps[4]).not.toHaveTextContent('Coming soon')
   expect(steps[5]).toHaveTextContent('Coming soon')
   expect(steps[0]).not.toHaveTextContent('Coming soon')
   expect(steps[1]).toHaveTextContent('Done')

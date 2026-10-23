@@ -117,6 +117,8 @@ function FeedView({ feed }: { feed: Feed }) {
         </Card>
       )}
 
+      {feed.mapping_status === 'approved' && <TranslationCard feed={feed} />}
+
       {latest === null && feed.source === 'upload' && (
         <Card className="flex flex-col items-start gap-3">
           <p className="text-sm text-muted-foreground">No file yet. Upload one and we read it straight away.</p>
@@ -187,6 +189,42 @@ function FeedView({ feed }: { feed: Feed }) {
       {dialog === 'upload' && <UploadFileDialog feed={feed} onClose={() => setDialog(null)} />}
       {dialog === 'delete' && <DeleteFeedDialog feed={feed} onClose={() => setDialog(null)} />}
     </div>
+  )
+}
+
+/** Where the translation stands, and the way to its page. */
+function TranslationCard({ feed }: { feed: Feed }) {
+  const run = feed.run
+  const [text, action, primary] = ((): [string, string, boolean] => {
+    if (run === null)
+      return ['Choose the texts and the languages, see the estimate, start.', 'Plan the translation', true]
+    if (run.status === 'failed') return ['The last run failed.', 'See why', true]
+    if (run.stage === 'sync') return ['Reading the products into the catalogue…', 'Open', false]
+    if (run.stage === 'plan')
+      return ['The products are read. Choose what to translate and into which languages.', 'Plan the translation', true]
+    if (run.status === 'held') return ['Waiting: some texts cannot be translated right now.', 'See why', false]
+    if (run.stage === 'translate') {
+      return [
+        `Translating: ${run.texts_done.toLocaleString('en')} of ${run.texts_planned.toLocaleString('en')} texts.`,
+        'See the progress',
+        false,
+      ]
+    }
+    return ['Translated. Change the plan or add a language at any time.', 'Open the translation', false]
+  })()
+
+  return (
+    <Card className="flex flex-wrap items-center justify-between gap-4">
+      <div className="min-w-0">
+        <h2 className="font-medium">Translation</h2>
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {text}
+        </p>
+      </div>
+      <Button asChild variant={primary ? 'primary' : 'secondary'}>
+        <Link to={`/app/feeds/${feed.id}/translation`}>{action}</Link>
+      </Button>
+    </Card>
   )
 }
 

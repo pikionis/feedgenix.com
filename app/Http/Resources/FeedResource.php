@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Domain\Feeds\Models\Feed;
+use App\Domain\Feeds\Models\PipelineRun;
 use App\Domain\Ingest\Models\Import;
 use App\Domain\Mapping\Models\Mapping;
 use Illuminate\Http\Request;
@@ -29,6 +30,7 @@ final class FeedResource extends JsonResource
         $feed = $this->resource;
         $options = $feed->parseOptions();
         $latest = $feed->latestImport;
+        $run = PipelineRun::query()->where('feed_id', $feed->id)->orderByDesc('id')->first();
 
         return [
             'id' => $feed->id,
@@ -54,6 +56,16 @@ final class FeedResource extends JsonResource
              * @var 'draft'|'approved'|null
              */
             'mapping_status' => $this->mappingStatus($feed),
+            /** The latest run through the catalogue and the translation: null before the mapping is first approved. */
+            'run' => $run instanceof PipelineRun ? [
+                /** @var 'sync'|'plan'|'translate'|'export'|'done' */
+                'stage' => $run->stage,
+                /** @var 'queued'|'running'|'awaiting_decision'|'held'|'done'|'failed' */
+                'status' => $run->status,
+                /** Texts this run sends to AI, and how many of them are done. */
+                'texts_planned' => (int) ($run->counts['planned'] ?? 0),
+                'texts_done' => (int) ($run->counts['texts_done'] ?? 0),
+            ] : null,
             'created_at' => $feed->created_at?->toIso8601String(),
         ];
     }

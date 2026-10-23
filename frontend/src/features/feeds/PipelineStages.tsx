@@ -22,9 +22,8 @@ const PURPOSE: Record<Stage['key'], string> = {
 }
 
 /**
- * The six stages of a feed and where this feed stands. Import, analysis and the mapping exist
- * today; the translation plan, translation and publishing are built next, so they say "Coming
- * soon" instead of pretending to run.
+ * The six stages of a feed and where this feed stands. Publishing is built next, so it says
+ * "Coming soon" instead of pretending to run.
  */
 export function pipelineStages(feed: Feed): Stage[] {
   const latest = feed.latest_import
@@ -62,23 +61,51 @@ export function pipelineStages(feed: Feed): Stage[] {
     return { state: 'next', detail: 'A draft is ready to review' }
   })()
 
-  // The stages after the mapping are built next: the first of them is next once it is approved.
-  const later = (key: Stage['key'], isNext: boolean): Omit<Stage, 'key' | 'name'> => ({
-    state: isNext ? 'next' : 'soon',
-    detail: PURPOSE[key],
-  })
+  const run = feed.mapping_status === 'approved' ? feed.run : null
+  const translating = run !== null && (run.stage === 'translate' || run.stage === 'export' || run.stage === 'done')
+
+  const planStage = ((): Omit<Stage, 'key' | 'name'> => {
+    if (feed.mapping_status !== 'approved') return { state: 'soon', detail: PURPOSE.plan }
+    if (run === null) return { state: 'next', detail: PURPOSE.plan }
+    if (run.stage === 'sync' && run.status === 'failed')
+      return { state: 'failed', detail: 'Reading the products failed' }
+    if (run.stage === 'sync') return { state: 'active', detail: 'Reading the products' }
+    if (run.stage === 'plan') return { state: 'active', detail: 'Choose and start' }
+    return { state: 'done', detail: 'Started' }
+  })()
+
+  const translationStage = ((): Omit<Stage, 'key' | 'name'> => {
+    if (run === null || !translating) return { state: 'soon', detail: PURPOSE.translation }
+    if (run.status === 'held') return { state: 'active', detail: 'Waiting' }
+    if (run.stage === 'translate') {
+      return {
+        state: 'active',
+        detail: `${run.texts_done.toLocaleString('en')} of ${run.texts_planned.toLocaleString('en')} texts`,
+      }
+    }
+    return {
+      state: 'done',
+      detail: run.texts_planned > 0 ? `${run.texts_planned.toLocaleString('en')} texts` : 'Up to date',
+    }
+  })()
+
+  // Publishing is built next: it is next once the translation is done.
+  const publishStage: Omit<Stage, 'key' | 'name'> = {
+    state: translationStage.state === 'done' ? 'next' : 'soon',
+    detail: PURPOSE.publish,
+  }
 
   return [
     { key: 'import', name: 'Import', ...importStage },
     { key: 'analysis', name: 'Analysis', ...analysisStage },
     { key: 'mapping', name: 'AI mapping', ...mappingStage },
-    { key: 'plan', name: 'Translation plan', ...later('plan', feed.mapping_status === 'approved') },
-    { key: 'translation', name: 'Translation', ...later('translation', false) },
-    { key: 'publish', name: 'Publish', ...later('publish', false) },
+    { key: 'plan', name: 'Translation plan', ...planStage },
+    { key: 'translation', name: 'Translation', ...translationStage },
+    { key: 'publish', name: 'Publish', ...publishStage },
   ]
 }
 
-const AVAILABLE: ReadonlySet<Stage['key']> = new Set(['import', 'analysis', 'mapping'])
+const AVAILABLE: ReadonlySet<Stage['key']> = new Set(['import', 'analysis', 'mapping', 'plan', 'translation'])
 
 export function PipelineStages({ feed }: { feed: Feed }) {
   const stages = pipelineStages(feed)
