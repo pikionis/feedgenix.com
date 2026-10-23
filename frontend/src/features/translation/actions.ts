@@ -52,11 +52,16 @@ export function useTranslationActions(feedId: number, plan: TranslationPlan) {
     return true
   }
 
-  const save = (key: string, fields: Record<string, TranslationMode>, targets: string[]) =>
+  const save = (key: string, fields: Record<string, TranslationMode>, targets: string[], auto?: boolean) =>
     run(key, () =>
       api.PUT('/v1/feeds/{feed}/translation-plan', {
         params: { path: { feed: feedId } },
-        body: { version: plan.version, fields, target_locales: targets },
+        body: {
+          version: plan.version,
+          fields,
+          target_locales: targets,
+          ...(auto === undefined ? {} : { auto_translate: auto }),
+        },
       }),
     )
   const modes = Object.fromEntries(plan.fields.map((field) => [field.field, field.mode]))
@@ -72,6 +77,7 @@ export function useTranslationActions(feedId: number, plan: TranslationPlan) {
         modes,
         on ? [...plan.target_locales, code] : plan.target_locales.filter((locale) => locale !== code),
       ),
+    setAuto: (on: boolean) => save('auto', modes, plan.target_locales, on),
     start: () =>
       run('start', () =>
         api.POST('/v1/feeds/{feed}/translation-plan/start', {

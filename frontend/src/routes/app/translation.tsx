@@ -200,6 +200,23 @@ function TranslationView({ feedId, plan, back }: { feedId: number; plan: Transla
 
         <Estimate plan={plan} toAi={toAi} />
 
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4 accent-primary"
+            checked={plan.auto_translate}
+            disabled={!editable}
+            onChange={(event) => void actions.setAuto(event.target.checked)}
+          />
+          <span>
+            Translate every new file by itself
+            <span className="block text-xs text-muted-foreground">
+              Only its new and changed texts, as this plan says. Each batch still reserves its credits first; without
+              them the work waits and tells you why.
+            </span>
+          </span>
+        </label>
+
         {canManage && (
           <div className="flex flex-wrap items-center justify-between gap-4 border-t-[0.5px] border-hairline pt-4">
             <p className="text-sm text-muted-foreground">

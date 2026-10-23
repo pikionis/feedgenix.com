@@ -25,11 +25,12 @@ final readonly class SaveTranslationPlan
     /**
      * @param  array<string, string>  $fields  field => translate, keep or skip
      * @param  list<string>  $targets
+     * @param  bool|null  $auto  carry on by itself after each new file; null keeps the current choice
      *
      * @throws PlanChanged on a stale version
      * @throws InvalidArgumentException for an unknown field, mode or language
      */
-    public function handle(Feed $feed, int $version, array $fields, array $targets, User $by): TranslationPlan
+    public function handle(Feed $feed, int $version, array $fields, array $targets, User $by, ?bool $auto = null): TranslationPlan
     {
         $known = array_unique(array_column($this->planner->sources($feed), 'field'));
         foreach ($fields as $field => $mode) {
@@ -47,7 +48,7 @@ final readonly class SaveTranslationPlan
             }
         }
 
-        return DB::transaction(function () use ($feed, $version, $fields, $targets, $by): TranslationPlan {
+        return DB::transaction(function () use ($feed, $version, $fields, $targets, $by, $auto): TranslationPlan {
             $plan = TranslationPlan::query()->where('feed_id', $feed->id)->lockForUpdate()->first()
                 ?? $this->planner->planOf($feed);
             if ($plan->version !== $version) {
@@ -56,6 +57,7 @@ final readonly class SaveTranslationPlan
             $plan->forceFill([
                 'fields' => [...$plan->fields, ...$fields],
                 'target_locales' => array_values(array_unique($targets)),
+                'auto_translate' => $auto ?? $plan->auto_translate,
                 'version' => $plan->exists ? $plan->version + 1 : 2,
                 'updated_by' => $by->id,
             ])->save();

@@ -9,6 +9,7 @@ use App\Domain\Credits\Actions\GrantCredits;
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Translation\Models\WorkUnit;
 use App\Models\Tenant;
+use Illuminate\Testing\TestResponse;
 
 /*
  * Translation helpers: a fake translator that writes each target's script and keeps the numbers,
@@ -81,4 +82,16 @@ function startTranslation(Tenant $tenant, Feed $feed): array
 function unitStatuses(Tenant $tenant): array
 {
     return tenancy()->run($tenant->id, static fn (): array => WorkUnit::query()->selectRaw('status, count(*) AS n')->groupBy('status')->pluck('n', 'status')->map(static fn (mixed $value): int => (int) $value)->all());
+}
+
+/** The review of a feed's products in one language (English unless said). */
+function reviewList(Tenant $tenant, int $feedId, array $query = []): TestResponse
+{
+    return test()->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feedId}/products?".http_build_query(['locale' => 'en', ...$query]))->assertOk();
+}
+
+/** @return array<string, mixed> the field's review row */
+function reviewText(array $product, string $field): array
+{
+    return collect($product['texts'])->firstWhere('field', $field);
 }

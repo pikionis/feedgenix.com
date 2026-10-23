@@ -1894,6 +1894,10 @@
                                             "maxLength": 16
                                         },
                                         "maxItems": 50
+                                    },
+                                    "auto_translate": {
+                                        "type": "boolean",
+                                        "description": "Translate the new and changed texts of each new file without waiting for a person. Omitted: unchanged."
                                     }
                                 },
                                 "required": [
@@ -4330,6 +4334,10 @@
                             "type": "string"
                         }
                     },
+                    "auto_translate": {
+                        "type": "boolean",
+                        "description": "After each new file, its new and changed texts are translated without waiting for a person."
+                    },
                     "workspace_locales": {
                         "type": "array",
                         "items": {
@@ -4497,6 +4505,7 @@
                     "saved",
                     "fields",
                     "target_locales",
+                    "auto_translate",
                     "workspace_locales",
                     "work",
                     "estimate",

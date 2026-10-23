@@ -1223,6 +1223,8 @@ export interface components {
         }[]
       }[]
       target_locales: string[]
+      /** @description After each new file, its new and changed texts are translated without waiting for a person. */
+      auto_translate: boolean
       workspace_locales: {
         code: string
         name: string
@@ -2552,6 +2554,8 @@ export interface operations {
           }
           /** @description BCP-47 codes of the workspace's languages. */
           target_locales: string[]
+          /** @description Translate the new and changed texts of each new file without waiting for a person. Omitted: unchanged. */
+          auto_translate?: boolean
         }
       }
     }

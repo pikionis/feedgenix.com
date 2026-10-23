@@ -184,6 +184,7 @@ export function translationPlan(overrides: Partial<TranslationPlan> = {}): Trans
       { field: 'size', label: 'Size', mode: 'keep', sources: [{ locale: 'de', products: 5 }] },
     ],
     target_locales: ['en'],
+    auto_translate: false,
     workspace_locales: [
       { code: 'en', name: 'English' },
       { code: 'fr', name: 'French' },

@@ -51,6 +51,8 @@ final class TranslationPlanController
             /** BCP-47 codes of the workspace's languages. */
             'target_locales' => ['present', 'array', 'max:50'],
             'target_locales.*' => ['string', 'max:16'],
+            /** Translate the new and changed texts of each new file without waiting for a person. Omitted: unchanged. */
+            'auto_translate' => ['sometimes', 'boolean'],
         ]);
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -58,7 +60,7 @@ final class TranslationPlanController
         try {
             /** @var array<string, string> $fields */
             $fields = array_map(strval(...), (array) $data['fields']);
-            $plan = $save->handle($feed, (int) $data['version'], $fields, array_values(array_map(strval(...), (array) $data['target_locales'])), $user);
+            $plan = $save->handle($feed, (int) $data['version'], $fields, array_values(array_map(strval(...), (array) $data['target_locales'])), $user, isset($data['auto_translate']) ? (bool) $data['auto_translate'] : null);
         } catch (InvalidArgumentException $invalid) {
             throw ValidationException::withMessages(['fields' => $invalid->getMessage()]);
         }

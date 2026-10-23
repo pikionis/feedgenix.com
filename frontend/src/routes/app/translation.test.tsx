@@ -80,6 +80,52 @@ it('saves a change with the version it was made on, keeping the other choices', 
   expect(sent).toEqual({ version: 2, fields: { title: 'translate', size: 'keep' }, target_locales: ['en', 'fr'] })
 })
 
+it('turns on translating every new file by itself, keeping the plan as it is', async () => {
+  let sent: unknown
+  servePlan(translationPlan())
+  server.use(
+    http.put(apiUrl('/v1/feeds/7/translation-plan'), async ({ request }) => {
+      sent = await request.json()
+
+      return HttpResponse.json({ translation_plan: translationPlan({ version: 3, auto_translate: true }) })
+    }),
+  )
+  renderPlan()
+  await asOwner()
+  const auto = screen.getByRole('checkbox', { name: /Translate every new file by itself/ })
+  expect(auto).not.toBeChecked()
+
+  await userEvent.click(auto)
+
+  expect(
+    await screen.findByRole('checkbox', { name: /Translate every new file by itself/, checked: true }),
+  ).toBeInTheDocument()
+  expect(sent).toEqual({
+    version: 2,
+    fields: { title: 'translate', size: 'keep' },
+    target_locales: ['en'],
+    auto_translate: true,
+  })
+})
+
+it('sends no switch with other changes, so a save never turns it off', async () => {
+  let sent: Record<string, unknown> = {}
+  servePlan(translationPlan({ auto_translate: true }))
+  server.use(
+    http.put(apiUrl('/v1/feeds/7/translation-plan'), async ({ request }) => {
+      sent = (await request.json()) as Record<string, unknown>
+
+      return HttpResponse.json({ translation_plan: translationPlan({ version: 3, auto_translate: true }) })
+    }),
+  )
+  renderPlan()
+  await asOwner()
+
+  await userEvent.selectOptions(screen.getByLabelText('Title'), 'skip')
+
+  await expect.poll(() => Object.keys(sent)).toEqual(['version', 'fields', 'target_locales'])
+})
+
 it('reloads the plan when someone else changed it meanwhile', async () => {
   servePlan(translationPlan(), translationPlan({ version: 9, target_locales: ['fr'] }))
   server.use(
@@ -160,7 +206,7 @@ it('has no estimate while AI is off, and says the work would wait', async () => 
   renderPlan()
 
   expect(await screen.findByText(/AI is not switched on yet/)).toBeInTheDocument()
-  expect(screen.queryByText(/ credits/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/with AI: about/)).not.toBeInTheDocument()
 })
 
 it('cannot start without a language', async () => {

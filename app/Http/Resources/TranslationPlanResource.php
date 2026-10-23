@@ -64,6 +64,8 @@ final class TranslationPlanResource extends JsonResource
             ])->values()->all(),
             /** @var list<string> */
             'target_locales' => $plan->target_locales,
+            /** After each new file, its new and changed texts are translated without waiting for a person. */
+            'auto_translate' => (bool) $plan->auto_translate,
             'workspace_locales' => TenantLanguage::query()->orderBy('language_code')->pluck('language_code')
                 ->map(static fn (string $code): array => ['code' => $code, 'name' => (string) ($names[$code] ?? $code)])->values()->all(),
             /**

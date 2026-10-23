@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $feed_id
  * @property array<string, string> $fields field => translate, keep or skip
  * @property list<string> $target_locales
+ * @property bool $auto_translate new and changed texts of each new file are translated without waiting for a person
  * @property int $version
  * @property int|null $updated_by
  * @property CarbonImmutable|null $updated_at
@@ -31,6 +32,7 @@ class TranslationPlan extends Model
     protected $attributes = [
         'fields' => '{}',
         'target_locales' => '[]',
+        'auto_translate' => false,
         'version' => 1,
         'updated_by' => null,
     ];
@@ -45,6 +47,7 @@ class TranslationPlan extends Model
             'feed_id' => 'integer',
             'fields' => 'array',
             'target_locales' => 'array',
+            'auto_translate' => 'boolean',
             'version' => 'integer',
             'updated_by' => 'integer',
             'updated_at' => 'immutable_datetime',

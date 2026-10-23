@@ -5,8 +5,6 @@ declare(strict_types=1);
 use App\Domain\AI\Data\AiRequest;
 use App\Domain\Catalog\Models\ProductText;
 use App\Domain\Translation\Models\TranslationMemory;
-use App\Models\Tenant;
-use Illuminate\Testing\TestResponse;
 
 /*
  * Reviewing translations (M4): the products of a feed in one language, what needs a look, and a
@@ -37,17 +35,6 @@ function reviewedWorkspace(): array
     startTranslation($tenant, $feed);
 
     return [$tenant, $feed, $products, $fakes];
-}
-
-function reviewList(Tenant $tenant, int $feedId, array $query = []): TestResponse
-{
-    return test()->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feedId}/products?".http_build_query(['locale' => 'en', ...$query]))->assertOk();
-}
-
-/** @return array<string, mixed> the field's review row */
-function reviewText(array $product, string $field): array
-{
-    return collect($product['texts'])->firstWhere('field', $field);
 }
 
 it('lists the texts in one language with their source, and shows what needs a look', function (): void {

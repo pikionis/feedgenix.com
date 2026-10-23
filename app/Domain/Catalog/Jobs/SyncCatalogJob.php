@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Catalog\Jobs;
 
 use App\Domain\Catalog\CatalogSyncer;
+use App\Domain\Catalog\Events\CatalogSynced;
 use App\Domain\Feeds\Models\PipelineRun;
 use App\Domain\Ingest\Models\Import;
 use App\Domain\Mapping\Models\Mapping;
@@ -18,7 +19,7 @@ use Throwable;
 
 /**
  * Reads a run's import into the catalogue, as the workspace that started it, then waits for the
- * translation plan. As long as an import of the largest plan's feed (three hours). One attempt:
+ * translation plan (or carries on, when the plan does by itself). As long as an import of the largest plan's feed (three hours). One attempt:
  * a failed sync is visible on the run and started again by a person or the next file.
  */
 #[Timeout(self::TIMEOUT)]
@@ -64,13 +65,14 @@ final class SyncCatalogJob implements ShouldQueue
             'counts' => $result->counts,
             'warnings' => $result->warnings,
         ])->save();
+        event(new CatalogSynced($run->id, $run->feed_id));
     }
 
-    /** Timed out or killed: the run must not stay "running". */
+    /** Timed out or killed while reading: the run must not stay "running" (a run that went on to translate is not this job's). */
     public function failed(?Throwable $exception): void
     {
         resolve(TenantContext::class)->run($this->tenantId, function (): void {
-            PipelineRun::query()->whereKey($this->runId)->whereIn('status', ['queued', 'running'])
+            PipelineRun::query()->whereKey($this->runId)->where('stage', 'sync')->whereIn('status', ['queued', 'running'])
                 ->update(['status' => 'failed', 'failure_reason' => 'interrupted', 'failure_message' => 'Reading the feed into the catalogue stopped unexpectedly. Try again.', 'finished_at' => now()]);
         });
     }

@@ -25,3 +25,4 @@ record supersedes them.
 | [0018](0018-mapping.md) | Mapping: drafts by column signature, AI per column, one pipeline (refines 0003, 0004) |
 | [0019](0019-catalogue-sync.md) | The catalogue sync: the feed is the truth, one path, guarded removals (refines 0003, 0006) |
 | [0020](0020-translation-engine.md) | The translation engine: work units, fenced writes, checked memory (refines 0005, 0006) |
+| [0021](0021-automatic-translation.md) | A translation plan can carry on by itself after each new file (refines 0019, 0020) |
