@@ -449,3 +449,16 @@ the scan, so a file it could not read had no record of its own.
 - **Rules:** every write is fenced by the source the person saw (409 when it changed in the feed); only translations are touched, never the feed's own text, a golden field, a language outside the workspace or a product gone from the feed; a person's translation is never replaced by the AI and goes into the memory for the same text; a text handed back is forgotten by the memory too, so the AI really translates it again.
 - **With it:** the plan and translation stages are live on the feed page; a file that arrived while its feed was busy is read once the feed is free (ADR 0019 said so; nothing did it); the products can be read again after a failed read.
 - **Proof:** 8 review tests, 3 for waiting files and reads, the page tests (translation 10, review 8, stages, feed card), the e2e flow from an upload to a translation the owner writes; 27 of 27 guard mutants caught.
+
+### M5 · `ExportService` (export, writeCsvChunked, escapeField, validateExport, shrink guard, pruneOldVersions, rollbackExport, resolveFieldValue), `BuildSupplierFeed::writeGzipSidecar`, `DescriptionFormatter`, `ShortDescriptionMaker` → `Domain/Export/{ExportBuilder,FileChecks,ColumnPlan,Transforms,Dialects}`, `Domain/Catalog/Formatters`, `config/export.php` (ADR 0022)
+- **Kept:** write to a temporary place and publish only a checked file; the shrink guard; a verified gzip; a few old builds to go back to; published texts only when they passed the checks; never another language instead; no empty columns; the description and short-description formatters.
+- **Fixed:**
+  - Every `"` became `'` in every value (23" became 23', a golden code with a quote changed): RFC 4180 quoting in CSV writes every value unchanged; in TSV a golden value that cannot be written as it is takes its row to the report.
+  - The check parsed with other escaping rules than the writer, and let 1% of the rows go missing: each dialect reads its own files back, and the rows read must be exactly the rows written.
+  - The gzip was a sidecar: when it failed the old `.gz` stayed next to a new file: the plain file and its gzip are one build, published together or not at all.
+  - Publishing and rollback copied files in place (a channel could read half a file): immutable keys and a pointer moved in one transaction.
+  - A request for a missing file started a build: requests never build (ADR 0007; serving is the next step).
+  - The short description knew only Latin sentence ends and could not cut a text without spaces: CJK, Arabic and Devanagari sentence ends, and a cut at the limit.
+  - The formatter ran on every description of every feed: a column transform a preset asks for.
+- **Dropped:** supplier-specific columns and normalisers (colour, composition, size, gender, the category dictionary, Title Case, four category levels, `_intel` headers, the canonical Competec description), the new-products feed, the global cache kill switch.
+- **Proof:** 28 tests (dialects 3, transforms and formatters 6, file checks 8, builds 11); 17 of 17 guard mutants caught.
