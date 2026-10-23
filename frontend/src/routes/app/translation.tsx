@@ -51,6 +51,8 @@ function TranslationView({ feedId, plan, back }: { feedId: number; plan: Transla
     .reduce((sum, line) => sum + line.texts - line.memory, 0)
   const anyWork = plan.work.some((line) => line.texts > 0)
   const startable = canManage && canStart(plan.run) && plan.target_locales.length > 0 && anyWork
+  // The products are in the catalogue: their texts can be looked at, translated or not.
+  const reviewable = plan.target_locales.length > 0 && plan.run !== null && plan.run.stage !== 'sync'
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,7 +66,14 @@ function TranslationView({ feedId, plan, back }: { feedId: number; plan: Transla
               never translated: they pass through as they are.
             </p>
           </div>
-          <span className="rounded-full bg-surface px-3 py-1 text-sm">{runLabel(plan.run)}</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-surface px-3 py-1 text-sm">{runLabel(plan.run)}</span>
+            {reviewable && (
+              <Button asChild variant="secondary">
+                <Link to={`/app/feeds/${feedId}/products`}>Review the texts</Link>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

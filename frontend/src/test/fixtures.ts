@@ -7,6 +7,9 @@ import type {
   MappingField,
   PipelineRun,
   Plan,
+  ReviewPage,
+  ReviewProduct,
+  ReviewText,
   SessionUser,
   TranslationPlan,
   Workspace,
@@ -363,5 +366,45 @@ export function mapping(overrides: Partial<Mapping> = {}): Mapping {
       },
     ],
     ...overrides,
+  }
+}
+
+export const SOURCE_HASH = 'a'.repeat(64)
+
+export function reviewText(overrides: Partial<ReviewText> = {}): ReviewText {
+  return {
+    field: 'title',
+    label: 'Title',
+    provided: false,
+    source: { locale: 'de', value: 'Wanderschuh aus Leder', hash: SOURCE_HASH },
+    target: {
+      value: 'Leather hiking boot',
+      status: 'ready',
+      origin: 'ai',
+      stale: false,
+      failures: [],
+      hard: false,
+    },
+    ...overrides,
+  }
+}
+
+export function reviewProduct(overrides: Partial<ReviewProduct> = {}): ReviewProduct {
+  return { id: 11, sku: 'AO-1001', texts: [reviewText()], ...overrides }
+}
+
+export function reviewPage(
+  products: ReviewProduct[] = [reviewProduct()],
+  meta: Partial<ReviewPage['meta']> = {},
+): ReviewPage {
+  return {
+    data: products,
+    meta: {
+      page: 1,
+      pages: 1,
+      total: products.length,
+      counts: { all: products.length, review: 0, missing: 0, manual: 0 },
+      ...meta,
+    },
   }
 }

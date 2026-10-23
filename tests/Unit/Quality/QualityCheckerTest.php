@@ -21,7 +21,7 @@ it('passes a faithful translation', function (): void {
         ->toBe(['failures' => [], 'hard' => false]);
 });
 
-it('finds a changed number as a whole token, not inside another (legacy substring bug)', function (string $source, string $translation, bool $hard): void {
+it('finds a changed, lost or invented number as a whole token, not inside another (legacy substring bug)', function (string $source, string $translation, bool $hard): void {
     expect(quality($source, $translation)['hard'])->toBe($hard);
 })->with([
     '100 became 1000' => ['Zelt für 100 kg', 'Tent for 1000 kg', true],
@@ -29,6 +29,8 @@ it('finds a changed number as a whole token, not inside another (legacy substrin
     'a model code dropped' => ['Kocher XT200 aus Stahl', 'Steel stove', true],
     'decimal comma becomes a point' => ['Preis 19,90 für 2 Stück', 'Price 19.90 for 2 pieces', false],
     'numbers kept, reordered' => ['Grösse 42, 2 Paar', '2 pairs, size 42', false],
+    'a number invented' => ['Wanderschuh aus Leder', 'Leather hiking boot 999', true],
+    'a number repeated' => ['Zelt für 2 Personen', 'Tent for 2 people, 2 doors', true],
 ]);
 
 it('refuses a translation whose HTML differs', function (): void {

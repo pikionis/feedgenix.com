@@ -11,8 +11,8 @@ use App\Domain\Mapping\LanguageGuess;
  * QualityChecker, which missed HTML, scripts and echoes, and matched numbers as substrings so that
  * "100" was found in "1000"):
  *
- *  - numbers, codes and model numbers: every one of the source's must be in the translation, as a
- *    whole token (a decimal comma may become a point and back);
+ *  - numbers, codes and model numbers: the same as the source's, as whole tokens, none lost and
+ *    none added (a decimal comma may become a point and back);
  *  - HTML: the same tags in the same order;
  *  - script: written in the target language's script (Greek, Cyrillic, CJK, Arabic, Hebrew…);
  *  - category paths: the same number of levels;
@@ -37,8 +37,7 @@ final class QualityChecker
             return new QualityResult(['empty'], ['empty']);
         }
 
-        $missing = self::missingNumbers($source, $translation);
-        if ($missing !== []) {
+        if (self::numbers($source) !== self::numbers($translation)) {
             $failures[] = 'numbers';
         }
         if (self::tags($source) !== self::tags($translation)) {
@@ -70,22 +69,13 @@ final class QualityChecker
         return new QualityResult($failures, $hard);
     }
 
-    /** @return list<string> source numbers and codes the translation does not have */
-    private static function missingNumbers(string $source, string $translation): array
+    /** @return array<string, int> the numbers and codes of a text, counted, in any order */
+    private static function numbers(string $text): array
     {
-        $normalise = static fn (string $token): string => strtoupper(str_replace(',', '.', $token));
-        $have = array_count_values(array_map($normalise, self::tokens(self::NUMBER, strip_tags($translation))));
-        $missing = [];
-        foreach (self::tokens(self::NUMBER, strip_tags($source)) as $token) {
-            $key = $normalise($token);
-            if (($have[$key] ?? 0) > 0) {
-                $have[$key]--;
-            } else {
-                $missing[] = $token;
-            }
-        }
+        $counts = array_count_values(array_map(static fn (string $token): string => strtoupper(str_replace(',', '.', $token)), self::tokens(self::NUMBER, strip_tags($text))));
+        ksort($counts);
 
-        return $missing;
+        return $counts;
     }
 
     /** @return list<string> */

@@ -435,7 +435,7 @@ the scan, so a file it could not read had no record of its own.
   - **D12** (answers matched by the number the model wrote): an id per item through the gateway; a misaligned batch splits in two down to depth 6, and an item that never aligns fails visibly.
   - **D15** (checkpoint resume never resumed): no checkpoints; units in the database are the state, with leases, and a killed worker costs a lease timeout.
   - The memory stored every answer before checking it and served bad ones for ever: only checked translations are kept, and the field is part of the key.
-  - Numbers were matched as substrings ("100" in "1000"); HTML, scripts and echoes were never checked; hard failures were still saved as translations: whole-token numbers, the same tags in order, the target's script, category levels, echoes flagged, and hard failures stored as `qa_failed`, never published.
+  - Numbers were matched as substrings ("100" in "1000") and only the source's were looked for, so an invented one passed; HTML, scripts and echoes were never checked; hard failures were still saved as translations: the same whole-token numbers on both sides, the same tags in order, the target's script, category levels, echoes flagged, and hard failures stored as `qa_failed`, never published.
   - Swiss "ss" was prompt-only: enforced in code.
   - One source language for the whole catalogue: chosen per product.
   - The daily spend counter in cache and silent empty results at the provider cap: reservations per unit, and holds that resume.
@@ -443,3 +443,9 @@ the scan, so a file it could not read had no record of its own.
 - **Changed:** a per-feed plan (translate, keep or skip per field; the workspace's languages) with the work and an estimate in credits before it starts; the allowance counted per product and period.
 - **Dropped:** the marketplace-specific prompt, glossary and few-shot examples (glossaries come back per workspace in M9); the Gemini context cache; the async batch API.
 - **Proof:** 34 tests (plan 6, quality 15, runs 13: renumbered ids, never-aligned items, 429 storms, no credits, allowance on Free and Pro, a killed worker, a source changed in flight, a person's translation, golden fields through en/el/ja/ar/de-CH, Swiss "ss", prompt injection kept as data); 10 of 10 engine guard mutants caught.
+
+### M4 · New — the translation pages and the review (`routes/app/{translation,products}.tsx`, `features/{translation,review}`, `TextReview`, `Actions/ReviewTranslation`)
+- **What:** the plan page (languages, each field's mode, the work with the memory, the estimate in credits, Start, the run followed in texts, why work waits); the review of the texts one language at a time (to review, missing, yours; search by SKU or title); a person's word on a text: write it, approve the AI's as it is, or hand it back to the AI.
+- **Rules:** every write is fenced by the source the person saw (409 when it changed in the feed); only translations are touched, never the feed's own text, a golden field, a language outside the workspace or a product gone from the feed; a person's translation is never replaced by the AI and goes into the memory for the same text; a text handed back is forgotten by the memory too, so the AI really translates it again.
+- **With it:** the plan and translation stages are live on the feed page; a file that arrived while its feed was busy is read once the feed is free (ADR 0019 said so; nothing did it); the products can be read again after a failed read.
+- **Proof:** 8 review tests, 3 for waiting files and reads, the page tests (translation 10, review 8, stages, feed card), the e2e flow from an upload to a translation the owner writes; 27 of 27 guard mutants caught.

@@ -1183,6 +1183,384 @@
                 }
             }
         },
+        "/v1/feeds/{feed}/products": {
+            "get": {
+                "operationId": "product-texts.index",
+                "summary": "The feed's products with their texts in one language, 25 a page, by SKU: all of them, those\nto review (a failed or flagged check, a changed source), those missing a translation, or\nthose a person translated. With how many products each filter shows",
+                "tags": [
+                    "ProductText"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "locale",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+                            "maxLength": 16
+                        }
+                    },
+                    {
+                        "name": "filter",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all",
+                                "review",
+                                "missing",
+                                "manual"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ProductReviewResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "pages": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "counts": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "all": {
+                                                            "type": "integer"
+                                                        },
+                                                        "review": {
+                                                            "type": "integer"
+                                                        },
+                                                        "missing": {
+                                                            "type": "integer"
+                                                        },
+                                                        "manual": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "all",
+                                                        "review",
+                                                        "missing",
+                                                        "manual"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "page",
+                                                "pages",
+                                                "total",
+                                                "counts"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/products/{product}/texts/{field}/{locale}": {
+            "put": {
+                "operationId": "product-texts.update",
+                "summary": "Write a translation yourself (owner or admin). It is never replaced by the AI, and the same\ntext elsewhere reuses it. Send the source you translated: 409 when it changed in the feed",
+                "tags": [
+                    "ProductText"
+                ],
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "field",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "locale",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "value": {
+                                        "type": "string",
+                                        "maxLength": 20000
+                                    },
+                                    "source_locale": {
+                                        "type": "string",
+                                        "maxLength": 16
+                                    },
+                                    "source_hash": {
+                                        "type": "string",
+                                        "minLength": 64,
+                                        "maxLength": 64
+                                    }
+                                },
+                                "required": [
+                                    "value",
+                                    "source_locale",
+                                    "source_hash"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "product": {
+                                            "$ref": "#/components/schemas/ProductReviewResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "product"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "product-texts.destroy",
+                "summary": "Hand the text back to the AI (owner or admin): the next translation run translates it again",
+                "tags": [
+                    "ProductText"
+                ],
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "field",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "locale",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "product": {
+                                            "$ref": "#/components/schemas/ProductReviewResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "product"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/products/{product}/texts/{field}/{locale}/approve": {
+            "post": {
+                "operationId": "product-texts.approve",
+                "summary": "Publish the AI's translation as it is, though a check flagged it (owner or admin). 409 when\nthe source changed in the feed",
+                "tags": [
+                    "ProductText"
+                ],
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "field",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "locale",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "source_hash": {
+                                        "type": "string",
+                                        "minLength": 64,
+                                        "maxLength": 64
+                                    }
+                                },
+                                "required": [
+                                    "source_hash"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "product": {
+                                            "$ref": "#/components/schemas/ProductReviewResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "product"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/profile": {
             "get": {
                 "operationId": "profile.show",
@@ -3520,6 +3898,135 @@
                     "features"
                 ],
                 "title": "PlanResource"
+            },
+            "ProductReviewResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "sku": {
+                        "type": "string"
+                    },
+                    "texts": {
+                        "type": "array",
+                        "description": "Per text field: the source a translation is made from, and the translation (null when\nthere is none yet). \"provided\" is a text the feed has in this language itself: it is\nnot translated and changes in the feed only.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "field": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "provided": {
+                                    "type": "boolean"
+                                },
+                                "source": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "locale": {
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "type": "string"
+                                        },
+                                        "hash": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "locale",
+                                        "value",
+                                        "hash"
+                                    ]
+                                },
+                                "target": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "value": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ready",
+                                                "pending",
+                                                "stale",
+                                                "qa_failed",
+                                                "held"
+                                            ]
+                                        },
+                                        "origin": {
+                                            "type": "string",
+                                            "enum": [
+                                                "source",
+                                                "composed",
+                                                "ai",
+                                                "tm",
+                                                "manual",
+                                                "approved"
+                                            ]
+                                        },
+                                        "stale": {
+                                            "type": "boolean"
+                                        },
+                                        "failures": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "empty",
+                                                    "numbers",
+                                                    "html",
+                                                    "script",
+                                                    "levels",
+                                                    "length",
+                                                    "echo",
+                                                    "brands"
+                                                ]
+                                            }
+                                        },
+                                        "hard": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "value",
+                                        "status",
+                                        "origin",
+                                        "stale",
+                                        "failures",
+                                        "hard"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "field",
+                                "label",
+                                "provided",
+                                "source",
+                                "target"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "sku",
+                    "texts"
+                ],
+                "title": "ProductReviewResource"
             },
             "RegisterRequest": {
                 "type": "object",

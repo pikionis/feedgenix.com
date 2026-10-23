@@ -108,6 +108,18 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Waiting' })).toBeVisible()
   await expect(page.getByText(/Some texts wait/)).toBeVisible()
 
+  // Reviewing: nothing is translated yet, so the owner writes one text themselves.
+  await page.getByRole('link', { name: 'Review the texts' }).click()
+  await expect(page.getByRole('heading', { name: 'Review the texts' })).toBeVisible()
+  await page.getByRole('button', { name: 'Translate it yourself' }).first().click()
+  await page.getByRole('textbox', { name: /your translation/ }).fill('Marteau de charpentier')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByText('Yours', { exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: /^Yours/ }).click()
+  await expect(page.getByRole('tab', { name: 'Yours (1)', selected: true })).toBeVisible()
+  await expect(page.getByText('Marteau de charpentier')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Tools export: translation' }).click()
   await page.getByRole('link', { name: 'Tools export' }).click()
   await expect(stages.nth(4)).toContainText('Waiting')
 })

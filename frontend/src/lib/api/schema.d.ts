@@ -376,6 +376,68 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds/{feed}/products': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * The feed's products with their texts in one language, 25 a page, by SKU: all of them, those
+     *     to review (a failed or flagged check, a changed source), those missing a translation, or
+     *     those a person translated. With how many products each filter shows
+     */
+    get: operations['product-texts.index']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/products/{product}/texts/{field}/{locale}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Write a translation yourself (owner or admin). It is never replaced by the AI, and the same
+     *     text elsewhere reuses it. Send the source you translated: 409 when it changed in the feed
+     */
+    put: operations['product-texts.update']
+    post?: never
+    /** Hand the text back to the AI (owner or admin): the next translation run translates it again */
+    delete: operations['product-texts.destroy']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/products/{product}/texts/{field}/{locale}/approve': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Publish the AI's translation as it is, though a check flagged it (owner or admin). 409 when
+     *     the source changed in the feed
+     */
+    post: operations['product-texts.approve']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/profile': {
     parameters: {
       query?: never
@@ -1013,6 +1075,36 @@ export interface components {
         dedicated_infrastructure: boolean
         api_mcp: boolean
       }
+    }
+    /** ProductReviewResource */
+    ProductReviewResource: {
+      id: number
+      sku: string
+      /**
+       * @description Per text field: the source a translation is made from, and the translation (null when
+       *     there is none yet). "provided" is a text the feed has in this language itself: it is
+       *     not translated and changes in the feed only.
+       */
+      texts: {
+        field: string
+        label: string
+        provided: boolean
+        source: {
+          locale: string
+          value: string
+          hash: string
+        } | null
+        target: {
+          value: string | null
+          /** @enum {string} */
+          status: 'ready' | 'pending' | 'stale' | 'qa_failed' | 'held'
+          /** @enum {string} */
+          origin: 'source' | 'composed' | 'ai' | 'tm' | 'manual' | 'approved'
+          stale: boolean
+          failures: ('empty' | 'numbers' | 'html' | 'script' | 'levels' | 'length' | 'echo' | 'brands')[]
+          hard: boolean
+        } | null
+      }[]
     }
     /** RegisterRequest */
     RegisterRequest: {
@@ -2093,6 +2185,152 @@ export interface operations {
           }
         }
       }
+      422: components['responses']['ValidationException']
+    }
+  }
+  'product-texts.index': {
+    parameters: {
+      query: {
+        locale: string
+        filter?: 'all' | 'review' | 'missing' | 'manual'
+        search?: string | null
+        page?: number
+      }
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            data: components['schemas']['ProductReviewResource'][]
+            meta: {
+              page: number
+              pages: number
+              total: number
+              counts: {
+                all: number
+                review: number
+                missing: number
+                manual: number
+              }
+            }
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'product-texts.update': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The product ID */
+        product: number
+        field: string
+        locale: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          value: string
+          source_locale: string
+          source_hash: string
+        }
+      }
+    }
+    responses: {
+      /** @description `ProductReviewResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            product: components['schemas']['ProductReviewResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'product-texts.destroy': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The product ID */
+        product: number
+        field: string
+        locale: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `ProductReviewResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            product: components['schemas']['ProductReviewResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'product-texts.approve': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The product ID */
+        product: number
+        field: string
+        locale: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          source_hash: string
+        }
+      }
+    }
+    responses: {
+      /** @description `ProductReviewResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            product: components['schemas']['ProductReviewResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
       422: components['responses']['ValidationException']
     }
   }

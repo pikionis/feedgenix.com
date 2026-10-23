@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\App\FeedController;
 use App\Http\Controllers\App\FeedImportController;
 use App\Http\Controllers\App\MappingController;
+use App\Http\Controllers\App\ProductTextController;
 use App\Http\Controllers\App\ProfileController;
 use App\Http\Controllers\App\TranslationPlanController;
 use App\Http\Controllers\App\TwoFactorController;
@@ -98,6 +99,11 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::put('/feeds/{feed}/translation-plan', [TranslationPlanController::class, 'update'])->name('translation-plan.update');
         Route::post('/feeds/{feed}/translation-plan/start', [TranslationPlanController::class, 'start'])->name('translation-plan.start');
         Route::post('/feeds/{feed}/catalog/sync', [TranslationPlanController::class, 'sync'])->name('translation-plan.sync');
+        // Reviewing the texts of the products, one language at a time (M4).
+        Route::get('/feeds/{feed}/products', [ProductTextController::class, 'index'])->name('product-texts.index');
+        Route::put('/products/{product}/texts/{field}/{locale}', [ProductTextController::class, 'update'])->name('product-texts.update');
+        Route::post('/products/{product}/texts/{field}/{locale}/approve', [ProductTextController::class, 'approve'])->name('product-texts.approve');
+        Route::delete('/products/{product}/texts/{field}/{locale}', [ProductTextController::class, 'destroy'])->name('product-texts.destroy');
         Route::get('/imports/{import}', [FeedImportController::class, 'show'])->name('imports.show');
         Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->name('imports.reread');
     });

@@ -68,3 +68,16 @@ export type TranslationPlan = components['schemas']['TranslationPlanResource']
 export type TranslationMode = TranslationPlan['fields'][number]['mode']
 
 export type PipelineRun = NonNullable<TranslationPlan['run']>
+
+/** A page of products with their texts in one language (GET /v1/feeds/{feed}/products). */
+export type ReviewPage = paths['/v1/feeds/{feed}/products']['get']['responses'][200]['content']['application/json']
+
+export type ReviewFilter = NonNullable<
+  NonNullable<paths['/v1/feeds/{feed}/products']['get']['parameters']['query']>['filter']
+>
+
+export type ReviewProduct = components['schemas']['ProductReviewResource']
+
+export type ReviewText = ReviewProduct['texts'][number]
+
+export type QualityFailure = NonNullable<ReviewText['target']>['failures'][number]
