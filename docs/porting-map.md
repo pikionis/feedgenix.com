@@ -427,4 +427,4 @@ the scan, so a file it could not read had no record of its own.
   - N+1 lookups per row and a chunk path that re-parsed the whole file per chunk: chunks of 500 with one lookup and bulk upserts each.
   - Chunk checkpoints that resumed stale runs: no checkpoints; the database rows are the state.
 - **Dropped:** the supplier-specific colour guard and enrichment, category brand stripping and taxonomy cleanup (they come back as general normalisers in M12, if at all); the identical-text language analysis.
-- **Proof:** 13 tests; 7 of 7 guard mutants caught.
+- **Proof:** 12 tests; 7 of 7 guard mutants caught.
