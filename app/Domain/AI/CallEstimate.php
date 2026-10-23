@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\AI;
 
+use App\Domain\AI\Data\AiItem;
 use App\Domain\AI\Data\AiRequest;
+use App\Domain\AI\Data\AiUsage;
+use App\Domain\AI\Data\Prompt;
 use App\Domain\AI\Exceptions\AiDenied;
 use App\Domain\AI\Exceptions\AiTerminal;
 
@@ -42,5 +45,26 @@ final readonly class CallEstimate
     public function total(array $requests): int
     {
         return array_sum(array_map($this->worstCase(...), $requests));
+    }
+
+    /**
+     * What a usage would be charged on the costliest model a purpose may run on: the building block
+     * of estimates made before any request exists (a translation plan).
+     *
+     * @throws AiDenied when AI is switched off
+     * @throws AiTerminal when no priced model on a configured provider can take the purpose
+     */
+    public function charge(AiPurpose $purpose, int $inputTokens, int $outputTokens): int
+    {
+        if (! $this->enabled) {
+            throw AiDenied::because('ai_disabled', 'AI is switched off.');
+        }
+        $probe = new AiRequest(0, $purpose, new Prompt('estimate', '0', '', ''), [new AiItem('x', '')], [], 1, null);
+        $charge = 0;
+        foreach ($this->routes->candidates($probe) as $candidate) {
+            $charge = max($charge, $this->pricing->charge($candidate['model'], new AiUsage(inputTokens: $inputTokens, outputTokens: $outputTokens)));
+        }
+
+        return $charge;
     }
 }

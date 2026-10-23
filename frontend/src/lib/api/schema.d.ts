@@ -491,6 +491,27 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/feeds/{feed}/translation-plan': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** What the feed will translate, into which languages, how much work that is and its estimate in credits */
+    get: operations['translation-plan.show']
+    /**
+     * Choose each text field's mode and the target languages (owner or admin). Languages must be
+     *     the workspace's own; 409 on a stale version
+     */
+    put: operations['translation-plan.update']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/security/two-factor': {
     parameters: {
       query?: never
@@ -1039,6 +1060,53 @@ export interface components {
         quoted: boolean
         xml_item_path: string | null
       }
+    }
+    /** TranslationPlanResource */
+    TranslationPlanResource: {
+      /** @description Send it back with a change: a save on an older version is refused (409). */
+      version: number
+      /** @description False until someone saves it: these are the defaults. */
+      saved: string
+      fields: string
+      target_locales: string[]
+      workspace_locales: {
+        code: string
+        name: string
+      }[]
+      work: {
+        field: string
+        target_locale: string
+        /** @enum {string} */
+        mode: 'translate' | 'keep'
+        /** @description Texts with no fresh translation yet. */
+        texts: string
+        /** @description Of those, repeats the translation memory covers at no cost. */
+        memory: string
+      }[]
+      estimate: {
+        available: string
+        /** @description Why there is no estimate: ai_disabled, unpriced_model, provider_unavailable. */
+        unavailable_reason: string | null
+        about_credits: number | null
+        /** @description The most it can cost; each call reserves its share first. */
+        at_most_credits: number | null
+      }
+      run: {
+        id: number
+        /** @enum {string} */
+        stage: 'sync' | 'plan' | 'translate' | 'export' | 'done'
+        /** @enum {string} */
+        status: 'queued' | 'running' | 'awaiting_decision' | 'held' | 'done' | 'failed'
+        counts: {
+          [key: string]: number
+        }
+        warnings: {
+          code: string
+          message: string
+          count: number
+        }[]
+        failure_message: string | null
+      } | null
     }
     /**
      * UpdateFeedRequest
@@ -2133,6 +2201,71 @@ export interface operations {
         content?: never
       }
       401: components['responses']['AuthenticationException']
+    }
+  }
+  'translation-plan.show': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description `TranslationPlanResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            translation_plan: components['schemas']['TranslationPlanResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'translation-plan.update': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          version: number
+          /** @description field => translate, keep or skip */
+          fields: ('translate' | 'keep' | 'skip')[]
+          /** @description BCP-47 codes of the workspace's languages. */
+          target_locales: string[]
+        }
+      }
+    }
+    responses: {
+      /** @description `TranslationPlanResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            translation_plan: components['schemas']['TranslationPlanResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
     }
   }
   'two-factor.show': {

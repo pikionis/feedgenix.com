@@ -7,6 +7,7 @@ use App\Http\Controllers\App\FeedController;
 use App\Http\Controllers\App\FeedImportController;
 use App\Http\Controllers\App\MappingController;
 use App\Http\Controllers\App\ProfileController;
+use App\Http\Controllers\App\TranslationPlanController;
 use App\Http\Controllers\App\TwoFactorController;
 use App\Http\Controllers\App\UploadController;
 use App\Http\Controllers\App\WorkspaceController;
@@ -92,6 +93,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::put('/feeds/{feed}/mapping/fields', [MappingController::class, 'update'])->name('mapping.update');
         Route::post('/feeds/{feed}/mapping/suggest', [MappingController::class, 'suggest'])->name('mapping.suggest');
         Route::post('/feeds/{feed}/mapping/approve', [MappingController::class, 'approve'])->name('mapping.approve');
+        // What a feed translates, into which languages (M4).
+        Route::get('/feeds/{feed}/translation-plan', [TranslationPlanController::class, 'show'])->name('translation-plan.show');
+        Route::put('/feeds/{feed}/translation-plan', [TranslationPlanController::class, 'update'])->name('translation-plan.update');
         Route::get('/imports/{import}', [FeedImportController::class, 'show'])->name('imports.show');
         Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->name('imports.reread');
     });

@@ -1423,6 +1423,141 @@
                 }
             }
         },
+        "/v1/feeds/{feed}/translation-plan": {
+            "get": {
+                "operationId": "translation-plan.show",
+                "summary": "What the feed will translate, into which languages, how much work that is and its estimate in credits",
+                "tags": [
+                    "TranslationPlan"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`TranslationPlanResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "translation_plan": {
+                                            "$ref": "#/components/schemas/TranslationPlanResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "translation_plan"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "translation-plan.update",
+                "summary": "Choose each text field's mode and the target languages (owner or admin). Languages must be\nthe workspace's own; 409 on a stale version",
+                "tags": [
+                    "TranslationPlan"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "version": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "fields": {
+                                        "type": "array",
+                                        "description": "field => translate, keep or skip",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "translate",
+                                                "keep",
+                                                "skip"
+                                            ]
+                                        }
+                                    },
+                                    "target_locales": {
+                                        "type": "array",
+                                        "description": "BCP-47 codes of the workspace's languages.",
+                                        "items": {
+                                            "type": "string",
+                                            "maxLength": 16
+                                        },
+                                        "maxItems": 50
+                                    }
+                                },
+                                "required": [
+                                    "version",
+                                    "fields",
+                                    "target_locales"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`TranslationPlanResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "translation_plan": {
+                                            "$ref": "#/components/schemas/TranslationPlanResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "translation_plan"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
         "/v1/security/two-factor": {
             "get": {
                 "operationId": "two-factor.show",
@@ -3441,6 +3576,201 @@
                     "name"
                 ],
                 "title": "StoreFeedRequest"
+            },
+            "TranslationPlanResource": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "type": "integer",
+                        "description": "Send it back with a change: a save on an older version is refused (409)."
+                    },
+                    "saved": {
+                        "type": "string",
+                        "description": "False until someone saves it: these are the defaults."
+                    },
+                    "fields": {
+                        "type": "string"
+                    },
+                    "target_locales": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "workspace_locales": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "code",
+                                "name"
+                            ]
+                        }
+                    },
+                    "work": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "field": {
+                                    "type": "string"
+                                },
+                                "target_locale": {
+                                    "type": "string"
+                                },
+                                "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                        "translate",
+                                        "keep"
+                                    ]
+                                },
+                                "texts": {
+                                    "type": "string",
+                                    "description": "Texts with no fresh translation yet."
+                                },
+                                "memory": {
+                                    "type": "string",
+                                    "description": "Of those, repeats the translation memory covers at no cost."
+                                }
+                            },
+                            "required": [
+                                "field",
+                                "target_locale",
+                                "mode",
+                                "texts",
+                                "memory"
+                            ]
+                        }
+                    },
+                    "estimate": {
+                        "type": "object",
+                        "properties": {
+                            "available": {
+                                "type": "string"
+                            },
+                            "unavailable_reason": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "description": "Why there is no estimate: ai_disabled, unpriced_model, provider_unavailable."
+                            },
+                            "about_credits": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "at_most_credits": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "description": "The most it can cost; each call reserves its share first."
+                            }
+                        },
+                        "required": [
+                            "available",
+                            "unavailable_reason",
+                            "about_credits",
+                            "at_most_credits"
+                        ]
+                    },
+                    "run": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "stage": {
+                                "type": "string",
+                                "enum": [
+                                    "sync",
+                                    "plan",
+                                    "translate",
+                                    "export",
+                                    "done"
+                                ]
+                            },
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "queued",
+                                    "running",
+                                    "awaiting_decision",
+                                    "held",
+                                    "done",
+                                    "failed"
+                                ]
+                            },
+                            "counts": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "integer"
+                                }
+                            },
+                            "warnings": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "code",
+                                        "message",
+                                        "count"
+                                    ]
+                                }
+                            },
+                            "failure_message": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "stage",
+                            "status",
+                            "counts",
+                            "warnings",
+                            "failure_message"
+                        ]
+                    }
+                },
+                "required": [
+                    "version",
+                    "saved",
+                    "fields",
+                    "target_locales",
+                    "workspace_locales",
+                    "work",
+                    "estimate",
+                    "run"
+                ],
+                "title": "TranslationPlanResource"
             },
             "UpdateFeedRequest": {
                 "type": "object",
