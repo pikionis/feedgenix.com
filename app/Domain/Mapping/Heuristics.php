@@ -106,20 +106,23 @@ final readonly class Heuristics
         return array_values($matches);
     }
 
+    /**
+     * A column's language: named in its header, else guessed from its text, else the feed's. When
+     * that is the feed's language in general ("de") and the feed's own is more precise ("de-CH",
+     * often said by a person), the feed's wins.
+     */
     private function locale(MappingInput $input, string $column, ?string $sourceLocale): ?string
     {
-        $fromName = $this->languageOf($column);
-        if ($fromName !== null) {
-            return $fromName;
+        $found = $this->languageOf($column);
+        if ($found === null && ! $input->isProtected($column)) {
+            $found = LanguageGuess::guess(implode(' ', array_slice($input->values($column), 0, 10)));
         }
-        if (! $input->isProtected($column)) {
-            $guess = LanguageGuess::guess(implode(' ', array_slice($input->values($column), 0, 10)));
-            if ($guess !== null) {
-                return $guess;
-            }
+        if ($found === null) {
+            return $sourceLocale;
         }
+        $base = static fn (string $locale): string => strtolower(explode('-', $locale)[0]);
 
-        return $sourceLocale;
+        return $sourceLocale !== null && $base($found) === $base($sourceLocale) ? $sourceLocale : $found;
     }
 
     /** "Titel_DE", "description-fr-CH", "Name (it)" → the registry locale its last words name. */

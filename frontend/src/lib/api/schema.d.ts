@@ -254,7 +254,11 @@ export interface paths {
     delete?: never
     options?: never
     head?: never
-    patch?: never
+    /**
+     * Say which language the feed is written in (owner or admin): its text fields are filed under
+     *     it. 409 on a stale version, 422 for a language outside the registry
+     */
+    patch: operations['mapping.language']
     trace?: never
   }
   '/v1/feeds/{feed}/mapping/fields': {
@@ -699,8 +703,27 @@ export interface components {
       } | null
       /** @description The import whose profile is current (the last one read successfully); it stays while a later import fails. */
       profile_import_id: number | null
+      /**
+       * @description The mapping of the current columns: null until the feed has a profile and the mapping
+       *     was first viewed (that drafts it).
+       * @enum {string|null}
+       */
+      mapping_status: 'draft' | 'approved' | null
       created_at: string | null
     }
+    /**
+     * FieldClass
+     * @description How a canonical field is treated (ADR 0003).
+     * @enum {string}
+     */
+    FieldClass: 'golden' | 'pass_through' | 'translatable' | 'composable' | 'optimize_only' | 'derived'
+    /**
+     * FieldKind
+     * @description How a field's values are checked (the mapping's FieldValidator).
+     * @enum {string}
+     */
+    FieldKind:
+      'text' | 'html' | 'code' | 'gtin' | 'money' | 'currency' | 'integer' | 'number' | 'url' | 'urls' | 'category'
     /** ForgotPasswordRequest */
     ForgotPasswordRequest: {
       /** Format: email */
@@ -826,15 +849,24 @@ export interface components {
       source_locale: string | null
       approved_at: string | null
       ai: {
-        status: string
+        /** @enum {string} */
+        status: 'none' | 'queued' | 'running' | 'done' | 'failed'
         failure: string | null
         available: boolean
-        /** @description e.g. ai_disabled, unpriced_model, provider_unavailable */
-        unavailable_reason: string
+        /** @description Why a suggestion cannot be asked for now: ai_disabled, unpriced_model, provider_unavailable. */
+        unavailable_reason: string | null
         /** @description The most a suggestion can cost, in credits; usually far less is used. */
-        estimate_credits: number
+        estimate_credits: number | null
       }
-      columns: unknown[]
+      columns: {
+        position: number
+        name: string
+        kind: components['schemas']['ValueKind']
+        fill_rate: number
+        /** @description Prices, stock, ids, images, weights: never shown to the AI, never in a text field. */
+        protected: boolean
+        examples: string[]
+      }[]
       fields: {
         key: string
         target: string
@@ -844,7 +876,10 @@ export interface components {
         strategy: 'direct' | 'compose' | 'none'
         source_column: string | null
         recipe: {
-          sources: unknown[]
+          sources: {
+            column: string
+            label: string
+          }[]
           separator: string
           label_separator: string
         } | null
@@ -865,7 +900,15 @@ export interface components {
         }[]
         samples: string[]
       }[]
-      available_fields: unknown[]
+      available_fields: {
+        key: string
+        label: string
+        class: components['schemas']['FieldClass']
+        kind: components['schemas']['FieldKind']
+        description: string
+        localized: boolean
+        composable: boolean
+      }[]
     }
     /** PlanResource */
     PlanResource: {
@@ -1042,9 +1085,9 @@ export interface components {
       locale?: string | null
       /** @description The column that fills it alone; omit both column and recipe to leave it empty. */
       column?: string | null
-      recipe: {
+      recipe?: {
         sources?: {
-          column: string
+          column?: string
           label?: string | null
         }[]
         separator?: string | null
@@ -1688,6 +1731,42 @@ export interface operations {
       }
       401: components['responses']['AuthenticationException']
       404: components['responses']['ModelNotFoundException']
+    }
+  }
+  'mapping.language': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description The feed ID */
+        feed: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          version: number
+          /** @description BCP-47, from the language registry. */
+          source_locale: string
+        }
+      }
+    }
+    responses: {
+      /** @description `MappingResource` */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            mapping: components['schemas']['MappingResource']
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
     }
   }
   'mapping.update': {

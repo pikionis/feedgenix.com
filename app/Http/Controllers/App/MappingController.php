@@ -10,6 +10,7 @@ use App\Domain\Feeds\Models\Feed;
 use App\Domain\Mapping\Actions\ApproveMapping;
 use App\Domain\Mapping\Actions\DraftMapping;
 use App\Domain\Mapping\Actions\EditMappingField;
+use App\Domain\Mapping\Actions\SetSourceLocale;
 use App\Domain\Mapping\Actions\SuggestMapping;
 use App\Domain\Mapping\Exceptions\MappingChanged;
 use App\Domain\Mapping\Exceptions\MappingIncomplete;
@@ -67,6 +68,34 @@ final class MappingController
         }
 
         return $this->respond($mapping->refresh());
+    }
+
+    /**
+     * Say which language the feed is written in (owner or admin): its text fields are filed under
+     * it. 409 on a stale version, 422 for a language outside the registry.
+     *
+     * @throws MappingChanged
+     */
+    public function language(Request $request, Feed $feed, DraftMapping $draft, SetSourceLocale $set): JsonResponse
+    {
+        $this->authorizeManage($request);
+        $data = $request->validate([
+            'version' => ['required', 'integer', 'min:1'],
+            /** BCP-47, from the language registry. */
+            'source_locale' => ['required', 'string', 'max:16'],
+        ]);
+        $mapping = $draft->current($feed);
+        if (! $mapping instanceof Mapping) {
+            return self::noProfile();
+        }
+
+        try {
+            $mapping = $set->handle($mapping, (int) $data['version'], (string) $data['source_locale']);
+        } catch (InvalidArgumentException $invalid) {
+            throw ValidationException::withMessages(['source_locale' => $invalid->getMessage()]);
+        }
+
+        return self::respond($mapping);
     }
 
     /**

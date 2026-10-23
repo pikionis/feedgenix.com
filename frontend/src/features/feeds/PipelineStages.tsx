@@ -22,9 +22,9 @@ const PURPOSE: Record<Stage['key'], string> = {
 }
 
 /**
- * The six stages of a feed and where this feed stands. Import and analysis exist today; mapping,
- * the translation plan, translation and publishing are built next, so they say "Coming soon"
- * instead of pretending to run.
+ * The six stages of a feed and where this feed stands. Import, analysis and the mapping exist
+ * today; the translation plan, translation and publishing are built next, so they say "Coming
+ * soon" instead of pretending to run.
  */
 export function pipelineStages(feed: Feed): Stage[] {
   const latest = feed.latest_import
@@ -55,7 +55,14 @@ export function pipelineStages(feed: Feed): Stage[] {
     return { state: 'soon', detail: PURPOSE.analysis }
   })()
 
-  // Nothing after analysis exists yet: the first of them is next once there is a profile.
+  const mappingStage = ((): Omit<Stage, 'key' | 'name'> => {
+    if (!hasProfile) return { state: 'soon', detail: PURPOSE.mapping }
+    if (feed.mapping_status === 'approved') return { state: 'done', detail: 'Approved' }
+    if (feed.mapping_status === 'draft') return { state: 'active', detail: 'Draft: review it' }
+    return { state: 'next', detail: 'A draft is ready to review' }
+  })()
+
+  // The stages after the mapping are built next: the first of them is next once it is approved.
   const later = (key: Stage['key'], isNext: boolean): Omit<Stage, 'key' | 'name'> => ({
     state: isNext ? 'next' : 'soon',
     detail: PURPOSE[key],
@@ -64,14 +71,14 @@ export function pipelineStages(feed: Feed): Stage[] {
   return [
     { key: 'import', name: 'Import', ...importStage },
     { key: 'analysis', name: 'Analysis', ...analysisStage },
-    { key: 'mapping', name: 'AI mapping', ...later('mapping', hasProfile) },
-    { key: 'plan', name: 'Translation plan', ...later('plan', false) },
+    { key: 'mapping', name: 'AI mapping', ...mappingStage },
+    { key: 'plan', name: 'Translation plan', ...later('plan', feed.mapping_status === 'approved') },
     { key: 'translation', name: 'Translation', ...later('translation', false) },
     { key: 'publish', name: 'Publish', ...later('publish', false) },
   ]
 }
 
-const AVAILABLE: ReadonlySet<Stage['key']> = new Set(['import', 'analysis'])
+const AVAILABLE: ReadonlySet<Stage['key']> = new Set(['import', 'analysis', 'mapping'])
 
 export function PipelineStages({ feed }: { feed: Feed }) {
   const stages = pipelineStages(feed)

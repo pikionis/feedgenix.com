@@ -49,3 +49,15 @@ export type Delimiter = NonNullable<ReadingOptions['delimiter']>
 export type RegistrationMode = components['schemas']['RegistrationMode']
 
 export type AuthOptions = paths['/auth/options']['get']['responses'][200]['content']['application/json']
+
+/** A feed's mapping for review (GET /v1/feeds/{feed}/mapping). */
+export type Mapping = components['schemas']['MappingResource']
+
+export type MappingField = Mapping['fields'][number]
+
+export type MappingColumn = Mapping['columns'][number]
+
+/** A canonical field a column can fill. */
+export type CanonicalField = Mapping['available_fields'][number]
+
+export type FieldClass = components['schemas']['FieldClass']

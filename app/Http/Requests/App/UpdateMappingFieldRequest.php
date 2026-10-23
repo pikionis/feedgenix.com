@@ -24,9 +24,9 @@ final class UpdateMappingFieldRequest extends FormRequest
             'locale' => ['nullable', 'string', 'max:16'],
             /** The column that fills it alone; omit both column and recipe to leave it empty. */
             'column' => ['nullable', 'string', 'max:1000', 'prohibits:recipe'],
-            'recipe' => ['nullable', 'array'],
+            'recipe' => ['sometimes', 'nullable', 'array'],
             'recipe.sources' => ['required_with:recipe', 'array', 'min:1', 'max:30'],
-            'recipe.sources.*.column' => ['required', 'string', 'max:1000'],
+            'recipe.sources.*.column' => ['required_with:recipe.sources', 'string', 'max:1000'],
             'recipe.sources.*.label' => ['nullable', 'string', 'max:60'],
             'recipe.separator' => ['nullable', 'string', 'max:10'],
             'recipe.label_separator' => ['nullable', 'string', 'max:10'],

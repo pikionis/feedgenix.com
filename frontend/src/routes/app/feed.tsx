@@ -99,6 +99,24 @@ function FeedView({ feed }: { feed: Feed }) {
         <PipelineStages feed={feed} />
       </Card>
 
+      {feed.profile_import_id !== null && (
+        <Card className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="font-medium">Mapping</h2>
+            <p className="text-sm text-muted-foreground">
+              {feed.mapping_status === 'approved'
+                ? 'Approved: every column fills the right product field.'
+                : 'Which column fills each product field. A draft is ready: review it, let the AI suggest the rest, approve.'}
+            </p>
+          </div>
+          <Button asChild variant={feed.mapping_status === 'approved' ? 'secondary' : 'primary'}>
+            <Link to={`/app/feeds/${feed.id}/mapping`}>
+              {feed.mapping_status === 'approved' ? 'Open the mapping' : 'Review the mapping'}
+            </Link>
+          </Button>
+        </Card>
+      )}
+
       {latest === null && feed.source === 'upload' && (
         <Card className="flex flex-col items-start gap-3">
           <p className="text-sm text-muted-foreground">No file yet. Upload one and we read it straight away.</p>

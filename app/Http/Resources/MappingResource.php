@@ -40,6 +40,7 @@ final class MappingResource extends JsonResource
         $mapping = $this->resource;
         $schema = resolve(CanonicalSchema::class);
         $input = MappingInput::fromImport(StoreDecisions::profileOf($mapping));
+        [$estimate, $unavailable] = $this->estimate($mapping);
 
         return [
             'id' => $mapping->id,
@@ -50,8 +51,26 @@ final class MappingResource extends JsonResource
             'version' => $mapping->version,
             'source_locale' => $mapping->source_locale,
             'approved_at' => $mapping->approved_at?->toIso8601String(),
-            'ai' => $this->ai($mapping),
-            'columns' => array_map(static fn (array $column): array => [
+            'ai' => [
+                /** @var 'none'|'queued'|'running'|'done'|'failed' */
+                'status' => $mapping->ai_status,
+                /** @var string|null */
+                'failure' => $mapping->ai_failure,
+                'available' => $estimate !== null,
+                /**
+                 * Why a suggestion cannot be asked for now: ai_disabled, unpriced_model, provider_unavailable.
+                 *
+                 * @var string|null
+                 */
+                'unavailable_reason' => $unavailable,
+                /**
+                 * The most a suggestion can cost, in credits; usually far less is used.
+                 *
+                 * @var int|null
+                 */
+                'estimate_credits' => $estimate,
+            ],
+            'columns' => collect($input->columns)->map(static fn (array $column): array => [
                 'position' => $column['position'],
                 'name' => $column['name'],
                 /** @var ValueKind */
@@ -59,10 +78,11 @@ final class MappingResource extends JsonResource
                 'fill_rate' => $column['fill_rate'],
                 /** Prices, stock, ids, images, weights: never shown to the AI, never in a text field. */
                 'protected' => $column['protected'],
+                /** @var list<string> */
                 'examples' => $column['examples'],
-            ], $input->columns),
+            ])->values()->all(),
             'fields' => $mapping->fields()->orderBy('id')->get()->map(static fn (MappingField $field): array => self::field($schema, $input, $field))->values()->all(),
-            'available_fields' => array_values(array_map(static fn (CanonicalField $field): array => [
+            'available_fields' => collect($schema->mappable())->map(static fn (CanonicalField $field): array => [
                 'key' => $field->key,
                 'label' => $field->label,
                 /** @var FieldClass */
@@ -72,7 +92,7 @@ final class MappingResource extends JsonResource
                 'description' => $field->description,
                 'localized' => $field->isLocalized(),
                 'composable' => $field->isComposable(),
-            ], $schema->mappable())),
+            ])->values()->all(),
         ];
     }
 
@@ -94,6 +114,7 @@ final class MappingResource extends JsonResource
             /** @var 'direct'|'compose'|'none' */
             'strategy' => $field->strategy,
             'source_column' => $field->source_column,
+            /** @var array{sources: list<array{column: string, label: string}>, separator: string, label_separator: string}|null */
             'recipe' => $recipe?->toArray(),
             /** What was suggested and refused, when the field was left empty. */
             'candidate_column' => $field->candidate_column,
@@ -110,28 +131,13 @@ final class MappingResource extends JsonResource
         ];
     }
 
-    /** @return array{status: 'none'|'queued'|'running'|'done'|'failed', failure: string|null, available: bool, unavailable_reason: string|null, estimate_credits: int|null} */
-    private function ai(Mapping $mapping): array
+    /** @return array{0: int|null, 1: string|null} the worst case in credits, or why there is none */
+    private function estimate(Mapping $mapping): array
     {
-        $estimate = null;
-        $reason = null;
         try {
-            $estimate = Millicredits::toCredits(resolve(SuggestMapping::class)->worstCase($mapping));
+            return [Millicredits::toCredits(resolve(SuggestMapping::class)->worstCase($mapping)), null];
         } catch (AiException $unavailable) {
-            $reason = $unavailable->reason;
+            return [null, $unavailable->reason];
         }
-
-        /** @var 'none'|'queued'|'running'|'done'|'failed' $status */
-        $status = $mapping->ai_status;
-
-        return [
-            'status' => $status,
-            'failure' => $mapping->ai_failure,
-            'available' => $estimate !== null,
-            /** e.g. ai_disabled, unpriced_model, provider_unavailable */
-            'unavailable_reason' => $reason,
-            /** The most a suggestion can cost, in credits; usually far less is used. */
-            'estimate_credits' => $estimate,
-        ];
     }
 }

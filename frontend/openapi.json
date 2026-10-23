@@ -746,6 +746,78 @@
                         "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
+            },
+            "patch": {
+                "operationId": "mapping.language",
+                "summary": "Say which language the feed is written in (owner or admin): its text fields are filed under\nit. 409 on a stale version, 422 for a language outside the registry",
+                "tags": [
+                    "Mapping"
+                ],
+                "parameters": [
+                    {
+                        "name": "feed",
+                        "in": "path",
+                        "required": true,
+                        "description": "The feed ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "version": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "source_locale": {
+                                        "type": "string",
+                                        "description": "BCP-47, from the language registry.",
+                                        "maxLength": 16
+                                    }
+                                },
+                                "required": [
+                                    "version",
+                                    "source_locale"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`MappingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "mapping": {
+                                            "$ref": "#/components/schemas/MappingResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "mapping"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
             }
         },
         "/v1/feeds/{feed}/mapping/fields": {
@@ -2070,6 +2142,18 @@
                         ],
                         "description": "The import whose profile is current (the last one read successfully); it stays while a later import fails."
                     },
+                    "mapping_status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The mapping of the current columns: null until the feed has a profile and the mapping\nwas first viewed (that drafts it).",
+                        "enum": [
+                            "draft",
+                            "approved",
+                            null
+                        ]
+                    },
                     "created_at": {
                         "type": [
                             "string",
@@ -2086,9 +2170,41 @@
                     "parse_options",
                     "latest_import",
                     "profile_import_id",
+                    "mapping_status",
                     "created_at"
                 ],
                 "title": "FeedResource"
+            },
+            "FieldClass": {
+                "type": "string",
+                "description": "How a canonical field is treated (ADR 0003).\n",
+                "enum": [
+                    "golden",
+                    "pass_through",
+                    "translatable",
+                    "composable",
+                    "optimize_only",
+                    "derived"
+                ],
+                "title": "FieldClass"
+            },
+            "FieldKind": {
+                "type": "string",
+                "description": "How a field's values are checked (the mapping's FieldValidator).\n",
+                "enum": [
+                    "text",
+                    "html",
+                    "code",
+                    "gtin",
+                    "money",
+                    "currency",
+                    "integer",
+                    "number",
+                    "url",
+                    "urls",
+                    "category"
+                ],
+                "title": "FieldKind"
             },
             "ForgotPasswordRequest": {
                 "type": "object",
@@ -2653,7 +2769,14 @@
                         "type": "object",
                         "properties": {
                             "status": {
-                                "type": "string"
+                                "type": "string",
+                                "enum": [
+                                    "none",
+                                    "queued",
+                                    "running",
+                                    "done",
+                                    "failed"
+                                ]
                             },
                             "failure": {
                                 "type": [
@@ -2665,11 +2788,17 @@
                                 "type": "boolean"
                             },
                             "unavailable_reason": {
-                                "type": "string",
-                                "description": "e.g. ai_disabled, unpriced_model, provider_unavailable"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "description": "Why a suggestion cannot be asked for now: ai_disabled, unpriced_model, provider_unavailable."
                             },
                             "estimate_credits": {
-                                "type": "integer",
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
                                 "description": "The most a suggestion can cost, in credits; usually far less is used."
                             }
                         },
@@ -2683,7 +2812,41 @@
                     },
                     "columns": {
                         "type": "array",
-                        "items": {}
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "position": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "kind": {
+                                    "$ref": "#/components/schemas/ValueKind"
+                                },
+                                "fill_rate": {
+                                    "type": "number"
+                                },
+                                "protected": {
+                                    "type": "boolean",
+                                    "description": "Prices, stock, ids, images, weights: never shown to the AI, never in a text field."
+                                },
+                                "examples": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "position",
+                                "name",
+                                "kind",
+                                "fill_rate",
+                                "protected",
+                                "examples"
+                            ]
+                        }
                     },
                     "fields": {
                         "type": "array",
@@ -2727,7 +2890,21 @@
                                     "properties": {
                                         "sources": {
                                             "type": "array",
-                                            "items": {}
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "column": {
+                                                        "type": "string"
+                                                    },
+                                                    "label": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "column",
+                                                    "label"
+                                                ]
+                                            }
                                         },
                                         "separator": {
                                             "type": "string"
@@ -2835,7 +3012,41 @@
                     },
                     "available_fields": {
                         "type": "array",
-                        "items": {}
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "class": {
+                                    "$ref": "#/components/schemas/FieldClass"
+                                },
+                                "kind": {
+                                    "$ref": "#/components/schemas/FieldKind"
+                                },
+                                "description": {
+                                    "type": "string"
+                                },
+                                "localized": {
+                                    "type": "boolean"
+                                },
+                                "composable": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": [
+                                "key",
+                                "label",
+                                "class",
+                                "kind",
+                                "description",
+                                "localized",
+                                "composable"
+                            ]
+                        }
                     }
                 },
                 "required": [
@@ -3355,10 +3566,7 @@
                                             ],
                                             "maxLength": 60
                                         }
-                                    },
-                                    "required": [
-                                        "column"
-                                    ]
+                                    }
                                 },
                                 "minItems": 1,
                                 "maxItems": 30
@@ -3382,8 +3590,7 @@
                 },
                 "required": [
                     "version",
-                    "target",
-                    "recipe"
+                    "target"
                 ],
                 "title": "UpdateMappingFieldRequest"
             },

@@ -116,3 +116,15 @@ it("never reaches another workspace's feed", function (): void {
     test()->actingAs(owner($intruder))->getJson("/api/v1/feeds/{$feed->id}/mapping")->assertNotFound();
     test()->actingAs(owner($intruder))->putJson("/api/v1/feeds/{$feed->id}/mapping/fields", ['version' => 1, 'target' => 'sku'])->assertNotFound();
 });
+
+it('tells the feed page where the mapping stands', function (): void {
+    $tenant = aiWorkspace();
+    $feed = profiledFeed($tenant);
+    $status = static fn (): ?string => test()->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feed->id}")->assertOk()->json('feed.mapping_status');
+
+    expect($status())->toBeNull();
+    test()->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feed->id}/mapping")->assertOk();
+    expect($status())->toBe('draft');
+    test()->actingAs(owner($tenant))->postJson("/api/v1/feeds/{$feed->id}/mapping/approve", ['version' => 1])->assertOk();
+    expect($status())->toBe('approved');
+});

@@ -14,6 +14,23 @@ describe('pipelineStages', () => {
     expect(stages[1]?.detail).toBe('4,832 rows · 23 columns')
   })
 
+  it.each([
+    [null, 'next', 'A draft is ready to review', 'soon'],
+    ['draft', 'active', 'Draft: review it', 'soon'],
+    ['approved', 'done', 'Approved', 'next'],
+  ] as const)('mapping %s: the mapping stage and what comes after it', (mappingStatus, state, detail, plan) => {
+    const stages = pipelineStages(feed({ mapping_status: mappingStatus }))
+
+    expect(stages[2]).toMatchObject({ state, detail })
+    expect(stages[3]?.state).toBe(plan)
+  })
+
+  it('no mapping before the feed has a profile', () => {
+    expect(pipelineStages(feed({ latest_import: null, profile_import_id: null, mapping_status: null }))[2]?.state).toBe(
+      'soon',
+    )
+  })
+
   it('an uploaded file names the file', () => {
     const stages = pipelineStages(
       feed({ source: 'upload', latest_import: importSummary({ origin: 'upload', original_name: 'alpine.csv' }) }),
@@ -108,7 +125,9 @@ it('lists the six stages in order and says which are coming', () => {
     'Translation',
     'Publish',
   ])
-  expect(steps[2]).toHaveTextContent('Next · coming soon')
+  expect(steps[2]).toHaveTextContent('A draft is ready to review')
+  expect(steps[2]).not.toHaveTextContent('Coming soon')
+  expect(steps[3]).toHaveTextContent('Coming soon')
   expect(steps[5]).toHaveTextContent('Coming soon')
   expect(steps[0]).not.toHaveTextContent('Coming soon')
   expect(steps[1]).toHaveTextContent('Done')

@@ -54,12 +54,13 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Tools export' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'What we read' })).toBeVisible()
 
-  // The six stages: import and analysis done, mapping next, nothing later pretending to run.
+  // The six stages: import and analysis done, a mapping draft ready, nothing later pretending to run.
   const stages = page.getByRole('list', { name: 'Pipeline' }).getByRole('listitem')
   await expect(stages).toHaveCount(6)
   await expect(stages.nth(0)).toContainText('Done')
   await expect(stages.nth(1)).toContainText('Done')
-  await expect(stages.nth(2)).toContainText('Next · coming soon')
+  await expect(stages.nth(2)).toContainText('A draft is ready to review')
+  await expect(stages.nth(3)).toContainText('Coming soon')
   await expect(stages.nth(5)).toContainText('Coming soon')
 
   const columns = page.getByRole('table', { name: 'Columns' })
@@ -69,6 +70,20 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await expect(columns.getByRole('row', { name: /^Colour/ })).toContainText('75%')
   await expect(page.getByRole('table', { name: 'Sample products' })).toContainText('Claw hammer')
   await expect(page.getByText(/SKU · filled and unique in every row/)).toBeVisible()
+
+  // The mapping: a free draft (no AI), the feed's language said, approved.
+  await page.getByRole('link', { name: 'Review the mapping' }).click()
+  await expect(page.getByRole('heading', { name: 'Mapping' })).toBeVisible()
+  await expect(page.getByLabel('SKU', { exact: true })).toHaveValue('SKU')
+  await expect(page.getByLabel('GTIN / EAN', { exact: true })).toHaveValue('EAN')
+  await expect(page.getByText(/AI suggestions are switched off for now/)).toBeVisible()
+  await page.getByLabel('The feed is written in').selectOption('en')
+  await expect(page.getByLabel('Title (English)')).toHaveValue('Title')
+  await page.getByRole('button', { name: 'Approve the mapping' }).click()
+  await expect(page.getByText(/Changing a field sends it back to draft/)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Tools export' }).click()
+  await expect(page.getByRole('list', { name: 'Pipeline' }).getByRole('listitem').nth(2)).toContainText('Approved')
 })
 
 test('a Google Shopping URL becomes a column profile, and the Free plan stops at one feed', async ({ page }) => {

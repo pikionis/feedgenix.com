@@ -396,3 +396,14 @@ the scan, so a file it could not read had no record of its own.
 - **Changed:** one AI call per batch of 40 columns, with an id per column (the gateway's misalignment check applies), instead of one free-form JSON object per feed; Swiss/DeinDeal prompts and the four fixed languages are gone.
 - **Dropped:** the forced `categorie_*` translation for every language; the "translation fields" toggles (they come back as the field selection in M4).
 - **Proof:** 129 tests (columns and languages 47, validator 34, drafts 4, suggestions 22 including a 12-seed property test over random feeds, edits and approval 14, API 8) and 15 of 15 guard mutants caught.
+
+### M3 · Legacy Mapping Studio (Filament) → `frontend/src/routes/app/mapping.tsx`, `features/mapping`
+- **Kept:** one row per field with its source column, status, reason and sample values; AI suggestion on request; approval.
+- **Changed:**
+  - Fields are grouped by what happens to them (copied exactly, copied, translated, composed), and the uncommon ones are folded away.
+  - A protected column is never offered to a text field.
+  - Corrections for the AI are plain words; the most a suggestion can cost is shown in credits before it runs (never a provider cost).
+  - The feed's language is said by a person when the texts do not give it away (`PATCH …/mapping`); regional variants (`de-CH`) win over a detected `de`.
+  - Edits carry the version they were made on; a stale one reloads with an explanation.
+- **New:** the feed page links to the mapping, and the pipeline's mapping stage shows draft or approved.
+- **Proof:** 13 Vitest tests for the page, the stepper's states, and a Playwright step from a fresh Excel upload to an approved mapping; 4 Pest tests for the feed language and the feed's mapping status.

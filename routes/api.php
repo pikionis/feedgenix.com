@@ -88,6 +88,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         });
         // The mapping of a feed's columns to canonical fields (M3).
         Route::get('/feeds/{feed}/mapping', [MappingController::class, 'show'])->name('mapping.show');
+        Route::patch('/feeds/{feed}/mapping', [MappingController::class, 'language'])->name('mapping.language');
         Route::put('/feeds/{feed}/mapping/fields', [MappingController::class, 'update'])->name('mapping.update');
         Route::post('/feeds/{feed}/mapping/suggest', [MappingController::class, 'suggest'])->name('mapping.suggest');
         Route::post('/feeds/{feed}/mapping/approve', [MappingController::class, 'approve'])->name('mapping.approve');

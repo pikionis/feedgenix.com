@@ -1,4 +1,14 @@
-import type { Feed, FeedImport, ImportSummary, LimitHit, Plan, SessionUser, Workspace } from '~/lib/api/types'
+import type {
+  Feed,
+  FeedImport,
+  ImportSummary,
+  LimitHit,
+  Mapping,
+  MappingField,
+  Plan,
+  SessionUser,
+  Workspace,
+} from '~/lib/api/types'
 
 /** Typed from the OpenAPI contract, so a fixture can never drift from what the API returns. */
 export const origin = window.location.origin
@@ -140,6 +150,7 @@ export function feed(overrides: Partial<Feed> = {}): Feed {
     parse_options: { encoding: null, delimiter: null, quoted: true, xml_item_path: null },
     latest_import: importSummary(),
     profile_import_id: 100,
+    mapping_status: null,
     created_at: READ_AT,
     ...overrides,
   }
@@ -188,4 +199,130 @@ export const feedLimit: LimitHit = {
   plan: 'free',
   upgrade_to: 'pro',
   message: 'Your Free plan includes 1 feed. Pro gives you 5 feeds.',
+}
+
+export function mappingField(overrides: Partial<MappingField> = {}): MappingField {
+  return {
+    key: 'title@de',
+    target: 'title',
+    label: 'Title',
+    locale: 'de',
+    strategy: 'direct',
+    source_column: 'Titel',
+    recipe: null,
+    candidate_column: null,
+    origin: 'heuristic',
+    confidence: 0.85,
+    reason: 'The column name matches Title.',
+    status: 'validated',
+    issues: [],
+    samples: ['Wanderschuh aus Leder', 'Regenjacke'],
+    ...overrides,
+  }
+}
+
+/** A drafted mapping of a small German shop feed: SKU, price and title mapped, colour refused. */
+export function mapping(overrides: Partial<Mapping> = {}): Mapping {
+  return {
+    id: 3,
+    feed_id: 7,
+    status: 'draft',
+    version: 4,
+    source_locale: 'de',
+    approved_at: null,
+    ai: { status: 'none', failure: null, available: true, unavailable_reason: null, estimate_credits: 1200 },
+    columns: [
+      { position: 0, name: 'Artikelnummer', kind: 'code', fill_rate: 1, protected: true, examples: ['AO-1'] },
+      { position: 1, name: 'Titel', kind: 'text', fill_rate: 1, protected: false, examples: ['Wanderschuh'] },
+      { position: 2, name: 'Preis CHF', kind: 'decimal', fill_rate: 1, protected: true, examples: ['189.90'] },
+      { position: 3, name: 'Grösse', kind: 'text', fill_rate: 1, protected: false, examples: ['M', 'L'] },
+      { position: 4, name: 'Beschreibung', kind: 'text', fill_rate: 1, protected: false, examples: ['Robust'] },
+    ],
+    fields: [
+      mappingField({
+        key: 'sku',
+        target: 'sku',
+        label: 'SKU',
+        locale: null,
+        source_column: 'Artikelnummer',
+        samples: ['AO-1'],
+      }),
+      mappingField({
+        key: 'price',
+        target: 'price',
+        label: 'Price',
+        locale: null,
+        source_column: 'Preis CHF',
+        samples: ['189.90'],
+      }),
+      mappingField(),
+      mappingField({
+        key: 'color@de',
+        target: 'color',
+        label: 'Color',
+        strategy: 'none',
+        source_column: null,
+        candidate_column: 'Grösse',
+        origin: 'ai',
+        status: 'rejected',
+        issues: [
+          {
+            type: 'values_do_not_fit',
+            severity: 'error',
+            count: 1,
+            message: '4 of 4 values look like sizes (M, XL, 42): they belong in Size. Left empty.',
+          },
+        ],
+        samples: [],
+      }),
+    ],
+    available_fields: [
+      {
+        key: 'sku',
+        label: 'SKU',
+        class: 'golden',
+        kind: 'code',
+        description: "The seller's own product id.",
+        localized: false,
+        composable: false,
+      },
+      {
+        key: 'price',
+        label: 'Price',
+        class: 'golden',
+        kind: 'money',
+        description: 'The regular selling price.',
+        localized: false,
+        composable: false,
+      },
+      {
+        key: 'title',
+        label: 'Title',
+        class: 'translatable',
+        kind: 'text',
+        description: "The product's name.",
+        localized: true,
+        composable: false,
+      },
+      {
+        key: 'color',
+        label: 'Color',
+        class: 'translatable',
+        kind: 'text',
+        description: 'The colour name.',
+        localized: true,
+        composable: false,
+      },
+      {
+        key: 'warranty',
+        label: 'Warranty',
+        class: 'translatable',
+        kind: 'text',
+        description: 'The warranty terms.',
+        localized: true,
+        composable: false,
+      },
+    ],
+    ...overrides,
+  }
 }
