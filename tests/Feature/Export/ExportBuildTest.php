@@ -11,6 +11,7 @@ use App\Domain\Export\LocalArtifactServer;
 use App\Domain\Export\Models\ExportArtifact;
 use App\Domain\Export\Models\ExportProfile;
 use Illuminate\Contracts\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -204,6 +205,20 @@ it('keeps the published build serving when the next one fails, and leaves no scr
         ->and($profile->fresh()?->published_artifact_id)->toBe($good->id)
         ->and(Storage::disk('local')->files('exports/scratch', true))->toBe([])
         ->and(Storage::disk('local')->exists("exports/{$good->storage_key}/products.csv"))->toBeTrue();
+});
+
+it('never writes over files left under a key by a database restored from a backup', function (): void {
+    [$tenant, $feed] = translatingWorkspace(['en']);
+    $profile = exportProfile($tenant, $feed);
+    // The next build's id with files already there, as after a restore.
+    $next = (int) DB::selectOne('SELECT last_value + 1 AS id FROM export_artifacts_id_seq')->id;
+    Storage::disk('local')->put("exports/{$tenant->id}/{$profile->id}/{$next}/products.csv", 'stale');
+
+    $artifact = buildExport($tenant, $profile);
+
+    expect($artifact->status)->toBe('published')
+        ->and($artifact->storage_key)->toStartWith("{$tenant->id}/{$profile->id}/{$artifact->id}-")
+        ->and(Storage::disk('local')->get("exports/{$artifact->storage_key}/products.csv"))->not->toBe('stale');
 });
 
 it('builds one profile once at a time', function (): void {

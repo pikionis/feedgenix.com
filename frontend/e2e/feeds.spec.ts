@@ -132,7 +132,7 @@ test('an Excel upload becomes a column profile', async ({ page }) => {
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
   // Straight from Laravel: the URL's host is the app's, the path is what a channel pulls.
   const path = new URL(await urls.getByRole('textbox').first().inputValue()).pathname
-  const file = await page.request.get(`http://127.0.0.1:8000${path}`)
+  const file = await page.request.get(`http://127.0.0.1:${process.env.E2E_API_PORT ?? 8000}${path}`)
   expect(file.status()).toBe(200)
   expect(file.headers()['x-robots-tag']).toBe('noindex, nofollow')
   const csv = await file.text()

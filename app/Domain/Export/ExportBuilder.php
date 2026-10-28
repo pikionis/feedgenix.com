@@ -19,6 +19,7 @@ use App\Domain\Notices\Notify;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -107,7 +108,8 @@ final readonly class ExportBuilder
         foreach ($files as $name => $file) {
             $files[$name] = [...$file, ...FileChecks::gzip($scratch.'/'.$name, $file['bytes'], $file['sha256'])];
         }
-        $key = "{$profile->tenant_id}/{$profile->id}/{$artifact->id}";
+        // A random part too: files a restored database no longer knows about can never take a build's place.
+        $key = "{$profile->tenant_id}/{$profile->id}/{$artifact->id}-".Str::lower(Str::random(10));
         $this->server->store($scratch, $key);
 
         DB::transaction(static function () use ($profile, $artifact, $key, $files, $rows, $hash, $report): void {

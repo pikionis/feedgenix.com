@@ -31,6 +31,11 @@ test('the workspace fits a phone, even with a long name', async ({ page }) => {
   await expectNoHorizontalScroll(page, '/app')
 
   await page.goto('/app/settings')
-  await page.getByText('Most popular').waitFor()
+  await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor()
   await expectNoHorizontalScroll(page, '/app/settings')
+
+  // The plans moved to billing.
+  await page.goto('/app/billing/plans')
+  await page.getByText('Most popular').waitFor()
+  await expectNoHorizontalScroll(page, '/app/billing/plans')
 })
