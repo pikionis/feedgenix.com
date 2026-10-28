@@ -262,3 +262,19 @@ it('lets members look, never change', async () => {
   expect(screen.getByLabelText('Title')).toBeDisabled()
   expect(screen.queryByRole('button', { name: 'Start translating' })).not.toBeInTheDocument()
 })
+
+it('marks a language the plan paused', async () => {
+  servePlan(
+    translationPlan({
+      workspace_locales: [
+        { code: 'en', name: 'English', paused: false },
+        { code: 'fr', name: 'French', paused: true },
+      ],
+    }),
+  )
+  renderPlan()
+
+  const french = await screen.findByRole('checkbox', { name: /French/ })
+  expect(french.closest('label')).toHaveTextContent('Frenchpaused by your plan')
+  expect(screen.getByRole('checkbox', { name: 'English' }).closest('label')).not.toHaveTextContent('paused')
+})

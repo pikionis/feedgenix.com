@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanCatalog;
+use App\Domain\Billing\PlanLimitsApplier;
 use App\Models\Tenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Attributes\Signature;
@@ -27,7 +28,7 @@ use Throwable;
         {--override=* : A limit override as key=value ("null" = unlimited, "-" removes it)}')]
 final class SetPlanCommand extends Command
 {
-    public function handle(): int
+    public function handle(PlanLimitsApplier $limits): int
     {
         try {
             $tenant = $this->tenant();
@@ -55,6 +56,7 @@ final class SetPlanCommand extends Command
         }
 
         $tenant->forceFill($changes)->save();
+        $applied = $limits->apply($tenant);
 
         $entitlements = Entitlements::for($tenant);
         $this->info("Workspace {$tenant->slug} (#{$tenant->id}) is on ".PlanCatalog::name($entitlements->plan()).'.');
@@ -63,6 +65,8 @@ final class SetPlanCommand extends Command
             $limit = $entitlements->limit($key);
             $this->line(str_pad($key, 20).($limit === null ? 'unlimited' : number_format($limit)));
         }
+
+        $this->line("Paused {$applied['feeds_paused']} feed(s) and {$applied['languages_paused']} language(s); resumed {$applied['feeds_resumed']} feed(s) and {$applied['languages_resumed']} language(s).");
 
         return self::SUCCESS;
     }

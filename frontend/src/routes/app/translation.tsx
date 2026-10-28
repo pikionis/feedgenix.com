@@ -103,6 +103,7 @@ function TranslationView({ feedId, plan, back }: { feedId: number; plan: Transla
                     onChange={(event) => void actions.setTarget(locale.code, event.target.checked)}
                   />
                   {locale.name}
+                  {locale.paused && <span className="text-xs text-warn">paused by your plan</span>}
                 </label>
               </li>
             ))}

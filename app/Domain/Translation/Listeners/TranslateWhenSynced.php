@@ -12,8 +12,8 @@ use App\Domain\Translation\Models\TranslationPlan;
 /**
  * A plan that carries on by itself (ADR 0021): once a new file is read, its new and changed texts
  * are translated as the saved plan says, through the same start a person presses. Credits, the
- * allowance and AI availability hold the work exactly as they would then. A plan nobody saved, or
- * one without languages, waits for a person.
+ * allowance and AI availability hold the work exactly as they would then. A plan nobody saved, one
+ * without languages, or a feed the plan paused, waits for a person.
  */
 final readonly class TranslateWhenSynced
 {
@@ -23,7 +23,7 @@ final readonly class TranslateWhenSynced
     {
         $plan = TranslationPlan::query()->where('feed_id', $event->feedId)->first();
         $feed = Feed::query()->find($event->feedId);
-        if (! $plan instanceof TranslationPlan || ! $plan->auto_translate || $plan->target_locales === [] || ! $feed instanceof Feed) {
+        if (! $plan instanceof TranslationPlan || ! $plan->auto_translate || $plan->target_locales === [] || ! $feed instanceof Feed || $feed->plan_paused_at !== null) {
             return;
         }
 

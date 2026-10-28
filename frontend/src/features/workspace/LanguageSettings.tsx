@@ -51,6 +51,9 @@ export function LanguageSettings({ workspace }: { workspace: Workspace }) {
         {selected.map((code) => (
           <li key={code} className="inline-flex items-center gap-1 rounded-full bg-surface py-1 pr-1.5 pl-3 text-sm">
             {byCode.get(code)?.name ?? code}
+            {workspace.paused_languages.includes(code) && (
+              <span className="text-xs text-warn">paused by your plan</span>
+            )}
             {canManage && (
               <button
                 type="button"

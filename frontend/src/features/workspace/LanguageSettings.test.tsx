@@ -77,3 +77,13 @@ it('is read-only for members', async () => {
   expect(await screen.findByText('Only the owner or an admin can change the languages.')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Save languages' })).not.toBeInTheDocument()
 })
+
+it('marks the languages the plan paused', async () => {
+  const languages = languagesResponse.languages.filter((language) => language.code !== 'el')
+  renderSettings(workspace({ languages, paused_languages: ['fr'] }))
+
+  const selected = await screen.findByRole('list', { name: 'Selected target languages' })
+  // Once the names are in.
+  await expect.poll(() => selected.textContent).toContain('Frenchpaused by your plan')
+  expect(selected).not.toHaveTextContent('Germanpaused')
+})

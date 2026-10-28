@@ -63,6 +63,23 @@ final class PlanLimitExceeded extends RuntimeException
         ]);
     }
 
+    /** A feed paused by the plan's feed limit: it takes no new files or AI work until there is room. */
+    public static function feedPaused(string $plan, int $allowed, int $used, ?string $upgradeTo): self
+    {
+        $message = 'This feed is paused: your '.PlanCatalog::name($plan).' plan includes '.number_format($allowed).' '.($allowed === 1 ? 'feed' : 'feeds').'.'
+            .' Its feed URLs keep working. '.($upgradeTo === null ? 'Delete another feed' : 'Upgrade to '.PlanCatalog::name($upgradeTo).', or delete another feed,').' to use it again.';
+
+        return new self($message, [
+            'error' => 'feed_paused',
+            'limit' => 'feeds',
+            'allowed' => $allowed,
+            'used' => $used,
+            'requested' => null,
+            'plan' => $plan,
+            'upgrade_to' => $upgradeTo,
+        ]);
+    }
+
     /** A file larger than the plan reads; the message comes from the ingest side, which knows the units. */
     public static function feedSize(string $plan, int $allowedBytes, int $fileBytes, ?string $upgradeTo, string $message): self
     {

@@ -104,6 +104,7 @@ export function workspace(overrides: Partial<Workspace> = {}): Workspace {
       overage: { available: false, enabled: true, credits_per_product: null },
     },
     languages: [],
+    paused_languages: [],
     ...overrides,
   }
 }
@@ -160,6 +161,7 @@ export function feed(overrides: Partial<Feed> = {}): Feed {
     profile_import_id: 100,
     mapping_status: null,
     run: null,
+    plan_paused: false,
     exports: { count: 0, published: 0 },
     created_at: READ_AT,
     ...overrides,
@@ -190,8 +192,8 @@ export function translationPlan(overrides: Partial<TranslationPlan> = {}): Trans
     target_locales: ['en'],
     auto_translate: false,
     workspace_locales: [
-      { code: 'en', name: 'English' },
-      { code: 'fr', name: 'French' },
+      { code: 'en', name: 'English', paused: false },
+      { code: 'fr', name: 'French', paused: false },
     ],
     work: [
       { field: 'title', target_locale: 'en', mode: 'translate', texts: 5, memory: 2 },

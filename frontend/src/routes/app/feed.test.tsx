@@ -273,3 +273,12 @@ it('offers no translation before the mapping is approved', async () => {
   expect(await screen.findByRole('link', { name: 'Review the mapping' })).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Translation' })).not.toBeInTheDocument()
 })
+
+it('says a feed is paused by the plan, and offers no new file for it', async () => {
+  serveFeed(feed({ source: 'upload', plan_paused: true }))
+  renderFeed()
+
+  expect(await screen.findByText(/This feed is paused by your plan/)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Upgrade, or delete another feed' })).toHaveAttribute('href', '/app/settings')
+  expect(screen.getByRole('button', { name: 'Upload a new file' })).toBeDisabled()
+})

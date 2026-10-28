@@ -18,3 +18,6 @@ Schedule::command('ops:reconcile')->everyMinute()->withoutOverlapping()->onOneSe
 
 // Reservations a crashed worker never settled: charge what they consumed, release the rest.
 Schedule::command('credits:settle-expired')->everyFiveMinutes()->withoutOverlapping()->onOneServer();
+
+// Plans that lapsed by date: pause what is over the limits, resume what fits again (ADR 0024).
+Schedule::command('plans:apply')->hourly()->withoutOverlapping()->onOneServer();

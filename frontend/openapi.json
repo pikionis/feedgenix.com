@@ -3767,6 +3767,10 @@
                             "texts_done"
                         ]
                     },
+                    "plan_paused": {
+                        "type": "boolean",
+                        "description": "Paused by the plan's feed limit: no new files or AI work; its feed URLs keep working."
+                    },
                     "exports": {
                         "type": "object",
                         "description": "How many exports the feed has, and how many of them serve a build.",
@@ -3803,6 +3807,7 @@
                     "profile_import_id",
                     "mapping_status",
                     "run",
+                    "plan_paused",
                     "exports",
                     "created_at"
                 ],
@@ -5274,6 +5279,7 @@
                     },
                     "workspace_locales": {
                         "type": "array",
+                        "description": "The workspace's languages; a paused one (over the plan's limit) gets no new translations.",
                         "items": {
                             "type": "object",
                             "properties": {
@@ -5282,11 +5288,15 @@
                                 },
                                 "name": {
                                     "type": "string"
+                                },
+                                "paused": {
+                                    "type": "boolean"
                                 }
                             },
                             "required": [
                                 "code",
-                                "name"
+                                "name",
+                                "paused"
                             ]
                         }
                     },
@@ -5959,6 +5969,13 @@
                         "items": {
                             "$ref": "#/components/schemas/LanguageResource"
                         }
+                    },
+                    "paused_languages": {
+                        "type": "array",
+                        "description": "Languages the plan paused (over its limit): no new translations into them.",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 },
                 "required": [
@@ -5966,7 +5983,8 @@
                     "plan",
                     "recommended_plan",
                     "entitlements",
-                    "languages"
+                    "languages",
+                    "paused_languages"
                 ],
                 "title": "WorkspaceResource"
             }

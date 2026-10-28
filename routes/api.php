@@ -83,23 +83,23 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::patch('/feeds/{feed}', [FeedController::class, 'update'])->name('feeds.update');
         Route::delete('/feeds/{feed}', [FeedController::class, 'destroy'])->name('feeds.destroy');
         Route::get('/feeds/{feed}/imports', [FeedImportController::class, 'index'])->name('feeds.imports');
-        Route::post('/feeds/{feed}/fetch', [FeedImportController::class, 'fetch'])->middleware('throttle:feed-fetch')->name('feeds.fetch');
-        Route::post('/feeds/{feed}/uploads', [UploadController::class, 'start'])->name('uploads.start');
+        Route::post('/feeds/{feed}/fetch', [FeedImportController::class, 'fetch'])->middleware(['feed.active', 'throttle:feed-fetch'])->name('feeds.fetch');
+        Route::post('/feeds/{feed}/uploads', [UploadController::class, 'start'])->middleware('feed.active')->name('uploads.start');
         Route::scopeBindings()->group(function (): void {
             Route::put('/feeds/{feed}/uploads/{upload}/chunks/{index}', [UploadController::class, 'chunk'])->whereUuid('upload')->whereNumber('index')->name('uploads.chunk');
-            Route::post('/feeds/{feed}/uploads/{upload}/complete', [UploadController::class, 'complete'])->whereUuid('upload')->name('uploads.complete');
+            Route::post('/feeds/{feed}/uploads/{upload}/complete', [UploadController::class, 'complete'])->whereUuid('upload')->middleware('feed.active')->name('uploads.complete');
         });
         // The mapping of a feed's columns to canonical fields (M3).
         Route::get('/feeds/{feed}/mapping', [MappingController::class, 'show'])->name('mapping.show');
         Route::patch('/feeds/{feed}/mapping', [MappingController::class, 'language'])->name('mapping.language');
         Route::put('/feeds/{feed}/mapping/fields', [MappingController::class, 'update'])->name('mapping.update');
-        Route::post('/feeds/{feed}/mapping/suggest', [MappingController::class, 'suggest'])->name('mapping.suggest');
+        Route::post('/feeds/{feed}/mapping/suggest', [MappingController::class, 'suggest'])->middleware('feed.active')->name('mapping.suggest');
         Route::post('/feeds/{feed}/mapping/approve', [MappingController::class, 'approve'])->name('mapping.approve');
         // What a feed translates, into which languages (M4).
         Route::get('/feeds/{feed}/translation-plan', [TranslationPlanController::class, 'show'])->name('translation-plan.show');
         Route::put('/feeds/{feed}/translation-plan', [TranslationPlanController::class, 'update'])->name('translation-plan.update');
-        Route::post('/feeds/{feed}/translation-plan/start', [TranslationPlanController::class, 'start'])->name('translation-plan.start');
-        Route::post('/feeds/{feed}/catalog/sync', [TranslationPlanController::class, 'sync'])->name('translation-plan.sync');
+        Route::post('/feeds/{feed}/translation-plan/start', [TranslationPlanController::class, 'start'])->middleware('feed.active')->name('translation-plan.start');
+        Route::post('/feeds/{feed}/catalog/sync', [TranslationPlanController::class, 'sync'])->middleware('feed.active')->name('translation-plan.sync');
         // Reviewing the texts of the products, one language at a time (M4).
         Route::get('/feeds/{feed}/products', [ProductTextController::class, 'index'])->name('product-texts.index');
         Route::put('/products/{product}/texts/{field}/{locale}', [ProductTextController::class, 'update'])->name('product-texts.update');
@@ -115,6 +115,6 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::post('/exports/{export}/token', [ExportController::class, 'rotate'])->name('exports.rotate');
         Route::post('/exports/{export}/builds/{artifact}/publish', [ExportController::class, 'publish'])->name('exports.publish');
         Route::get('/imports/{import}', [FeedImportController::class, 'show'])->name('imports.show');
-        Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->name('imports.reread');
+        Route::post('/imports/{import}/reread', [FeedImportController::class, 'reread'])->middleware('feed.active')->name('imports.reread');
     });
 });

@@ -67,6 +67,8 @@ final class FeedResource extends JsonResource
                 'texts_planned' => (int) ($run->counts['planned'] ?? 0),
                 'texts_done' => (int) ($run->counts['texts_done'] ?? 0),
             ] : null,
+            /** Paused by the plan's feed limit: no new files or AI work; its feed URLs keep working. */
+            'plan_paused' => $feed->plan_paused_at !== null,
             /** How many exports the feed has, and how many of them serve a build. */
             'exports' => [
                 'count' => ExportProfile::query()->where('feed_id', $feed->id)->count(),

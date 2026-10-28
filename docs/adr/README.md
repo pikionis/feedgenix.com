@@ -28,3 +28,4 @@ record supersedes them.
 | [0021](0021-automatic-translation.md) | A translation plan can carry on by itself after each new file (refines 0019, 0020) |
 | [0022](0022-export-build.md) | The export build as built: dialects, columns, published texts, checks (refines 0007) |
 | [0023](0023-export-triggers-and-feed-urls.md) | When exports are built, and how feed URLs answer (refines 0007, 0022) |
+| [0024](0024-plan-pauses.md) | What is over a plan's limits pauses, never disappears (refines 0005, 0007) |

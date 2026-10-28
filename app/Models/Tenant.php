@@ -60,6 +60,7 @@ class Tenant extends Model
         'ai_paused_reason' => null,
         'is_internal' => false,
         'frozen_at' => null,
+        'applied_plan' => null,
     ];
 
     /**

@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
  * @property string $status active or paused
  * @property array<string, mixed> $parse_options
  * @property CarbonImmutable|null $content_changed_at when its exports last had something new to show
+ * @property CarbonImmutable|null $plan_paused_at over the plan's feed limit: no new files or AI work, its exports keep serving
  * @property CarbonImmutable|null $created_at
  * @property-read FeedSource|null $feedSource
  * @property-read Import|null $latestImport
@@ -43,6 +44,7 @@ class Feed extends Model
         'status' => 'active',
         'parse_options' => '{}',
         'content_changed_at' => null,
+        'plan_paused_at' => null,
     ];
 
     /** The catalogue changed in a way its exports show: the reconciler builds them again (ADR 0022). */
@@ -60,6 +62,7 @@ class Feed extends Model
             'tenant_id' => 'integer',
             'parse_options' => 'array',
             'content_changed_at' => 'immutable_datetime',
+            'plan_paused_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

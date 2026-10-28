@@ -41,7 +41,7 @@ final readonly class TranslationPlanner
         return (new TranslationPlan)->forceFill([
             'feed_id' => $feed->id,
             'fields' => $fields,
-            'target_locales' => TenantLanguage::query()->orderBy('language_code')->pluck('language_code')->all(),
+            'target_locales' => TenantLanguage::activeCodes(),
         ]);
     }
 
@@ -61,6 +61,17 @@ final readonly class TranslationPlanner
 
             return ['field' => (string) $values['field'], 'locale' => (string) $values['locale'], 'products' => (int) $values['products']];
         }, $rows));
+    }
+
+    /**
+     * The plan's target languages that take new translations: a language the plan paused keeps
+     * its texts and its place in the plan, and gets nothing new until it is active again.
+     *
+     * @return list<string>
+     */
+    public function targets(TranslationPlan $plan): array
+    {
+        return array_values(array_intersect($plan->target_locales, TenantLanguage::activeCodes()));
     }
 
     /** The language a product's text is translated from when it has several: the mapped feed language. */
@@ -96,7 +107,7 @@ final readonly class TranslationPlanner
             if ($mode === 'skip') {
                 continue;
             }
-            foreach ($plan->target_locales as $target) {
+            foreach ($this->targets($plan) as $target) {
                 $row = DB::selectOne('SELECT count(*) AS texts, coalesce(sum(char_length(value)), 0) AS characters, coalesce(sum(octet_length(value)) FILTER (WHERE memory IS NULL), 0) AS bytes, count(memory) AS memory FROM ('.self::PENDING.') AS work',
                     [$feed->id, $field, $target, (string) $preferred, $field, $target, $field, $target]);
                 $values = is_object($row) ? (array) $row : [];

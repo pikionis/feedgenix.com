@@ -80,9 +80,9 @@ function FeedView({ feed }: { feed: Feed }) {
           </div>
           <div className="flex flex-wrap gap-2">
             {feed.source === 'url' ? (
-              <FetchButton feed={feed} disabled={running} />
+              <FetchButton feed={feed} disabled={running || feed.plan_paused} />
             ) : (
-              <Button disabled={running} onClick={() => setDialog('upload')}>
+              <Button disabled={running || feed.plan_paused} onClick={() => setDialog('upload')}>
                 Upload a new file
               </Button>
             )}
@@ -94,6 +94,17 @@ function FeedView({ feed }: { feed: Feed }) {
           </div>
         </div>
       </div>
+
+      {feed.plan_paused && (
+        <Notice tone="warn">
+          This feed is paused by your plan: it takes no new files and no AI work, and its feed URLs keep serving the
+          last build.{' '}
+          <Link to="/app/settings" className="text-primary hover:text-primary-hover">
+            Upgrade, or delete another feed
+          </Link>{' '}
+          to use it again.
+        </Notice>
+      )}
 
       <Card>
         <PipelineStages feed={feed} />

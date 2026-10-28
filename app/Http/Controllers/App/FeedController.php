@@ -6,6 +6,7 @@ namespace App\Http\Controllers\App;
 
 use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanLimitExceeded;
+use App\Domain\Billing\PlanLimitsApplier;
 use App\Domain\Feeds\Actions\CreateFeed;
 use App\Domain\Feeds\Actions\DeleteFeed;
 use App\Domain\Feeds\Models\Feed;
@@ -103,10 +104,12 @@ final class FeedController
     }
 
     /** Delete a feed with its imports and stored files (owner or admin). */
-    public function destroy(Request $request, Feed $feed, DeleteFeed $delete): Response
+    public function destroy(Request $request, Feed $feed, DeleteFeed $delete, PlanLimitsApplier $limits): Response
     {
         $this->authorizeManage($request);
         $delete->handle($feed);
+        // Room for a feed the plan paused.
+        $limits->apply($this->workspace());
 
         return response()->noContent();
     }

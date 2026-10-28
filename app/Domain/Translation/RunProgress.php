@@ -54,6 +54,8 @@ final class RunProgress
             'allowance' => 'Some products are over this period\'s allowance: upgrade, or they wait for the next period.',
             'ai_disabled', 'unpriced_model', 'provider_unavailable' => 'Some texts wait: AI is not available right now.',
             'ai_paused', 'workspace_frozen' => 'AI is paused for this workspace.',
+            'feed_paused' => 'This feed is paused by your plan: its texts wait until it is active again.',
+            'language_paused' => 'Some languages are paused by your plan: their texts wait until they are active again.',
             default => 'Some texts wait: they resume on their own when the cause clears.',
         };
     }

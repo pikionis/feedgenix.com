@@ -57,7 +57,7 @@ final readonly class StartTranslation
             if ($mode === 'skip') {
                 continue;
             }
-            foreach ($plan->target_locales as $target) {
+            foreach ($this->planner->targets($plan) as $target) {
                 $this->plan($run, $feed, (string) $field, (string) $mode, (string) $target, $preferred, $counts, $products);
             }
         }

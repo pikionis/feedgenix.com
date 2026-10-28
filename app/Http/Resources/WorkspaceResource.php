@@ -79,6 +79,12 @@ final class WorkspaceResource extends JsonResource
                 ],
             ],
             'languages' => LanguageResource::collection($this->languages($tenant)),
+            /**
+             * Languages the plan paused (over its limit): no new translations into them.
+             *
+             * @var list<string>
+             */
+            'paused_languages' => resolve(TenantContext::class)->run($tenant->id, static fn (): array => TenantLanguage::query()->whereNotNull('plan_paused_at')->orderBy('language_code')->pluck('language_code')->all()),
         ];
     }
 

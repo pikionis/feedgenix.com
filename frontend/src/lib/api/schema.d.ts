@@ -1029,6 +1029,8 @@ export interface components {
         texts_planned: number
         texts_done: number
       } | null
+      /** @description Paused by the plan's feed limit: no new files or AI work; its feed URLs keep working. */
+      plan_paused: boolean
       /** @description How many exports the feed has, and how many of them serve a build. */
       exports: {
         count: number
@@ -1415,9 +1417,11 @@ export interface components {
       target_locales: string[]
       /** @description After each new file, its new and changed texts are translated without waiting for a person. */
       auto_translate: boolean
+      /** @description The workspace's languages; a paused one (over the plan's limit) gets no new translations. */
       workspace_locales: {
         code: string
         name: string
+        paused: boolean
       }[]
       /**
        * @description Per field and target language: the texts with no fresh translation yet, and how many
@@ -1614,6 +1618,8 @@ export interface components {
         }
       }
       languages: components['schemas']['LanguageResource'][]
+      /** @description Languages the plan paused (over its limit): no new translations into them. */
+      paused_languages: string[]
     }
   }
   responses: {

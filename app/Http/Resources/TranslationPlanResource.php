@@ -66,8 +66,13 @@ final class TranslationPlanResource extends JsonResource
             'target_locales' => $plan->target_locales,
             /** After each new file, its new and changed texts are translated without waiting for a person. */
             'auto_translate' => (bool) $plan->auto_translate,
-            'workspace_locales' => TenantLanguage::query()->orderBy('language_code')->pluck('language_code')
-                ->map(static fn (string $code): array => ['code' => $code, 'name' => (string) ($names[$code] ?? $code)])->values()->all(),
+            /**
+             * The workspace's languages; a paused one (over the plan's limit) gets no new translations.
+             *
+             * @var list<array{code: string, name: string, paused: bool}>
+             */
+            'workspace_locales' => TenantLanguage::query()->orderBy('language_code')->get(['language_code', 'plan_paused_at'])
+                ->map(static fn (TenantLanguage $language): array => ['code' => $language->language_code, 'name' => (string) ($names[$language->language_code] ?? $language->language_code), 'paused' => $language->plan_paused_at !== null])->values()->all(),
             /**
              * Per field and target language: the texts with no fresh translation yet, and how many
              * of those are repeats the translation memory covers at no cost.

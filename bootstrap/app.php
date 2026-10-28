@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureFeedActive;
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => ResolveTenant::class,
             'staff' => EnsureStaff::class,
+            'feed.active' => EnsureFeedActive::class,
         ]);
 
         // The tenant context must exist before route-model binding runs, so a record from another

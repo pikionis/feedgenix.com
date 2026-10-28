@@ -478,3 +478,15 @@ the scan, so a file it could not read had no record of its own.
 ### M5 · New — the publish page (`routes/app/publish.tsx`, `features/publish`), stage 6
 - **What:** each export's feed URLs to copy (and the `.gz` form), the build they serve (products, size), the products a channel would refuse for a missing column, rows a format could not carry, a build the shrink guard held back with "Publish it anyway", failures, earlier builds to serve again, new URLs after asking (the old ones work 72 hours), pause and resume, delete after asking; a new export offers only the formats and files its channel takes. The feed page links to it and stage 6 is live: next once products are in the catalogue (publishing does not wait for the translation), done when a feed URL is live.
 - **Proof:** 8 page tests and the stage tests; the e2e flow now creates an export and pulls its URL from Laravel; 7 of 7 guard mutants caught.
+
+### M6 · `PlanLimitsApplier`, `EnsureFeedActive`, `TenantsSyncPlans` → `Domain/Billing/PlanLimitsApplier`, `Http/Middleware/EnsureFeedActive`, `plans:apply`, `Translation/Listeners/HoldPausedWork` (ADR 0024)
+- **Kept:** nothing deleted; the least recently changed feeds pause and the most recent resume; a paused feed keeps serving its last export; viewing stays open; the hourly pass.
+- **Fixed:**
+  - Only feeds paused (every language kept translating after a downgrade): languages over the limit pause too, the last added first, and nothing new is translated into them.
+  - Queued AI work of a paused feed ran on: it is held, and handed out again when the feed or language resumes.
+  - The pause itself updated `updated_at`, so the next downgrade paused the wrong feeds: pauses never touch it.
+  - The hourly sync applied every workspace every hour: only those whose plan in force differs from the one applied.
+  - Deleting a feed or removing languages left the others paused until the next hour: they resume at once.
+- **Changed:** the 402 says what still works ("Its feed URLs keep working") and which plan fits.
+- **Not yet:** `EnsurePlanFeature` comes with the first feature-gated route (M9).
+- **Proof:** 8 tests; 15 of 15 guard mutants caught; the feed page, plan and settings show what is paused.

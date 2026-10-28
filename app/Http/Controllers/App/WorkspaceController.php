@@ -6,6 +6,7 @@ namespace App\Http\Controllers\App;
 
 use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanLimitExceeded;
+use App\Domain\Billing\PlanLimitsApplier;
 use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Http\Controllers\App\Concerns\ActsInWorkspace;
 use App\Http\Requests\App\UpdateWorkspaceLanguagesRequest;
@@ -45,7 +46,7 @@ final class WorkspaceController
      *
      * @throws PlanLimitExceeded
      */
-    public function updateLanguages(UpdateWorkspaceLanguagesRequest $request): WorkspaceResource
+    public function updateLanguages(UpdateWorkspaceLanguagesRequest $request, PlanLimitsApplier $limits): WorkspaceResource
     {
         $this->authorizeManage($request);
         $codes = $request->languageCodes();
@@ -62,6 +63,8 @@ final class WorkspaceController
 
             return $workspace;
         });
+        // Languages that now fit the plan take translations again.
+        $limits->apply($workspace);
 
         return new WorkspaceResource($workspace, $this->role($request));
     }
