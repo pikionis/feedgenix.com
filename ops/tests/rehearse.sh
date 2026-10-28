@@ -171,6 +171,18 @@ artifact=$(find "$dist" -maxdepth 1 -name 'feedgenix-*.tar.gz' | head -n 1)
 revision=$(basename "$artifact" .tar.gz)
 revision=${revision#feedgenix-}
 [[ $revision =~ ^[0-9a-f]{40}$ ]] || bad "artifact name has no revision: $artifact"
+# Some runners point /etc/resolv.conf at a loopback resolver of their own (127.0.0.100). provision.sh
+# rightly refuses that: the sandbox allows DNS only through systemd-resolved's stub. Put the runner's
+# resolver behind systemd-resolved, as on a real Ubuntu server, rather than loosen the preflight.
+runner_dns=$(awk '$1 == "nameserver" && $2 ~ /^127\./ && $2 != "127.0.0.53" { print $2 }' /etc/resolv.conf | paste -sd' ' -)
+if [[ -n $runner_dns ]]; then
+  install -d /etc/systemd/resolved.conf.d
+  printf '[Resolve]\nDNS=%s\n' "$runner_dns" >/etc/systemd/resolved.conf.d/zz-rehearsal.conf
+  systemctl restart systemd-resolved
+  ln -sfn /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+  wait_until 20 getent ahostsv4 github.com || bad "no DNS through systemd-resolved (upstream $runner_dns)"
+  ok "the runner's resolver ($runner_dns) now answers through systemd-resolved (127.0.0.53)"
+fi
 apt-get install -y -q openssh-server >/dev/null
 systemctl start ssh
 ssh-keygen -q -t ed25519 -N '' -C rehearsal-deploy -f "$WORK/deploy"
