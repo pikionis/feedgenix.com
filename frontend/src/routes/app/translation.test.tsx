@@ -278,3 +278,23 @@ it('marks a language the plan paused', async () => {
   expect(french.closest('label')).toHaveTextContent('Frenchpaused by your plan')
   expect(screen.getByRole('checkbox', { name: 'English' }).closest('label')).not.toHaveTextContent('paused')
 })
+
+it('says before a start what it counts against the allowance, and what is over it', async () => {
+  servePlan(
+    translationPlan({
+      allowance: { held: true, new: 5, over: 2, allowance: 3, used: 0, resets_at: '2027-02-01T00:00:00+00:00' },
+    }),
+  )
+  renderPlan()
+
+  expect(await screen.findByText(/2 products are over the 3 your plan includes until 2027-02-01/)).toHaveTextContent(
+    'Their translation waits until then, or starts at once when you upgrade.',
+  )
+})
+
+it('says how much of the allowance a start uses when it fits', async () => {
+  servePlan(translationPlan())
+  renderPlan()
+
+  expect(await screen.findByText('Counts 3 products of the 490 left until 2027-02-01.')).toBeInTheDocument()
+})

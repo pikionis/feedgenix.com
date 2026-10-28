@@ -90,3 +90,8 @@ export type ExportProfile = components['schemas']['ExportProfileResource']
 export type ExportBuild = NonNullable<ExportProfile['published']>
 
 export type ExportPreset = ExportsResponse['presets'][number]
+
+/** What the workspace is told (GET /v1/notices). */
+export type NoticesResponse = paths['/v1/notices']['get']['responses'][200]['content']['application/json']
+
+export type WorkspaceNotice = NoticesResponse['notices'][number]

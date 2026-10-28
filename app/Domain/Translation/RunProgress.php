@@ -6,6 +6,7 @@ namespace App\Domain\Translation;
 
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Feeds\Models\PipelineRun;
+use App\Domain\Notices\Notify;
 use App\Domain\Translation\Models\WorkUnit;
 
 /**
@@ -44,6 +45,12 @@ final class RunProgress
         })->save();
         if ($run->status === 'done') {
             Feed::contentChanged($run->feed_id);
+        }
+        if ($run->status === 'held' && in_array('credits', $holds, true)) {
+            // Once per run: what waits, and that it goes on by itself (ADR 0025).
+            Notify::send($run->tenant_id, 'held', "held_credits:{$run->id}", 'action', 'Translations wait for credits',
+                'Some texts of '.(Feed::query()->whereKey($run->feed_id)->value('name') ?? 'a feed').' wait: the workspace does not hold enough credits for them. They continue by themselves once there are credits. During the beta, write to us and we add them.',
+                'Open the translation', "/app/feeds/{$run->feed_id}/translation", email: true);
         }
     }
 

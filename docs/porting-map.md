@@ -490,3 +490,8 @@ the scan, so a file it could not read had no record of its own.
 - **Changed:** the 402 says what still works ("Its feed URLs keep working") and which plan fits.
 - **Not yet:** `EnsurePlanFeature` comes with the first feature-gated route (M9).
 - **Proof:** 8 tests; 15 of 15 guard mutants caught; the feed page, plan and settings show what is paused.
+
+### M6 · New — notices (`Domain/Notices`, `/app/notices`, ADR 0025); replaces the legacy `PipelineAlert::notifyAll`
+- **What:** a notice per workspace, once per key, in the app for everyone and by email to the verified owner and admins when it needs a decision: 80% of the period's products, products waiting for the next period, translations waiting for credits, what a plan paused or resumed (by name), an export build held back. The plan page says before a start what it counts against the allowance (`Admission::preview`, the same count the start makes).
+- **Fixed against the legacy alerts:** they went to every operator for every event, repeated on every run, and the shrink alert was the only one a customer got: one notice per event and key, to the people who decide, with the way to act on it and the dates.
+- **Proof:** 10 notice tests, the page, badge and allowance tests; 11 of 11 guard mutants caught.

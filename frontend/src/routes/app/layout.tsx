@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { LayoutGrid, type LucideIcon, Rss, Settings, ShieldCheck } from 'lucide-react'
+import { Bell, LayoutGrid, type LucideIcon, Rss, Settings, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, redirect, useNavigate } from 'react-router'
 import { Logo } from '~/components/brand/logo'
 import { Button } from '~/components/ui/button'
 import { Notice } from '~/components/ui/notice'
 import { UpgradeDialog } from '~/features/billing/UpgradeDialog'
+import { noticesQuery } from '~/features/notices/queries'
 import { workspaceQuery } from '~/features/workspace/queries'
 import { api } from '~/lib/api/client'
 import { unauthenticated } from '~/lib/events'
@@ -76,6 +77,7 @@ export default function AppLayout() {
           <NavItem to="/app/feeds" icon={Rss}>
             Feeds
           </NavItem>
+          <NoticesItem />
           <NavItem to="/app/settings" icon={Settings}>
             Settings
           </NavItem>
@@ -163,7 +165,31 @@ function Usage() {
   )
 }
 
-function NavItem({ to, end, icon: Icon, children }: { to: string; end?: boolean; icon: LucideIcon; children: string }) {
+/** Notices, with how many are unread (checked every minute). */
+function NoticesItem() {
+  const notices = useQuery(noticesQuery)
+  const unread = notices.data?.unread ?? 0
+
+  return (
+    <NavItem to="/app/notices" icon={Bell} badge={unread > 0 ? unread : undefined}>
+      Notices
+    </NavItem>
+  )
+}
+
+function NavItem({
+  to,
+  end,
+  icon: Icon,
+  badge,
+  children,
+}: {
+  to: string
+  end?: boolean
+  icon: LucideIcon
+  badge?: number
+  children: string
+}) {
   return (
     <NavLink
       to={to}
@@ -177,6 +203,13 @@ function NavItem({ to, end, icon: Icon, children }: { to: string; end?: boolean;
     >
       <Icon size={16} strokeWidth={1.5} className="hidden lg:block" aria-hidden="true" />
       {children}
+      {badge !== undefined && ' '}
+      {badge !== undefined && (
+        <span className="ml-auto rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
+          {badge > 99 ? '99+' : badge}
+          <span className="sr-only"> unread</span>
+        </span>
+      )}
     </NavLink>
   )
 }

@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { expect, it } from 'vitest'
 import { apiUrl, sessionUser, workspace } from '~/test/fixtures'
+import { notices } from '~/test/handlers'
 import { renderRoutes } from '~/test/render'
 import { server } from '~/test/server'
 import AppLayout, { clientLoader } from './layout'
@@ -61,7 +62,7 @@ it('has one navigation and one sign-out, with the plan and its usage', async () 
     within(nav)
       .getAllByRole('link')
       .map((link) => link.textContent),
-  ).toEqual(['Overview', 'Feeds', 'Settings'])
+  ).toEqual(['Overview', 'Feeds', 'Notices', 'Settings'])
   expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(1)
   expect(screen.getByText('Free plan')).toBeInTheDocument()
   // The fixture's Free plan: 0 of 1 feed, 0 of 1 language.
@@ -78,4 +79,19 @@ it('asks an unverified member to verify the address', async () => {
   renderApp('/app')
 
   expect(await screen.findByText(/Verify your address/)).toBeInTheDocument()
+})
+
+it('shows how many notices are unread next to Notices', async () => {
+  server.use(
+    http.get(apiUrl('/v1/auth/user'), () => HttpResponse.json({ user: sessionUser() })),
+    http.get(apiUrl('/v1/workspace'), () => HttpResponse.json(workspace())),
+    notices({ notices: [], unread: 3 }),
+  )
+
+  renderApp('/app')
+
+  const nav = await screen.findByRole('navigation', { name: 'Workspace' })
+  const link = await within(nav).findByRole('link', { name: /^Notices/ })
+  await expect.poll(() => link.textContent).toBe('Notices 3 unread')
+  expect(link).toHaveAttribute('href', '/app/notices')
 })

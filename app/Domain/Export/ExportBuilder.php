@@ -15,6 +15,7 @@ use App\Domain\Export\Models\ExportArtifact;
 use App\Domain\Export\Models\ExportProfile;
 use App\Domain\Mapping\Models\Mapping;
 use App\Domain\Mapping\Models\MappingField;
+use App\Domain\Notices\Notify;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -97,6 +98,8 @@ final readonly class ExportBuilder
                 'failure_reason' => 'shrink',
                 'failure_message' => sprintf('The new build has %s rows, the published one %s: more than %d%% fewer. The published one keeps serving; publish this one yourself if the drop is right.', number_format($rows), number_format($published->rows), (int) round((1 - $keep) * 100)),
             ])->save();
+            Notify::send($profile->tenant_id, 'export', "export_rejected:{$artifact->id}", 'action', "{$profile->name}: the new build was held back",
+                (string) $artifact->failure_message, 'Open the feed URLs', "/app/feeds/{$profile->feed_id}/publish", email: true);
 
             return $artifact;
         }

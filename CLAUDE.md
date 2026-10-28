@@ -41,8 +41,8 @@ the legacy Feed Intelligence app. The decisions behind it are in `docs/adr/`; th
 
 ## Structure
 - `app/Domain/<Module>/{Models,Actions,Jobs,Data,Events,Exceptions}` — modules: Tenancy, Identity,
-  Billing, Metering, Credits, Feeds, Ingest, Mapping, Catalog, Translation, Quality, Export, Agent,
-  AI, Ops. Modules talk through Actions, events and a few interfaces (AiClient, VectorIndex,
+  Billing, Metering, Credits, Feeds, Ingest, Mapping, Catalog, Translation, Quality, Export, Notices,
+  Agent, AI, Ops. Modules talk through Actions, events and a few interfaces (AiClient, VectorIndex,
   ArtifactServer, RowReader, Fetcher); Pest arch tests enforce it.
 - `app/Http/Controllers/{App,Admin,Auth,Public}` — thin, final controllers.
 - `frontend/src/{routes,features,components,lib}` — `~/` is `frontend/src/`.

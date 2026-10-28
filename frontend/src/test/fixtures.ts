@@ -200,6 +200,7 @@ export function translationPlan(overrides: Partial<TranslationPlan> = {}): Trans
       { field: 'size', target_locale: 'en', mode: 'keep', texts: 5, memory: 0 },
     ],
     estimate: { available: true, unavailable_reason: null, about_credits: 1200, at_most_credits: 4800 },
+    allowance: { held: false, new: 3, over: 0, allowance: 500, used: 10, resets_at: '2027-02-01T00:00:00+00:00' },
     run: pipelineRun(),
     ...overrides,
   }

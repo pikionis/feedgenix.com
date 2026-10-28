@@ -127,6 +127,32 @@ final readonly class TranslationPlanner
         return $lines;
     }
 
+    /**
+     * The products a start of the plan would send to AI (the allowance counts these): texts to
+     * translate that the memory does not cover. Kept fields and repeats count nothing.
+     *
+     * @return list<int>
+     */
+    public function productsForAi(Feed $feed, TranslationPlan $plan): array
+    {
+        $preferred = $this->preferredSource($feed);
+        $products = [];
+        foreach ($plan->fields as $field => $mode) {
+            if ($mode !== 'translate') {
+                continue;
+            }
+            foreach ($this->targets($plan) as $target) {
+                $rows = DB::select('SELECT DISTINCT product_id FROM ('.self::PENDING.') AS work WHERE memory IS NULL',
+                    [$feed->id, $field, $target, (string) $preferred, $field, $target, $field, $target]);
+                foreach ($rows as $row) {
+                    $products[(int) ((array) $row)['product_id']] = true;
+                }
+            }
+        }
+
+        return array_keys($products);
+    }
+
     /*
      * One row per product that has the field in another language and no fresh translation into the
      * target: none yet, or pending, stale, failed or held, or made from another version of the

@@ -409,6 +409,40 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/notices': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** The workspace's latest notices, newest first, with how many are unread */
+    get: operations['notices.index']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/notices/read': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Mark notices read: the ones listed, or all of them. Everyone in the workspace sees the same notices */
+    post: operations['notices.read']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/admin/overview': {
     parameters: {
       query?: never
@@ -1442,6 +1476,19 @@ export interface components {
         about_credits: number | null
         /** @description The most it can cost; each call reserves its share first. */
         at_most_credits: number | null
+      }
+      /**
+       * @description What starting the plan would count against the period's allowance: products with AI
+       *     work not counted yet this period, and how many of them are over it (on Free they
+       *     wait for the next period; on a paid plan with overage on they go ahead).
+       */
+      allowance: {
+        held: boolean
+        new: number
+        over: number
+        allowance: number | null
+        used: number
+        resets_at: string
       }
       run: {
         id: number
@@ -2534,6 +2581,81 @@ export interface operations {
       }
       401: components['responses']['AuthenticationException']
       404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'notices.index': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            notices: {
+              id: number
+              kind: string
+              /** @enum {string} */
+              level: 'info' | 'warn' | 'action'
+              title: string
+              body: string
+              action_label: string | null
+              action_path: string | null
+              read: boolean
+              created_at: string | null
+            }[]
+            unread: number
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+    }
+  }
+  'notices.read': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        'application/json': {
+          ids?: number[]
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            notices: {
+              id: number
+              kind: string
+              /** @enum {string} */
+              level: 'info' | 'warn' | 'action'
+              title: string
+              body: string
+              action_label: string | null
+              action_path: string | null
+              read: boolean
+              created_at: string | null
+            }[]
+            unread: number
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
       422: components['responses']['ValidationException']
     }
   }

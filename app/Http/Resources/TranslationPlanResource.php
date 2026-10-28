@@ -7,11 +7,13 @@ namespace App\Http\Resources;
 use App\Domain\Catalog\Schema\CanonicalSchema;
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Feeds\Models\PipelineRun;
+use App\Domain\Metering\Admission;
 use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Domain\Translation\Models\Language;
 use App\Domain\Translation\Models\TranslationPlan;
 use App\Domain\Translation\TranslationEstimate;
 use App\Domain\Translation\TranslationPlanner;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -103,6 +105,14 @@ final class TranslationPlanResource extends JsonResource
                  */
                 'at_most_credits' => $estimate['at_most_credits'],
             ],
+            /**
+             * What starting the plan would count against the period's allowance: products with AI
+             * work not counted yet this period, and how many of them are over it (on Free they
+             * wait for the next period; on a paid plan with overage on they go ahead).
+             *
+             * @var array{held: bool, new: int, over: int, allowance: int|null, used: int, resets_at: string}
+             */
+            'allowance' => resolve(Admission::class)->preview(Tenant::query()->findOrFail($this->feed->tenant_id), $planner->productsForAi($this->feed, $plan)),
             'run' => $run instanceof PipelineRun ? [
                 'id' => $run->id,
                 /** @var 'sync'|'plan'|'translate'|'export'|'done' */

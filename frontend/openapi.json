@@ -1546,6 +1546,216 @@
                 }
             }
         },
+        "/v1/notices": {
+            "get": {
+                "operationId": "notices.index",
+                "summary": "The workspace's latest notices, newest first, with how many are unread",
+                "tags": [
+                    "Notice"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "notices": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "kind": {
+                                                        "type": "string"
+                                                    },
+                                                    "level": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "info",
+                                                            "warn",
+                                                            "action"
+                                                        ]
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "body": {
+                                                        "type": "string"
+                                                    },
+                                                    "action_label": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "action_path": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "read": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "kind",
+                                                    "level",
+                                                    "title",
+                                                    "body",
+                                                    "action_label",
+                                                    "action_path",
+                                                    "read",
+                                                    "created_at"
+                                                ]
+                                            }
+                                        },
+                                        "unread": {
+                                            "type": "integer",
+                                            "minimum": 0
+                                        }
+                                    },
+                                    "required": [
+                                        "notices",
+                                        "unread"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/notices/read": {
+            "post": {
+                "operationId": "notices.read",
+                "summary": "Mark notices read: the ones listed, or all of them. Everyone in the workspace sees the same notices",
+                "tags": [
+                    "Notice"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "maxItems": 100
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "notices": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "kind": {
+                                                        "type": "string"
+                                                    },
+                                                    "level": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "info",
+                                                            "warn",
+                                                            "action"
+                                                        ]
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "body": {
+                                                        "type": "string"
+                                                    },
+                                                    "action_label": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "action_path": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "read": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "kind",
+                                                    "level",
+                                                    "title",
+                                                    "body",
+                                                    "action_label",
+                                                    "action_path",
+                                                    "read",
+                                                    "created_at"
+                                                ]
+                                            }
+                                        },
+                                        "unread": {
+                                            "type": "integer",
+                                            "minimum": 0
+                                        }
+                                    },
+                                    "required": [
+                                        "notices",
+                                        "unread"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/admin/overview": {
             "get": {
                 "operationId": "admin.overview",
@@ -5369,6 +5579,41 @@
                             "at_most_credits"
                         ]
                     },
+                    "allowance": {
+                        "type": "object",
+                        "description": "What starting the plan would count against the period's allowance: products with AI\nwork not counted yet this period, and how many of them are over it (on Free they\nwait for the next period; on a paid plan with overage on they go ahead).",
+                        "properties": {
+                            "held": {
+                                "type": "boolean"
+                            },
+                            "new": {
+                                "type": "integer"
+                            },
+                            "over": {
+                                "type": "integer"
+                            },
+                            "allowance": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "used": {
+                                "type": "integer"
+                            },
+                            "resets_at": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "held",
+                            "new",
+                            "over",
+                            "allowance",
+                            "used",
+                            "resets_at"
+                        ]
+                    },
                     "run": {
                         "type": [
                             "object",
@@ -5453,6 +5698,7 @@
                     "workspace_locales",
                     "work",
                     "estimate",
+                    "allowance",
                     "run"
                 ],
                 "title": "TranslationPlanResource"

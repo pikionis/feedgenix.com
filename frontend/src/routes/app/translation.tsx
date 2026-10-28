@@ -200,6 +200,7 @@ function TranslationView({ feedId, plan, back }: { feedId: number; plan: Transla
         )}
 
         <Estimate plan={plan} toAi={toAi} />
+        <Allowance plan={plan} />
 
         <label className="flex items-start gap-2 text-sm">
           <input
@@ -251,5 +252,33 @@ function Estimate({ plan, toAi }: { plan: TranslationPlan; toAi: number }) {
       {texts(toAi)} with AI: about <strong>{(estimate.about_credits ?? 0).toLocaleString('en')} credits</strong>, at
       most {(estimate.at_most_credits ?? 0).toLocaleString('en')}.
     </p>
+  )
+}
+
+/** What a start counts against the period's products, before anyone presses it. */
+function Allowance({ plan }: { plan: TranslationPlan }) {
+  const { allowance, new: added, over, used, held, resets_at: resets } = plan.allowance
+  if (allowance === null || added === 0) return null
+  const until = resets.slice(0, 10)
+  if (over === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Counts {added.toLocaleString('en')} {added === 1 ? 'product' : 'products'} of the{' '}
+        {Math.max(0, allowance - used).toLocaleString('en')} left until {until}.
+      </p>
+    )
+  }
+
+  return (
+    <Notice tone="warn">
+      {over.toLocaleString('en')} {over === 1 ? 'product is' : 'products are'} over the {allowance.toLocaleString('en')}{' '}
+      your plan includes until {until}.{' '}
+      {held
+        ? 'Their translation waits until then, or starts at once when you upgrade.'
+        : 'They go ahead as overage, charged per product.'}{' '}
+      <Link to="/app/settings" className="text-primary hover:text-primary-hover">
+        See the plans
+      </Link>
+    </Notice>
   )
 }

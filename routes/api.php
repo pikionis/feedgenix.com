@@ -7,6 +7,7 @@ use App\Http\Controllers\App\ExportController;
 use App\Http\Controllers\App\FeedController;
 use App\Http\Controllers\App\FeedImportController;
 use App\Http\Controllers\App\MappingController;
+use App\Http\Controllers\App\NoticeController;
 use App\Http\Controllers\App\ProductTextController;
 use App\Http\Controllers\App\ProfileController;
 use App\Http\Controllers\App\TranslationPlanController;
@@ -105,6 +106,10 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::put('/products/{product}/texts/{field}/{locale}', [ProductTextController::class, 'update'])->name('product-texts.update');
         Route::post('/products/{product}/texts/{field}/{locale}/approve', [ProductTextController::class, 'approve'])->name('product-texts.approve');
         Route::delete('/products/{product}/texts/{field}/{locale}', [ProductTextController::class, 'destroy'])->name('product-texts.destroy');
+
+        // What the workspace is told (M6).
+        Route::get('/notices', [NoticeController::class, 'index'])->name('notices.index');
+        Route::post('/notices/read', [NoticeController::class, 'read'])->name('notices.read');
 
         // Exports and their feed URLs (M5).
         Route::get('/feeds/{feed}/exports', [ExportController::class, 'index'])->name('exports.index');

@@ -29,3 +29,4 @@ record supersedes them.
 | [0022](0022-export-build.md) | The export build as built: dialects, columns, published texts, checks (refines 0007) |
 | [0023](0023-export-triggers-and-feed-urls.md) | When exports are built, and how feed URLs answer (refines 0007, 0022) |
 | [0024](0024-plan-pauses.md) | What is over a plan's limits pauses, never disappears (refines 0005, 0007) |
+| [0025](0025-notices.md) | Notices: told once, with the choices (refines 0005, 0024) |

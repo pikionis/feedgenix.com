@@ -18,6 +18,7 @@ export default [
     route('feeds/:feedId/translation', 'routes/app/translation.tsx'),
     route('feeds/:feedId/products', 'routes/app/products.tsx'),
     route('feeds/:feedId/publish', 'routes/app/publish.tsx'),
+    route('notices', 'routes/app/notices.tsx'),
     route('settings', 'routes/app/settings.tsx'),
   ]),
 
