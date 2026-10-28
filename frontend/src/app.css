@@ -29,6 +29,13 @@
   --color-queued-bg: var(--status-queued-bg);
   --color-error: var(--status-error);
   --color-error-bg: var(--status-error-bg);
+  /* The mosaic's block colours (components/ui/mosaic.tsx). */
+  --color-block-emerald: var(--block-emerald);
+  --color-block-pink: var(--block-pink);
+  --color-block-cyan: var(--block-cyan);
+  --color-block-amber: var(--block-amber);
+  --color-block-indigo: var(--block-indigo);
+  --color-block-ink: var(--block-ink);
 
   --radius-sm: var(--r-sm);
   --radius-md: var(--r-md);

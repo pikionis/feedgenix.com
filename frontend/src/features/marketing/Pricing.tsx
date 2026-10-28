@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '~/components/ui/button'
+import { Highlight } from '~/components/ui/mosaic'
 import { highlights } from '~/features/billing/PlanCards'
 import { euros } from '~/features/billing/format'
 import { plansQuery } from '~/features/workspace/queries'
@@ -24,7 +25,7 @@ export function Pricing() {
   return (
     <section id="pricing" aria-labelledby="pricing-title" className="py-16 lg:py-20">
       <h2 id="pricing-title" className="mb-1.5 text-center text-2xl font-medium tracking-[-0.02em]">
-        Pricing built around products, not seats.
+        Pricing built around <Highlight tone="emerald">products</Highlight>, not seats.
       </h2>
       <p className="mb-11 text-center text-base text-muted-foreground">
         Every plan keeps the Golden Rule. AI work is paid from prepaid credits, with an estimate before any job starts.

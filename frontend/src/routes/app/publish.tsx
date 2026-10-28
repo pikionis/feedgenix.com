@@ -4,6 +4,7 @@ import { useParams } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
+import { Highlight } from '~/components/ui/mosaic'
 import { feedQuery } from '~/features/feeds/queries'
 import { useExportActions } from '~/features/publish/actions'
 import { ExportCard } from '~/features/publish/ExportCard'
@@ -39,7 +40,7 @@ export default function PublishPage() {
     <div className="flex flex-col gap-5">
       <PageHeader
         back={back}
-        title="Publish"
+        title={<Highlight tone="emerald">Publish</Highlight>}
         subtitle="Feed URLs your sales channels pull. Each serves a whole, checked build; new prices and stock from a new file reach it within minutes, translations when they are done."
         actions={
           canManage && list.length > 0 && !adding ? (

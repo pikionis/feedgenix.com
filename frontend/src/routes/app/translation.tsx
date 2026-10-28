@@ -7,6 +7,7 @@ import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
 import { Rows, Section } from '~/components/ui/section'
 import { Table, TD, TH, THead, TR } from '~/components/ui/table'
+import { Highlight } from '~/components/ui/mosaic'
 import { FeedStateBadge, type FeedTone } from '~/features/feeds/FeedState'
 import { feedQuery } from '~/features/feeds/queries'
 import { useTranslationActions } from '~/features/translation/actions'
@@ -65,7 +66,7 @@ function TranslationView({
       <div className="flex flex-col gap-5">
         <PageHeader
           back={back}
-          title="Translation"
+          title={<Highlight tone="pink">Translation</Highlight>}
           subtitle="Which texts to translate, and into which languages. SKUs, prices, stock and the other identifiers are never translated: they pass through as they are."
           actions={
             <>

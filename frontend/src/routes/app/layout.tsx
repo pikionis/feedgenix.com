@@ -3,6 +3,7 @@ import { Bell, CreditCard, LayoutGrid, type LucideIcon, Rss, Settings, ShieldChe
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, redirect, useNavigate } from 'react-router'
 import { Logo } from '~/components/brand/logo'
+import { BlockDot, Mosaic, SECTION_TONES, type Block, type BlockTone } from '~/components/ui/mosaic'
 import { Button } from '~/components/ui/button'
 import { Initials } from '~/components/ui/initials'
 import { Notice } from '~/components/ui/notice'
@@ -68,22 +69,24 @@ export default function AppLayout() {
     <div className="min-h-screen bg-background lg:flex">
       <aside className="sticky top-0 z-10 border-b-[0.5px] border-hairline bg-surface lg:static lg:w-[180px] lg:shrink-0 lg:border-r-[0.5px] lg:border-b-0">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6 lg:sticky lg:top-0 lg:h-screen lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-4 lg:px-3 lg:py-[18px]">
+          {/* The brand panel's blocks, beside the logo and along the foot: never over a label (from lg). */}
+          <Mosaic blocks={SIDEBAR_BLOCKS} className="hidden lg:block" />
           <div className="lg:px-1.5">
             <Logo />
           </div>
           {user.workspace !== null && <WorkspaceCard name={user.workspace.name} plan={user.workspace.plan} />}
           <nav aria-label="Workspace" className="order-1 flex gap-0.5 lg:order-2 lg:flex-col">
-            <NavItem to="/app" end icon={LayoutGrid}>
+            <NavItem to="/app" end icon={LayoutGrid} tone={SECTION_TONES.overview}>
               Overview
             </NavItem>
-            <NavItem to="/app/feeds" icon={Rss}>
+            <NavItem to="/app/feeds" icon={Rss} tone={SECTION_TONES.feeds}>
               Feeds
             </NavItem>
             <NoticesItem />
-            <NavItem to="/app/billing" icon={CreditCard}>
+            <NavItem to="/app/billing" icon={CreditCard} tone={SECTION_TONES.billing}>
               Billing
             </NavItem>
-            <NavItem to="/app/settings" icon={Settings}>
+            <NavItem to="/app/settings" icon={Settings} tone={SECTION_TONES.settings}>
               Settings
             </NavItem>
             {user.is_staff && (
@@ -111,6 +114,18 @@ export default function AppLayout() {
     </div>
   )
 }
+
+// Sidebar is 180px wide; the logo runs from 18px to about 152px between y 20 and 46, and the
+// workspace card starts near y 62: the top blocks sit above the logo and in the gap under it.
+const SIDEBAR_BLOCKS: readonly Block[] = [
+  { tone: 'cyan', top: 2, right: 30, width: 20, height: 10 },
+  { tone: 'emerald', top: -6, right: -10, width: 34, height: 18 },
+  { tone: 'pink', top: 50, right: 4, width: 16, height: 8 },
+  { tone: 'emerald', bottom: -6, left: -14, width: 36, height: 16 },
+  { tone: 'ink', bottom: 8, right: 78, width: 10, height: 10 },
+  { tone: 'amber', bottom: -8, right: 40, width: 30, height: 20 },
+  { tone: 'pink', bottom: -12, right: -10, width: 46, height: 30 },
+]
 
 const PLAN_NAMES: Record<string, string> = { free: 'Free', pro: 'Pro', ultra: 'Ultra', custom: 'Custom' }
 
@@ -186,7 +201,7 @@ function NoticesItem() {
   const unread = notices.data?.unread ?? 0
 
   return (
-    <NavItem to="/app/notices" icon={Bell} badge={unread > 0 ? unread : undefined}>
+    <NavItem to="/app/notices" icon={Bell} tone={SECTION_TONES.notices} badge={unread > 0 ? unread : undefined}>
       Notices
     </NavItem>
   )
@@ -196,12 +211,14 @@ function NavItem({
   to,
   end,
   icon: Icon,
+  tone,
   badge,
   children,
 }: {
   to: string
   end?: boolean
   icon: LucideIcon
+  tone?: BlockTone
   badge?: number
   children: string
 }) {
@@ -211,7 +228,7 @@ function NavItem({
       end={end ?? false}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2.5 rounded-md border-[0.5px] px-3 py-2 text-[13px] transition-colors duration-200',
+          'group flex items-center gap-2.5 rounded-md border-[0.5px] px-3 py-2 text-[13px] transition-colors duration-200',
           isActive
             ? 'border-hairline bg-background font-medium text-foreground'
             : 'border-transparent text-muted-foreground hover:bg-ink/[0.04] hover:text-foreground',
@@ -226,6 +243,10 @@ function NavItem({
           {badge > 99 ? '99+' : badge}
           <span className="sr-only"> unread</span>
         </span>
+      )}
+      {/* The section's block colour marks where you are; the page title carries the same colour. */}
+      {tone !== undefined && badge === undefined && (
+        <BlockDot tone={tone} className="ml-auto hidden lg:group-aria-[current=page]:block" />
       )}
     </NavLink>
   )

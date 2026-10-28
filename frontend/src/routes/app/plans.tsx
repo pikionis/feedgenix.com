@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { PageHeader } from '~/components/ui/page-header'
 import { Section } from '~/components/ui/section'
 import { Table, TD, TH, THead, TR } from '~/components/ui/table'
+import { Highlight, SECTION_TONES } from '~/components/ui/mosaic'
 import { PlanCards } from '~/features/billing/PlanCards'
 import { plansQuery, workspaceQuery } from '~/features/workspace/queries'
 import type { Plan } from '~/lib/api/types'
@@ -55,7 +56,11 @@ export default function Plans() {
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ to: '/app/billing', label: 'Billing' }}
-        title="Choose a plan"
+        title={
+          <>
+            Choose a <Highlight tone={SECTION_TONES.billing}>plan</Highlight>
+          </>
+        }
         subtitle="Upgrade any time. Yearly is paid once and saves 25%. No plan includes AI spend: AI work uses your credits."
       />
 

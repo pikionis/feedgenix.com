@@ -5,10 +5,12 @@ import { Card } from '~/components/ui/card'
 import { LanguagePill } from '~/components/ui/language-pill'
 import { PageHeader } from '~/components/ui/page-header'
 import { UsageBar } from '~/components/ui/usage-bar'
+import { BlockDot, Highlight, Mosaic, SECTION_TONES, type Block, type BlockTone } from '~/components/ui/mosaic'
 import { feedsQuery } from '~/features/feeds/queries'
 import { feedState, FeedStateBadge } from '~/features/feeds/FeedState'
 import { workspaceQuery } from '~/features/workspace/queries'
 import { useSession } from '~/lib/session'
+import { cn } from '~/lib/utils'
 import type { Route } from './+types/overview'
 
 export const meta: Route.MetaFunction = () => [
@@ -30,7 +32,11 @@ export default function Overview() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={`Welcome, ${firstName}`}
+        title={
+          <>
+            Welcome, <Highlight tone={SECTION_TONES.overview}>{firstName}</Highlight>
+          </>
+        }
         subtitle={
           empty
             ? 'Start with a feed: the address your shop publishes its products at, or a file.'
@@ -49,6 +55,7 @@ export default function Overview() {
         <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat
             label="Feeds"
+            tone="emerald"
             detail={
               workspace.data?.entitlements.limits.feeds === null || workspace.data === undefined
                 ? undefined
@@ -59,11 +66,12 @@ export default function Overview() {
           </Stat>
           <Stat
             label="Products in the latest files"
+            tone="cyan"
             detail={`${(workspace.data?.entitlements.used.products ?? 0).toLocaleString('en')} counted this period`}
           >
             {products.toLocaleString('en')}
           </Stat>
-          <Stat label="Target languages">
+          <Stat label="Target languages" tone="pink">
             {workspace.data === undefined || workspace.data.languages.length === 0 ? (
               '0'
             ) : (
@@ -74,7 +82,11 @@ export default function Overview() {
               </span>
             )}
           </Stat>
-          <Stat label="Feed URLs live" detail={live > 0 ? 'Pulled by your channels' : 'Publish a feed to get one'}>
+          <Stat
+            label="Feed URLs live"
+            tone="amber"
+            detail={live > 0 ? 'Pulled by your channels' : 'Publish a feed to get one'}
+          >
             {live.toLocaleString('en')}
           </Stat>
         </dl>
@@ -169,8 +181,11 @@ export default function Overview() {
         )}
       </div>
 
-      <Card className="flex flex-col gap-2 border-transparent bg-warm">
-        <h2 className="font-medium">The Golden Rule</h2>
+      <Card className="relative flex flex-col gap-2 overflow-hidden border-transparent bg-warm sm:pr-44">
+        <Mosaic blocks={GOLDEN_BLOCKS} className="hidden sm:block" />
+        <h2 className="font-medium">
+          The <Highlight tone="amber">Golden Rule</Highlight>
+        </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           SKUs, GTINs, prices, currency, stock, weights and dimensions pass through byte-identical. They never reach a
           prompt. When the AI is unsure, a field stays empty rather than wrong.
@@ -180,11 +195,33 @@ export default function Overview() {
   )
 }
 
+// The Golden Rule card's right edge (text stops 11rem short of it from sm).
+const GOLDEN_BLOCKS: readonly Block[] = [
+  { tone: 'emerald', top: -14, right: -20, width: 110, height: 52 },
+  { tone: 'cyan', top: 24, right: 104, width: 34, height: 20 },
+  { tone: 'pink', bottom: 18, right: 22, width: 58, height: 30 },
+  { tone: 'ink', bottom: -8, right: 92, width: 22, height: 22 },
+  { tone: 'amber', bottom: 30, right: -10, width: 26, height: 26 },
+]
+
+const STEP_TONES = ['bg-block-pink', 'bg-block-cyan', 'bg-block-emerald'] as const
+
 /** The app kit's stat card: Mist, 10px corners, no border; label, number, one line under it. */
-function Stat({ label, detail, children }: { label: string; detail?: string; children: React.ReactNode }) {
+function Stat({
+  label,
+  detail,
+  tone,
+  children,
+}: {
+  label: string
+  detail?: string
+  tone: BlockTone
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex flex-col rounded-lg bg-surface px-4 py-3.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+    <div className="relative flex flex-col rounded-lg bg-surface px-4 py-3.5">
+      <BlockDot tone={tone} className="absolute top-3.5 right-4 h-2.5 w-5" />
+      <dt className="pr-7 text-xs text-muted-foreground">{label}</dt>
       <dd className="my-1.5 text-[26px] leading-none font-medium tracking-[-0.01em]">{children}</dd>
       {detail !== undefined && <dd className="text-xs text-muted-foreground">{detail}</dd>}
     </div>
@@ -206,7 +243,10 @@ function Step({
     <li className="flex flex-wrap items-center gap-4 border-t-[0.5px] border-hairline py-3.5">
       <span
         aria-hidden="true"
-        className="flex size-7 items-center justify-center rounded-full border border-primary text-xs font-medium text-primary"
+        className={cn(
+          'flex size-7 items-center justify-center rounded-[4px] font-mono text-xs font-medium text-block-ink',
+          STEP_TONES[(number - 1) % STEP_TONES.length],
+        )}
       >
         {number}
       </span>

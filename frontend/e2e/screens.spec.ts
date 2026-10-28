@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { expect, test, type Page } from '@playwright/test'
+import { expect as baseExpect, test, type Page } from '@playwright/test'
 
 /*
  * Screenshots of every page, at desktop and phone width, for design reviews (frontend/screens/).
@@ -11,6 +11,10 @@ import { expect, test, type Page } from '@playwright/test'
 
 test.skip(process.env.FEEDGENIX_SCREENS !== '1', 'Screenshots only on request (FEEDGENIX_SCREENS=1).')
 test.setTimeout(180_000)
+
+// A fresh database and a cold server: the first sign-up and the first import can take longer than
+// the default 5 seconds. This spec only takes pictures, so it waits longer rather than flake.
+const expect = baseExpect.configure({ timeout: 20_000 })
 
 const out = resolve(import.meta.dirname, '..', 'screens')
 const fixtures = resolve(import.meta.dirname, 'fixtures')

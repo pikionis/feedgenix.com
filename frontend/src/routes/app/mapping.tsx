@@ -6,6 +6,7 @@ import { Callout } from '~/components/ui/callout'
 import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
 import { Rows, Section } from '~/components/ui/section'
+import { Highlight } from '~/components/ui/mosaic'
 import { FeedStateBadge } from '~/features/feeds/FeedState'
 import { feedQuery } from '~/features/feeds/queries'
 import { formatWhen } from '~/features/feeds/labels'
@@ -66,7 +67,7 @@ function MappingView({
       <div className="flex flex-col gap-5">
         <PageHeader
           back={back}
-          title="Mapping"
+          title={<Highlight tone="cyan">Mapping</Highlight>}
           subtitle="Which column fills each product field. Anything uncertain stays empty until you choose."
           actions={
             <FeedStateBadge

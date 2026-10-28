@@ -5,6 +5,7 @@ import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
 import { Initials } from '~/components/ui/initials'
 import { PageHeader } from '~/components/ui/page-header'
+import { Highlight, SECTION_TONES } from '~/components/ui/mosaic'
 import { PasswordForm, ProfileForm } from '~/features/workspace/AccountForms'
 import { LanguageSettings } from '~/features/workspace/LanguageSettings'
 import { workspaceQuery } from '~/features/workspace/queries'
@@ -67,7 +68,10 @@ export default function Settings() {
   return (
     <div>
       <div className="mb-6">
-        <PageHeader title="Settings" subtitle="Your workspace, its languages, and how you sign in." />
+        <PageHeader
+          title={<Highlight tone={SECTION_TONES.settings}>Settings</Highlight>}
+          subtitle="Your workspace, its languages, and how you sign in."
+        />
       </div>
       <Section
         id="workspace"

@@ -19,6 +19,8 @@ const STEPS = [
   },
 ] as const
 
+const STEP_BLOCKS = ['bg-block-pink', 'bg-block-cyan', 'bg-block-emerald', 'bg-block-amber'] as const
+
 export function HowItWorks() {
   return (
     <section
@@ -38,8 +40,11 @@ export function HowItWorks() {
               </li>
             )}
             <li>
-              <p className="mb-2.5 font-mono text-xs tracking-[0.08em] text-faint">
-                Step {String(index + 1).padStart(2, '0')}
+              <p
+                className={`mb-3 flex size-8 items-center justify-center rounded-[4px] font-mono text-xs text-block-ink ${STEP_BLOCKS[index]}`}
+              >
+                <span className="sr-only">Step </span>
+                {String(index + 1).padStart(2, '0')}
               </p>
               <h3 className="text-md font-medium tracking-[-0.01em]">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>

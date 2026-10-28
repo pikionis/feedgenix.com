@@ -7,6 +7,7 @@ import { Callout } from '~/components/ui/callout'
 import { Initials } from '~/components/ui/initials'
 import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
+import { Highlight, SECTION_TONES } from '~/components/ui/mosaic'
 import { AddFeedDialog } from '~/features/feeds/AddFeedDialog'
 import { FORMAT, formatWhen } from '~/features/feeds/labels'
 import { feedsQuery } from '~/features/feeds/queries'
@@ -36,7 +37,7 @@ export default function Feeds() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Feeds"
+        title={<Highlight tone={SECTION_TONES.feeds}>Feeds</Highlight>}
         subtitle={[
           used === undefined
             ? 'Where your products come from'

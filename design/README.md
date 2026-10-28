@@ -46,7 +46,7 @@ the Sand band, how it works, pricing and the Ink footer. The look is the kit's; 
 
 ## Visual rules
 - **Flat.** Warm-neutral surfaces, 0.5px hairlines, generous whitespace, two type weights.
-- **Colour.** Indigo `#4F46E5` is the only loud colour: primary action, active navigation, progress,
+- **Colour.** (The mosaic below adds the brand blocks as decoration.) Indigo `#4F46E5` is the only loud colour: primary action, active navigation, progress,
   the recommended plan's border, the logo bars — never a full-bleed background. Emerald `#0F9B7E`
   means confirmation only (checkmarks, positive deltas, "synced", the spark). Ink `#1F1D2E` is text
   and the only dark background. Sand for warm sections, Mist for the workspace surface, Paper as the
@@ -86,3 +86,20 @@ Facts about a thing (what a file holds, a run's progress, the figures of a plan)
 lists and tables sit in hairline frames. `npm run build` then
 `FEEDGENIX_SCREENS=1 E2E_API_PORT=8010 npx playwright test e2e/screens.spec.ts` shoots every page at
 desktop and phone width into `frontend/screens/` (ignored by git) for a design review.
+
+## The mosaic (across the site)
+The brand panel's coloured blocks are the site's signature, on the landing page and in the app
+(owner's choice, 2026-10-28). `frontend/src/components/ui/mosaic.tsx` holds the three pieces:
+
+- `Mosaic`: flat blocks (emerald, pink, cyan, amber, indigo, ink; 4px corners) placed at a frame's
+  edges and clipped to it. Decorative only (`aria-hidden`), and never over a word, a control or a
+  number: the frame keeps its text clear of them (e.g. `sm:pr-44` on the Golden Rule card).
+- `Highlight`: one word of a title set on a block, as in "Ship your catalog in every language".
+  At most one or two per title; Ink text on the light blocks, white on Indigo and Ink.
+- `BlockDot`: a small solid block as a marker (the active menu item, a stat card's corner).
+
+Each part of the workspace has its colour, shared by its title and its menu item:
+Overview cyan, Feeds emerald, Notices amber, Billing pink, Settings indigo. Inside a feed, each
+page takes its own (Mapping cyan, Translation pink, Review amber, Publish emerald). Tables, forms
+and status badges stay plain: the blocks decorate, the status colours (success, warn, error) inform,
+and the two are never mixed. On phones the sidebar's blocks and the menu marker are left out.

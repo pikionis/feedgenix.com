@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
+import { Highlight } from '~/components/ui/mosaic'
 import { feedQuery } from '~/features/feeds/queries'
 import { useReviewActions } from '~/features/review/actions'
 import { FILTERS } from '~/features/review/labels'
@@ -81,7 +82,11 @@ function Review({
     <div className="flex flex-col gap-5">
       <PageHeader
         back={back}
-        title="Review the texts"
+        title={
+          <>
+            Review the <Highlight tone="amber">texts</Highlight>
+          </>
+        }
         subtitle="One language at a time. What you write yourself is never replaced by the AI, and the same text elsewhere reuses it."
       />
 

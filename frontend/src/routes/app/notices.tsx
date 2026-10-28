@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
 import { Rows } from '~/components/ui/section'
+import { Highlight, SECTION_TONES } from '~/components/ui/mosaic'
 import { formatWhen } from '~/features/feeds/labels'
 import { noticesQuery } from '~/features/notices/queries'
 import { api } from '~/lib/api/client'
@@ -38,7 +39,7 @@ export default function NoticesPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Notices"
+        title={<Highlight tone={SECTION_TONES.notices}>Notices</Highlight>}
         subtitle="What your workspace was told: usage, work that waits, plan changes and held feeds. The owner and admins get the ones that need a decision by email too."
       />
       {notices.data.notices.length === 0 ? (

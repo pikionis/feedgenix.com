@@ -7,6 +7,7 @@ import { Card } from '~/components/ui/card'
 import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
 import { UsageBar } from '~/components/ui/usage-bar'
+import { BlockDot, Highlight, SECTION_TONES } from '~/components/ui/mosaic'
 import { euros } from '~/features/billing/format'
 import { highlights } from '~/features/billing/PlanCards'
 import { TopUpDialog } from '~/features/billing/TopUpDialog'
@@ -37,7 +38,7 @@ export default function Billing() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Billing"
+        title={<Highlight tone={SECTION_TONES.billing}>Billing</Highlight>}
         subtitle="Your plan is the platform fee. AI work is paid from prepaid credits, with an estimate before every job."
       />
 
@@ -49,7 +50,8 @@ export default function Billing() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-3 rounded-lg bg-surface p-5">
+        <div className="relative flex flex-col gap-3 rounded-lg bg-surface p-5">
+          <BlockDot tone="pink" className="absolute top-5 right-5 h-2.5 w-5" />
           <h2 className="text-xs text-muted-foreground">Plan</h2>
           <p className="text-[28px] leading-tight font-medium tracking-[-0.02em]">
             {plan.name}
@@ -77,7 +79,8 @@ export default function Billing() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-lg bg-surface p-5">
+        <div className="relative flex flex-col gap-3 rounded-lg bg-surface p-5">
+          <BlockDot tone="amber" className="absolute top-5 right-5 h-2.5 w-5" />
           <h2 className="text-xs text-muted-foreground">Credits</h2>
           <p className="text-[28px] leading-tight font-medium tracking-[-0.02em]">Prepaid, never expire</p>
           <p className="text-sm text-muted-foreground">
@@ -91,7 +94,8 @@ export default function Billing() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 rounded-lg bg-surface p-5">
+        <div className="relative flex flex-col gap-4 rounded-lg bg-surface p-5">
+          <BlockDot tone="cyan" className="absolute top-5 right-5 h-2.5 w-5" />
           <h2 className="text-xs text-muted-foreground">This period</h2>
           <UsageBar label="Feeds" used={entitlements.used.feeds} allowed={entitlements.limits.feeds} />
           <UsageBar
