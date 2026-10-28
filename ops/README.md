@@ -27,7 +27,9 @@ every `--dry-run` change nothing.
 - PostgreSQL 18 with pgvector from the PGDG repository, on its unix socket only;
 - FeedGenix's own PHP-FPM master, Redis, queue worker and scheduler timer, as systemd units in
   `feedgenix.slice` (at most 4 CPUs and 8 GB);
-- one nginx vhost for `staging.feedgenix.com` (with two snippets) and a Let's Encrypt certificate.
+- one nginx vhost for the site's name, `feedgenix.com` (ADR 0029), and the names that redirect to it
+  (`www.feedgenix.com`, `staging.feedgenix.com`), with two snippets and one Let's Encrypt certificate
+  for all of them.
 
 **Never touched:**
 - the legacy app's directory and `.env`;
@@ -206,6 +208,36 @@ sandbox); this closes the gap for code running outside them: deploy-time migrati
   ssh -i feedgenix-deploy feedgenix@HOST "deploy $(git rev-parse HEAD) $(cat "$a.sha256")" < "$a"
   ```
 
+## Moving the site to another name (ADR 0029)
+`--domain` is the site's own name; `--redirect-from` lists the names that answer with a `301` to it,
+path and query kept. A re-run with other names moves the site: the vhost, one certificate for every
+name, and the three `.env` keys that name the site (`APP_URL`, `FRONTEND_URL`,
+`SANCTUM_STATEFUL_DOMAINS`; nothing else in `.env` changes). Then the live release's cached
+configuration is rebuilt and PHP-FPM and the worker restart.
+
+**`staging.feedgenix.com` → `feedgenix.com`:**
+1. **DNS** (Hostinger, *Domains → feedgenix.com → DNS records*): the `A` record for `@` points to the
+   VPS, `69.62.116.163`, instead of the parking address. `www` stays a `CNAME` to `feedgenix.com`.
+   There is no `AAAA` record, unless it is the VPS's own IPv6 address.
+2. **Check from the laptop:** `nslookup feedgenix.com` and `nslookup www.feedgenix.com` both answer
+   `69.62.116.163`.
+3. **Copy the scripts up and do a dry run** (go-ahead). If DNS is not ready, it stops and changes nothing:
+   ```bash
+   git archive HEAD ops | ssh root@VPS 'rm -rf /root/feedgenix-ops && mkdir -p /root/feedgenix-ops && tar -x -C /root/feedgenix-ops'
+   ssh root@VPS 'bash /root/feedgenix-ops/ops/provision.sh --mode=shared --domain=feedgenix.com \
+     --redirect-from=www.feedgenix.com,staging.feedgenix.com --legacy-url=https://feed-intel.site/ \
+     --allow-unfinished=cloudpanel --dry-run'
+   ```
+4. **Provision** (go-ahead): the same command without `--dry-run`. It ends with `feedgenix-check`,
+   which now checks each redirect too.
+5. **Sign in again** at `https://feedgenix.com`. Sessions are per host.
+
+If the VPS's own resolver still holds the old address, the run reports that DNS does not point here.
+Wait out the record's TTL, or, once `nslookup` from outside agrees, add `--skip-dns-check`.
+
+**Back to `staging.feedgenix.com`:** the same command with `--domain=staging.feedgenix.com` and no
+`--redirect-from`. Its old certificate is still there.
+
 ## Removing FeedGenix from the shared host
 ```bash
 systemctl disable --now feedgenix-schedule.timer feedgenix-worker@default feedgenix-php feedgenix-redis
@@ -223,7 +255,9 @@ userdel feedgenix && rm -r /home/feedgenix
 ## How this is tested
 - **`ops/tests/unit.sh`**, anywhere: the apt guards (upgrades and removals, unfinished packages, the
   `--allow-unfinished` match), the PHP packages chosen by missing module, template rendering, legacy
-  liveness and port detection.
+  liveness and port detection. Also the move to another name: the `.env` keys (every other line byte
+  for byte), certificate names matched exactly, and DNS that is not ready (an IPv4 or AAAA record
+  still parked elsewhere).
 - **`ops/tests/rehearse.sh`**, in CI on fresh Ubuntu 24.04 VMs, next to a stand-in legacy app
   (`tests/fake-legacy.sh`) and on a clean server:
   - Next to a half-configured package whose postinst always fails, it refuses to run apt (dry run
@@ -233,5 +267,8 @@ userdel feedgenix && rm -r /home/feedgenix
   - It signs up with an invite, verifies the email and opens the workspace.
   - It tries a release that fails its smoke test, one whose code does not load, a truncated upload,
     concurrent deploys, shell and forwarding with the key, and a broken nginx template.
+  - It moves the site to a new name and back. The old names must redirect (path kept, valid
+    certificate). Sign-in must hold its session on the new name, the smoke test of a deploy must
+    pass there, and a second run must change nothing.
   - It breaks each isolation guarantee once, to see its check fail.
   - The legacy app's processes must keep their PIDs throughout.

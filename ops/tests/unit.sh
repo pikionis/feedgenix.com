@@ -140,7 +140,8 @@ export FG_MODE=shared FG_DOMAIN=staging.feedgenix.test FG_TLS=self-signed FG_APP
   FG_FPM_MAX_CHILDREN=16 'FG_INACCESSIBLE_PATHS=-/var/www -/etc/supervisor' 'FG_HOST_ADDRESSES=203.0.113.7/32' \
   FG_HTTP2_LISTEN=' http2' 'FG_HTTP2_DIRECTIVE=# http2 on the listen lines' 'FG_IPV6_LISTEN_80=listen [::]:80;' \
   'FG_IPV6_LISTEN_443=listen [::]:443 ssl http2;' 'FG_NOINDEX_HEADER=add_header X-Robots-Tag "noindex, nofollow" always;' \
-  'FG_ROBOTS_TXT=User-agent: *\nDisallow: /\n'
+  'FG_ROBOTS_TXT=User-agent: *\nDisallow: /\n' 'FG_SERVER_NAMES=staging.feedgenix.test www.feedgenix.test' \
+  FG_REDIRECT_HOSTS=www.feedgenix.test
 while IFS= read -r template; do
   name=${template#"$OPS/templates/"}
   check "$name" bash -c ". '$OPS/lib/common.sh'; render '$template' >'$WORK/rendered' && ! grep -n '\${FG_' '$WORK/rendered'"
@@ -154,6 +155,16 @@ check "the vhost serves the release through the current symlink, uncached" \
   bash -c "grep -q 'root /srv/feedgenix/current/frontend/build/client;' '$WORK/site.conf' && grep -q 'open_file_cache off;' '$WORK/site.conf'"
 check "feed URLs (/f/) reach Laravel, not the SPA shell" \
   bash -c "grep -A2 'location ^~ /f/ {' '$WORK/site.conf' | grep -q 'include /etc/nginx/snippets/feedgenix-php.conf;'"
+check "port 80 answers for every name (ACME) and sends each straight to https on the site's own name" \
+  bash -c "grep -qx '    server_name staging.feedgenix.test www.feedgenix.test;' '$WORK/site.conf' && [[ \$(grep -c 'return 301 https://staging.feedgenix.test\$request_uri;' '$WORK/site.conf') == 1 ]]"
+check "the site itself (443) answers only for its own name" \
+  bash -c "[[ \$(grep -c '^    server_name staging.feedgenix.test;' '$WORK/site.conf') == 1 ]]"
+render "$OPS/templates/nginx/feedgenix-redirect.conf" >"$WORK/redirect.conf"
+check "a redirect name gets a permanent redirect to the site, path and query kept, over TLS" \
+  bash -c "grep -qx '    server_name www.feedgenix.test;' '$WORK/redirect.conf' && grep -qx '        return 301 https://staging.feedgenix.test\$request_uri;' '$WORK/redirect.conf' && grep -q 'ssl_certificate /etc/feedgenix/tls/cert.pem;' '$WORK/redirect.conf'"
+check "every key the .env template derives from the domain is one provision.sh keeps in step" \
+  equals "$(grep -o '^[A-Z_]*=[^ ]*\${FG_DOMAIN}' "$OPS/templates/env.template" | cut -d= -f1 | sort | paste -sd' ' -)" \
+  "$(grep -o '"[A-Z_]*=[^"]*\$FG_DOMAIN"' "$OPS/provision.sh" | tr -d '"' | cut -d= -f1 | sort | paste -sd' ' -)"
 render "$OPS/templates/nginx/feedgenix-php.conf" >"$WORK/php.conf"
 check "PHP runs the resolved release path (\$realpath_root) on FeedGenix's own socket" \
   bash -c "grep -q 'SCRIPT_FILENAME \$realpath_root/index.php;' '$WORK/php.conf' && grep -q 'fastcgi_pass unix:/run/feedgenix-php/php-fpm.sock;' '$WORK/php.conf'"
@@ -229,6 +240,71 @@ check "a global IPv6 address (the beta VPS) means nginx listens on [::] too" \
   bash -c "ip() { [[ \$* == '-6 -o addr show scope global' ]] && echo '2: eth0 inet6 2a02:4780:41:9ed5::1/48 scope global'; }; $(declare -f host_has_ipv6); host_has_ipv6"
 check "only link-local or loopback IPv6 (nothing global) means IPv4 only" \
   bash -c "ip() { :; }; $(declare -f host_has_ipv6); ! host_has_ipv6"
+
+echo "env_set"
+cat >"$WORK/env-old" <<'EOF'
+# FeedGenix. Written once by ops/provision.sh.
+APP_KEY=base64:c2VjcmV0K3NlY3JldD0=
+APP_URL=https://staging.feedgenix.test
+APP_URL_SUFFIX=keep
+# APP_URL=https://commented.test
+FRONTEND_URL=https://staging.feedgenix.test
+GOOGLE_CLIENT_SECRET=a&b\c=d
+EOF
+env_set APP_URL=https://feedgenix.test FRONTEND_URL=https://feedgenix.test SANCTUM_STATEFUL_DOMAINS=feedgenix.test \
+  <"$WORK/env-old" >"$WORK/env-new"
+check "sets the named keys and appends a missing one" \
+  bash -c "grep -qx 'APP_URL=https://feedgenix.test' '$WORK/env-new' && grep -qx 'FRONTEND_URL=https://feedgenix.test' '$WORK/env-new' && [[ \$(tail -n 1 '$WORK/env-new') == SANCTUM_STATEFUL_DOMAINS=feedgenix.test ]]"
+check "every other line passes through byte for byte: secrets, a longer key, a commented-out key" \
+  equals $'< APP_URL=https://staging.feedgenix.test\n< FRONTEND_URL=https://staging.feedgenix.test\n> APP_URL=https://feedgenix.test\n> FRONTEND_URL=https://feedgenix.test\n> SANCTUM_STATEFUL_DOMAINS=feedgenix.test' \
+  "$(diff "$WORK/env-old" "$WORK/env-new" | grep '^[<>]' | sort)"
+check "a second pass changes nothing (a converged host reports no change)" \
+  bash -c "$(declare -f env_set); env_set APP_URL=https://feedgenix.test FRONTEND_URL=https://feedgenix.test SANCTUM_STATEFUL_DOMAINS=feedgenix.test <'$WORK/env-new' | cmp -s - '$WORK/env-new'"
+check "a last line without a newline is kept" \
+  equals $'A=1\nB=2' "$(printf 'A=1\nB=x' | env_set B=2)"
+
+echo "cert_covers"
+# Its own minimal config, whatever OPENSSL_CONF says. (MSYS2_ARG_CONV_EXCL: Git Bash would turn
+# /CN=… into a Windows path; Linux ignores it.)
+printf '[req]\ndistinguished_name = dn\n[dn]\n' >"$WORK/openssl.cnf"
+if MSYS2_ARG_CONV_EXCL='/CN=' openssl req -config "$WORK/openssl.cnf" -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=feedgenix.test \
+  -addext 'subjectAltName=DNS:feedgenix.test,DNS:www.feedgenix.test,DNS:*.wild.test' \
+  -keyout "$WORK/key.pem" -out "$WORK/cert.pem" >/dev/null 2>&1; then
+  check "every name listed" cert_covers "$WORK/cert.pem" feedgenix.test www.feedgenix.test
+  check "one name missing is not covered (a move to a new name needs a new certificate)" \
+    bash -c "$(declare -f cert_covers); ! cert_covers '$WORK/cert.pem' feedgenix.test staging.feedgenix.test"
+  check "a prefix or a suffix of a name is not that name" \
+    bash -c "$(declare -f cert_covers); ! cert_covers '$WORK/cert.pem' feedgenix.tes && ! cert_covers '$WORK/cert.pem' ww.feedgenix.test"
+  check "names are matched exactly, never through a wildcard" \
+    bash -c "$(declare -f cert_covers); ! cert_covers '$WORK/cert.pem' shop.wild.test"
+else
+  check "openssl can make a test certificate" false
+fi
+check "a missing certificate covers nothing" bash -c "$(declare -f cert_covers); ! cert_covers '$WORK/none.pem' feedgenix.test"
+
+echo "hosts_not_here"
+# This host: 203.0.113.7 and 2001:db8::7 (the beta VPS has both).
+hosts_stub='ip() { case $1 in
+  -4) echo "2: eth0    inet 203.0.113.7/24 brd 203.0.113.255 scope global eth0" ;;
+  -6) echo "2: eth0    inet6 2001:db8::7/64 scope global" ;;
+esac; }
+getent() { case $1:$2 in
+  ahostsv4:feedgenix.test | ahostsv4:dual.test | ahostsv4:aaaa-parked.test) echo "203.0.113.7     STREAM $2" ;;
+  ahostsv6:feedgenix.test) echo "::ffff:203.0.113.7 STREAM feedgenix.test" ;;
+  ahostsv6:dual.test) echo "2001:db8::7     STREAM dual.test" ;;
+  ahostsv6:aaaa-parked.test) echo "2001:db8:99::1  STREAM aaaa-parked.test" ;;
+  ahostsv4:parked.test) echo "198.51.100.9    STREAM parked.test" ;;
+  ahostsv4:half.test) printf "203.0.113.7     STREAM half.test\n198.51.100.9    STREAM\n" ;;
+  *) return 2 ;;
+esac; }'
+check "a name that points here (IPv4 only, or IPv4 and IPv6) is not listed" \
+  bash -c "$hosts_stub; $(declare -f hosts_not_here); [[ -z \$(hosts_not_here feedgenix.test dual.test) ]]"
+check "a name still parked elsewhere, one with only some addresses here, and one that does not resolve are listed" \
+  bash -c "$hosts_stub; $(declare -f hosts_not_here); [[ \$(hosts_not_here feedgenix.test parked.test half.test missing.test | paste -sd' ' -) == 'parked.test half.test missing.test' ]]"
+check "a name whose IPv4 is here but whose AAAA record is still parked elsewhere is listed" \
+  bash -c "$hosts_stub; $(declare -f hosts_not_here); [[ \$(hosts_not_here aaaa-parked.test) == aaaa-parked.test ]]"
+check "no failure under errexit and pipefail when nothing resolves" \
+  bash -c "set -Eeuo pipefail; $hosts_stub; $(declare -f hosts_not_here); out=\$(hosts_not_here missing.test); [[ \$out == missing.test ]]"
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 ((failed == 0))

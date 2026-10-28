@@ -33,3 +33,4 @@ record supersedes them.
 | [0026](0026-staff-area-and-trail.md) | The staff area and its trail: one line per request, credits never a cost (refines 0002, 0005, 0016) |
 | [0027](0027-partial-admission.md) | What fits the allowance runs; what waits is counted before it runs (refines 0005, 0020) |
 | [0028](0028-overage-fee.md) | The overage fee: charged with the count, only from available credits (refines 0005, 0016, 0027) |
+| [0029](0029-the-beta-answers-at-feedgenix-com.md) | The private beta answers at feedgenix.com; the other names redirect (refines 0009, 0011) |

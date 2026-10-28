@@ -370,6 +370,59 @@ expect_ok "nginx -t passes" nginx -t
 expect_fail "the broken snippet is not on disk" grep -q this_is_not_an_nginx_directive /etc/nginx/snippets/feedgenix-headers.conf
 expect_ok "the site still answers" healthy
 
+section "Move the site to another name; the old names redirect (ADR 0029)"
+NEW=feedgenix.test
+ENV_FILE=/srv/feedgenix/shared/.env
+on() { # HOST CURL-ARGS… — through nginx here, verifying the certificate for HOST
+  local host=$1
+  shift
+  curl -s --max-time 10 --cacert /etc/feedgenix/tls/cert.pem --resolve "$host:443:127.0.0.1" --resolve "$host:80:127.0.0.1" "$@"
+}
+answer() { on "$1" -o /dev/null -w '%{http_code} %{redirect_url}' "$2" || true; } # HOST URL
+healthy_on() { [[ $(on "$1" "https://$1/api/health") == *'"status":"ok"'* ]]; }
+domain_keys='^(APP_URL|FRONTEND_URL|SANCTUM_STATEFUL_DOMAINS)='
+rest_before=$(grep -vE "$domain_keys" "$ENV_FILE" | sha256sum)
+move_args=(--mode="$mode" --domain="$NEW" --redirect-from="www.$NEW,$DOMAIN" --tls=self-signed --deploy-key="$WORK/deploy.pub")
+back_args=(--mode="$mode" --domain="$DOMAIN" --tls=self-signed --deploy-key="$WORK/deploy.pub")
+if [[ $mode == shared ]]; then
+  move_args+=(--legacy-url=https://legacy.test/ --allow-upgrades)
+  back_args+=(--legacy-url=https://legacy.test/ --allow-upgrades)
+fi
+expect_output "--redirect-from refuses a name twice" 'names www.feedgenix.test twice' \
+  "$OPS/provision.sh" "${move_args[@]}" --redirect-from="www.$NEW,www.$NEW" --dry-run
+expect_ok "provision.sh --domain=$NEW --redirect-from=www.$NEW,$DOMAIN" "$OPS/provision.sh" "${move_args[@]}"
+expect_ok "the site answers on its new name, with a certificate for it" healthy_on "$NEW"
+expect_ok "the old name redirects there permanently, path and query kept, over a valid certificate" \
+  test "$(answer "$DOMAIN" "https://$DOMAIN/f/abc/products.csv?x=1")" == "301 https://$NEW/f/abc/products.csv?x=1"
+expect_ok "www redirects there too" test "$(answer "www.$NEW" "https://www.$NEW/")" == "301 https://$NEW/"
+expect_ok "plain http on an old name goes to the new name in one hop" \
+  test "$(answer "$DOMAIN" "http://$DOMAIN/app?y=2")" == "301 https://$NEW/app?y=2"
+expect_ok ".env: the three domain keys follow the new name" bash -c \
+  "grep -qx 'APP_URL=https://$NEW' $ENV_FILE && grep -qx 'FRONTEND_URL=https://$NEW' $ENV_FILE && grep -qx 'SANCTUM_STATEFUL_DOMAINS=$NEW' $ENV_FILE"
+expect_ok ".env: every other line (APP_KEY and the rest) is byte for byte what it was" \
+  test "$(grep -vE "$domain_keys" "$ENV_FILE" | sha256sum)" == "$rest_before"
+expect_ok ".env is still mode 600, owned by feedgenix" test "$(stat -c '%a %U' "$ENV_FILE")" == "600 feedgenix"
+expect_output "the live release's cached configuration was rebuilt from it" "https://$NEW" feedgenix-artisan config:show app.url
+jar2=$WORK/cookies-moved
+on_new() { on "$NEW" -b "$jar2" -c "$jar2" -H "Referer: https://$NEW/" -H 'Accept: application/json' "$@"; }
+on_new -o /dev/null "https://$NEW/sanctum/csrf-cookie"
+xsrf2=$(awk '$6 == "XSRF-TOKEN" { print $7 }' "$jar2" | python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))')
+on_new -o /dev/null -H "X-XSRF-TOKEN: $xsrf2" -H 'Content-Type: application/json' \
+  --data "{\"email\":\"rehearsal@example.com\",\"password\":\"$password\"}" "https://$NEW/api/auth/login"
+expect_output "PHP-FPM serves the new name as the app's own: a sign-in there holds its session" \
+  '"email":"rehearsal@example.com"' on_new "https://$NEW/api/v1/auth/user"
+provision_moved() { "$OPS/provision.sh" "${move_args[@]}"; }
+expect_output "a second run changes nothing" '^   0 change\(s\)$' provision_moved
+expect_ok "feedgenix-check passes, the redirects included" feedgenix-check
+expect_output "…and it checks them" 'redirects to https://feedgenix.test \(path kept\)' feedgenix-check
+expect_ok "a deploy on the new name passes its smoke test" deploy "$art2" "$rev2"
+expect_ok "and the worker runs it" wait_until 45 worker_on_live
+expect_ok "moving back is one re-run with the old flags" "$OPS/provision.sh" "${back_args[@]}"
+expect_ok "healthy on the old name again" healthy
+expect_ok ".env names the old name again" grep -qx "APP_URL=https://$DOMAIN" "$ENV_FILE"
+expect_ok "the new name is no longer FeedGenix's" test "$(answer "$NEW" "https://$NEW/api/health")" != "200 "
+expect_ok "feedgenix-check passes" feedgenix-check
+
 section "Restarts"
 systemctl restart "postgresql@18-main.service" feedgenix-redis.service feedgenix-php.service
 expect_ok "healthy again after PostgreSQL, Redis and PHP-FPM restart" wait_until 30 healthy

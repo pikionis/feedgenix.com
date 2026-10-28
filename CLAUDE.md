@@ -87,7 +87,8 @@ are BCP-47 codes chosen per workspace.
 - The owner speaks Greek; code, docs and commit messages are in English.
 
 ## Environments
-- Private beta/staging runs on the existing VPS next to the frozen legacy app, strictly isolated.
+- Private beta/staging runs on the existing VPS next to the frozen legacy app, strictly isolated. Its
+  name is `feedgenix.com` (once DNS points there); `www.` and `staging.` redirect to it (ADR 0029).
   It has its own user, PostgreSQL, Redis, PHP-FPM master and nginx vhost, all sandboxed systemd
   units (ADR 0009, ADR 0011). **Every server change needs the owner's explicit go-ahead at that
   moment.** Production moves to a new server at launch.

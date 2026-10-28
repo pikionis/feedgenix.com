@@ -272,6 +272,55 @@ sudo_allowed() { # USER
 # `-s /proc/net/if_inet6`: procfs files report size 0, so that test is always false.)
 host_has_ipv6() { [[ -n $(ip -6 -o addr show scope global 2>/dev/null) ]]; }
 
+# The names of HOST… that do not point here, one per line; empty when every name does. A name points
+# here when it has IPv4 addresses and they are all this host's, and any IPv6 address it has is this
+# host's too (Let's Encrypt prefers IPv6: a parked AAAA record would fail the challenge).
+hosts_not_here() {
+  local ours ours6 host resolved resolved6
+  ours=$(ip -4 -o addr show scope global 2>/dev/null | awk '{ split($4, a, "/"); print a[1] }' | sort -u)
+  ours6=$(ip -6 -o addr show scope global 2>/dev/null | awk '{ split($4, a, "/"); print a[1] }' | sort -u)
+  for host in "$@"; do
+    resolved=$({ getent ahostsv4 "$host" 2>/dev/null || true; } | awk '{ print $1 }' | sort -u)
+    # ahostsv6 maps a name without AAAA records to ::ffff:IPv4 addresses: those are not IPv6 records.
+    resolved6=$({ getent ahostsv6 "$host" 2>/dev/null || true; } | awk '$1 !~ /^::ffff:/ { print $1 }' | sort -u)
+    if [[ -z $resolved || -n $(comm -23 <(printf '%s\n' "$resolved") <(printf '%s\n' "$ours")) ]] ||
+      [[ -n $resolved6 && -n $(comm -23 <(printf '%s\n' "$resolved6") <(printf '%s\n' "$ours6")) ]]; then
+      printf '%s\n' "$host"
+    fi
+  done
+}
+
+# 0 when CERT exists and its subjectAltName lists every NAME exactly (no wildcard matching).
+cert_covers() { # CERT NAME…
+  local cert=$1 names name
+  shift
+  [[ -f $cert ]] || return 1
+  names=$(openssl x509 -noout -ext subjectAltName -in "$cert" 2>/dev/null | tr ',' '\n' |
+    sed -n 's/^[[:space:]]*DNS:\(.*\)$/\1/p' | tr -d '\r[:blank:]')
+  for name in "$@"; do grep -qxF -- "$name" <<<"$names" || return 1; done
+}
+
+# env_set KEY=VALUE… — the .env on stdin with each KEY's line set to VALUE, appended when it has no
+# line; every other line (comments, secrets) passes through byte for byte.
+env_set() {
+  local -A want=() seen=()
+  local pair line key
+  for pair in "$@"; do want[${pair%%=*}]=${pair#*=}; done
+  while IFS= read -r line || [[ -n $line ]]; do
+    key=${line%%=*}
+    if [[ $line == *=* && $key =~ ^[A-Za-z_][A-Za-z0-9_]*$ && -n ${want[$key]+set} ]]; then
+      printf '%s=%s\n' "$key" "${want[$key]}"
+      seen[$key]=1
+    else
+      printf '%s\n' "$line"
+    fi
+  done
+  for pair in "$@"; do
+    key=${pair%%=*}
+    [[ -n ${seen[$key]+set} ]] || printf '%s\n' "$pair"
+  done
+}
+
 # Loopback DNS resolvers from /etc/resolv.conf (systemd-resolved: 127.0.0.53).
 loopback_resolvers() {
   awk '$1 == "nameserver" && $2 ~ /^127\./ { print $2 }' /etc/resolv.conf 2>/dev/null | sort -u

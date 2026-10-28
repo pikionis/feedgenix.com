@@ -31,9 +31,15 @@ usage() {
 Usage: provision.sh --mode=shared|dedicated --domain=HOST [options]
 
   --mode=shared|dedicated       see the header of this script
-  --domain=HOST                 e.g. staging.feedgenix.com
+  --domain=HOST                 the site's own name, e.g. feedgenix.com. APP_URL, FRONTEND_URL and
+                                SANCTUM_STATEFUL_DOMAINS in .env follow it (a re-run moves the site)
+  --redirect-from=HOST[,HOST]   other names that answer with a permanent redirect to --domain, path
+                                kept, e.g. www.feedgenix.com,staging.feedgenix.com. The certificate
+                                covers them too
   --tls=letsencrypt|self-signed letsencrypt (default) keeps a self-signed placeholder until the
-                                domain's DNS points here; re-run once it does
+                                domain's DNS points here; re-run once it does. On a host that already
+                                serves FeedGenix, every name must point here first: the live site
+                                keeps its certificate until then
   --email=ADDRESS               Let's Encrypt account email (when certbot has no account yet)
   --legacy-dir=PATH             shared: the legacy app (default /var/www/feed-intelligence)
   --legacy-url=URL              shared: the legacy site that must keep answering (required)
@@ -53,6 +59,7 @@ EOF
 # ---- arguments -------------------------------------------------------------------------------------
 FG_MODE=
 FG_DOMAIN=
+REDIRECT_FROM=
 FG_TLS=letsencrypt
 FG_APP_ENV=production
 FG_LEGACY_DIR=/var/www/feed-intelligence
@@ -69,6 +76,7 @@ for arg in "$@"; do
   case $arg in
     --mode=*) FG_MODE=${arg#*=} ;;
     --domain=*) FG_DOMAIN=${arg#*=} ;;
+    --redirect-from=*) REDIRECT_FROM=${arg#*=} ;;
     --tls=*) FG_TLS=${arg#*=} ;;
     --email=*) EMAIL=${arg#*=} ;;
     --legacy-dir=*) FG_LEGACY_DIR=${arg#*=} ;;
@@ -106,6 +114,12 @@ INSTALLED_NOW=()
 FG_TLS_CERT=
 FG_TLS_KEY=
 FG_TLS_CA=
+HOST_NAME='^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'
+REDIRECT_HOSTS=()   # --redirect-from
+ALL_HOSTS=()        # --domain first, then the redirect names: every name the certificate covers
+FG_SERVER_NAMES=    # the same, for nginx's server_name
+FG_REDIRECT_HOSTS=
+ENV_MOVED=0         # .env's domain keys changed: the live release's cached config is rebuilt
 FG_PG_PORT=5432
 FG_NGINX_USER=www-data
 
@@ -120,8 +134,18 @@ preflight() {
   [[ -f /sys/fs/cgroup/cgroup.controllers ]] || die "cgroup v2 is required"
 
   [[ $FG_MODE == shared || $FG_MODE == dedicated ]] || die "--mode=shared or --mode=dedicated is required"
-  [[ $FG_DOMAIN =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] ||
-    die "--domain must be a lowercase host name (got '$FG_DOMAIN')"
+  [[ $FG_DOMAIN =~ $HOST_NAME ]] || die "--domain must be a lowercase host name (got '$FG_DOMAIN')"
+  local host
+  local -a listed=()
+  IFS=, read -ra listed <<<"$REDIRECT_FROM"
+  for host in "${listed[@]}"; do
+    [[ $host =~ $HOST_NAME ]] || die "--redirect-from takes lowercase host names separated by commas (got '$host')"
+    [[ " $FG_DOMAIN ${REDIRECT_HOSTS[*]} " != *" $host "* ]] || die "--redirect-from names $host twice (or it is --domain)"
+    REDIRECT_HOSTS+=("$host")
+  done
+  ALL_HOSTS=("$FG_DOMAIN" "${REDIRECT_HOSTS[@]}")
+  FG_SERVER_NAMES=${ALL_HOSTS[*]}
+  FG_REDIRECT_HOSTS=${REDIRECT_HOSTS[*]}
   [[ $FG_TLS == letsencrypt || $FG_TLS == self-signed ]] || die "--tls must be letsencrypt or self-signed"
   [[ $FG_APP_ENV == production || $FG_APP_ENV == staging ]] || die "--app-env must be production or staging"
   [[ -z $EMAIL || $EMAIL =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || die "--email is not an address"
@@ -163,6 +187,15 @@ preflight() {
       die "port $port is held by '$owners', not nginx; the FeedGenix vhost needs nginx on 80 and 443"
   done
   [[ ! -e /usr/sbin/policy-rc.d ]] || die "/usr/sbin/policy-rc.d already exists; refusing to replace it"
+
+  # A host that already serves FeedGenix keeps its certificate and its .env until every name points
+  # here: a move whose DNS is not ready changes nothing.
+  if [[ $FG_TLS == letsencrypt && -f $FG_ETC/host.conf ]] && ((!SKIP_DNS_CHECK)) &&
+    ! cert_covers "/etc/letsencrypt/live/$FG_DOMAIN/fullchain.pem" "${ALL_HOSTS[@]}"; then
+    local away
+    away=$(hosts_not_here "${ALL_HOSTS[@]}" | paste -sd ' ' -)
+    [[ -z $away ]] || die "DNS for $away does not point to this host yet: nothing was changed. Re-run once it does"
+  fi
 
   local extra
   extra=$(loopback_resolvers | grep -vx '127.0.0.53' || true)
@@ -648,14 +681,39 @@ install_deploy_key() {
 write_env() {
   section "Application environment"
   local env=$FG_ROOT/shared/.env
-  if [[ -f $env ]]; then
-    ok "$env exists (never rewritten: edit it by hand)"
+  if [[ ! -f $env ]]; then
+    FG_APP_KEY="base64:$(openssl rand -base64 32)"
+    render "$TEMPLATES/env.template" >"$WORK/env"
+    install_secret_file "$WORK/env" "$env" 0600 "$FG_USER" "$FG_USER"
+    unset FG_APP_KEY
     return 0
   fi
-  FG_APP_KEY="base64:$(openssl rand -base64 32)"
-  render "$TEMPLATES/env.template" >"$WORK/env"
-  install_secret_file "$WORK/env" "$env" 0600 "$FG_USER" "$FG_USER"
-  unset FG_APP_KEY
+
+  # The keys --domain decides follow it, so a re-run moves the site. The rest of .env is the owner's
+  # and is never rewritten; only the changed lines are shown (secrets sit next to them).
+  env_set "APP_URL=https://$FG_DOMAIN" "FRONTEND_URL=https://$FG_DOMAIN" "SANCTUM_STATEFUL_DOMAINS=$FG_DOMAIN" \
+    <"$env" >"$WORK/env"
+  if cmp -s "$env" "$WORK/env"; then
+    ok "$env exists (the keys --domain decides match it; edit the rest by hand)"
+    return 0
+  fi
+  changed "$env: the keys --domain decides now follow $FG_DOMAIN"
+  diff --old-line-format='           - %L' --new-line-format='           + %L' --unchanged-line-format= \
+    "$env" "$WORK/env" || true
+  ENV_MOVED=1
+  if ((FG_DRY_RUN)); then return 0; fi
+  install -m 0600 -o "$FG_USER" -g "$FG_USER" "$WORK/env" "$env.feedgenix-new"
+  mv -f "$env.feedgenix-new" "$env"
+}
+
+# A live release caches its configuration (`artisan optimize` at deploy). After a move it is rebuilt
+# from the new .env, and PHP-FPM and the worker restart at the end of the run to read it.
+rebuild_app_config() {
+  ((ENV_MOVED)) || return 0
+  [[ -e $FG_ROOT/current/artisan ]] || return 0
+  changed "rebuild the live release's cached configuration (feedgenix-artisan optimize)"
+  apply /usr/local/bin/feedgenix-artisan optimize
+  RESTART+=(feedgenix-php.service feedgenix-worker@default.service)
 }
 
 # ---- TLS and nginx ---------------------------------------------------------------------------------
@@ -664,15 +722,17 @@ self_signed_cert() {
   FG_TLS_CERT=$dir/cert.pem
   FG_TLS_KEY=$dir/key.pem
   FG_TLS_CA=$FG_TLS_CERT
-  if [[ -f $FG_TLS_CERT ]] && openssl x509 -checkend 604800 -noout -in "$FG_TLS_CERT" >/dev/null 2>&1 &&
-    grep -q "DNS:$FG_DOMAIN\$" <<<"$(openssl x509 -noout -ext subjectAltName -in "$FG_TLS_CERT" 2>/dev/null)"; then
+  if openssl x509 -checkend 604800 -noout -in "$FG_TLS_CERT" >/dev/null 2>&1 &&
+    cert_covers "$FG_TLS_CERT" "${ALL_HOSTS[@]}"; then
     return 0
   fi
-  changed "self-signed certificate for $FG_DOMAIN in $dir (a placeholder until Let's Encrypt)"
+  changed "self-signed certificate for ${ALL_HOSTS[*]} in $dir (a placeholder until Let's Encrypt)"
   if ((FG_DRY_RUN)); then return 0; fi
   install -d -m 0755 "$dir"
+  local san
+  san=$(printf 'DNS:%s,' "${ALL_HOSTS[@]}")
   openssl req -x509 -newkey rsa:2048 -nodes -days 90 -subj "/CN=$FG_DOMAIN" \
-    -addext "subjectAltName=DNS:$FG_DOMAIN" -keyout "$WORK/key.pem" -out "$WORK/cert.pem" 2>/dev/null
+    -addext "subjectAltName=${san%,}" -keyout "$WORK/key.pem" -out "$WORK/cert.pem" 2>/dev/null
   install -m 0600 "$WORK/key.pem" "$FG_TLS_KEY"
   install -m 0644 "$WORK/cert.pem" "$FG_TLS_CERT"
   NGINX_RELOAD=1
@@ -725,6 +785,7 @@ render_nginx() {
     if ((FG_CHANGED)); then NGINX_TOUCHED+=("/etc/nginx/snippets/$name.conf"); fi
   done
   render "$TEMPLATES/nginx/feedgenix.conf" >"$WORK/site.conf"
+  if ((${#REDIRECT_HOSTS[@]} > 0)); then render "$TEMPLATES/nginx/feedgenix-redirect.conf" >>"$WORK/site.conf"; fi
   install_file "$WORK/site.conf" "$NGINX_SITE" 0644 root root keep-prev
   if ((FG_CHANGED)); then NGINX_TOUCHED+=("$NGINX_SITE"); fi
   if [[ -n $NGINX_LINK ]]; then
@@ -769,16 +830,10 @@ nginx_apply() {
   NGINX_RELOAD=0
 }
 
-dns_points_here() {
-  local resolved ours
-  resolved=$(getent ahostsv4 "$FG_DOMAIN" | awk '{ print $1 }' | sort -u)
-  ours=$(ip -4 -o addr show scope global | awk '{ split($4, a, "/"); print a[1] }' | sort -u)
-  [[ -n $resolved ]] && [[ -z $(comm -23 <(printf '%s\n' "$resolved") <(printf '%s\n' "$ours")) ]]
-}
-
 setup_nginx_and_tls() {
   section "nginx vhost and TLS for $FG_DOMAIN"
-  if [[ $FG_TLS == letsencrypt && -f /etc/letsencrypt/live/$FG_DOMAIN/fullchain.pem ]]; then
+  # The Let's Encrypt certificate is named after --domain and must list every name.
+  if [[ $FG_TLS == letsencrypt ]] && cert_covers "/etc/letsencrypt/live/$FG_DOMAIN/fullchain.pem" "${ALL_HOSTS[@]}"; then
     use_letsencrypt_cert
   else
     self_signed_cert
@@ -787,10 +842,12 @@ setup_nginx_and_tls() {
   nginx_apply
 
   if [[ $FG_TLS == letsencrypt && $FG_TLS_CERT != /etc/letsencrypt/* ]]; then
-    if ((!SKIP_DNS_CHECK)) && ! dns_points_here; then
-      warn "$FG_DOMAIN does not resolve to this host yet: kept the self-signed placeholder. Re-run once DNS points here."
+    local away=
+    if ((!SKIP_DNS_CHECK)); then away=$(hosts_not_here "${ALL_HOSTS[@]}" | paste -sd ' ' -); fi
+    if [[ -n $away ]]; then
+      warn "$away does not resolve to this host yet: kept the self-signed placeholder. Re-run once DNS points here."
     elif ((FG_DRY_RUN)); then
-      changed "certbot certonly --webroot for $FG_DOMAIN, then switch the vhost to it"
+      changed "certbot certonly --webroot for ${ALL_HOSTS[*]}, then switch the vhost to it"
     else
       local -a account=()
       if [[ -n $EMAIL ]]; then
@@ -798,10 +855,13 @@ setup_nginx_and_tls() {
       elif ! compgen -G '/etc/letsencrypt/accounts/*/directory/*' >/dev/null; then
         account=(--register-unsafely-without-email)
       fi
+      local -a names=()
+      local host
+      for host in "${ALL_HOSTS[@]}"; do names+=(-d "$host"); done
       # --webroot never edits an nginx config. A renewal reloads nginx only if nginx -t passes.
-      certbot certonly --webroot -w "$FG_ACME_ROOT" -d "$FG_DOMAIN" --non-interactive --agree-tos \
-        --keep-until-expiring "${account[@]}" --deploy-hook 'nginx -t -q && systemctl reload nginx'
-      changed "Let's Encrypt certificate for $FG_DOMAIN"
+      certbot certonly --webroot -w "$FG_ACME_ROOT" --cert-name "$FG_DOMAIN" "${names[@]}" --non-interactive \
+        --agree-tos --keep-until-expiring "${account[@]}" --deploy-hook 'nginx -t -q && systemctl reload nginx'
+      changed "Let's Encrypt certificate for ${ALL_HOSTS[*]}"
       use_letsencrypt_cert
       render_nginx
       nginx_apply
@@ -891,6 +951,7 @@ main() {
   install_tools
   install_deploy_key
   write_env
+  rebuild_app_config
   setup_nginx_and_tls
   harden_host
   start_services

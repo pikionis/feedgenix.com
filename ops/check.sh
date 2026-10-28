@@ -176,6 +176,11 @@ check_account() {
       fail ".env uses TCP for DB_HOST or REDIS_HOST (must be unix sockets)"
     fi
     if grep -Eq '^APP_DEBUG=false' "$env"; then pass "APP_DEBUG=false"; else fail "APP_DEBUG is not false"; fi
+    if grep -qx "APP_URL=https://$FG_DOMAIN" "$env" && grep -qx "SANCTUM_STATEFUL_DOMAINS=$FG_DOMAIN" "$env"; then
+      pass "APP_URL and SANCTUM_STATEFUL_DOMAINS name $FG_DOMAIN"
+    else
+      fail "APP_URL or SANCTUM_STATEFUL_DOMAINS does not name $FG_DOMAIN (re-run provision.sh: it keeps them in step)"
+    fi
   fi
 }
 
@@ -271,6 +276,21 @@ check_site() {
   else
     pass "TLS uses a Let's Encrypt certificate"
   fi
+
+  # Every other name answers with a permanent redirect to the site, path and query kept.
+  local host answer
+  local -a redirects=()
+  read -ra redirects <<<"${FG_REDIRECT_HOSTS:-}"
+  for host in "${redirects[@]}"; do
+    local -a ropts=(-s --max-time 10 --resolve "$host:443:127.0.0.1" -o /dev/null -w '%{http_code} %{redirect_url}')
+    if [[ -n $FG_TLS_CA ]]; then ropts+=(--cacert "$FG_TLS_CA"); fi
+    answer=$(curl "${ropts[@]}" "https://$host/f/check?from=feedgenix-check" || true)
+    if [[ $answer == "301 https://$FG_DOMAIN/f/check?from=feedgenix-check" ]]; then
+      pass "https://$host redirects to https://$FG_DOMAIN (path kept)"
+    else
+      fail "https://$host answers '$answer', not a 301 to https://$FG_DOMAIN"
+    fi
+  done
 
   local live
   live=$(readlink -e "$FG_ROOT/current" 2>/dev/null || true)
