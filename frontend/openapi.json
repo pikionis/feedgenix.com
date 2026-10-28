@@ -10,6 +10,90 @@
         }
     ],
     "paths": {
+        "/v1/admin/audit": {
+            "get": {
+                "operationId": "admin.audit",
+                "tags": [
+                    "Audit"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "audit": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "user_email": {
+                                                        "type": "string"
+                                                    },
+                                                    "action": {
+                                                        "type": "string"
+                                                    },
+                                                    "method": {
+                                                        "type": "string"
+                                                    },
+                                                    "path": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "integer"
+                                                    },
+                                                    "subject_tenant_id": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "details": {
+                                                        "type": [
+                                                            "object",
+                                                            "null"
+                                                        ],
+                                                        "additionalProperties": {}
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "user_email",
+                                                    "action",
+                                                    "method",
+                                                    "path",
+                                                    "status",
+                                                    "subject_tenant_id",
+                                                    "details",
+                                                    "created_at"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "audit"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/auth/options": {
             "get": {
                 "operationId": "auth.options",
@@ -3205,6 +3289,664 @@
                 }
             }
         },
+        "/v1/admin/workspaces": {
+            "get": {
+                "operationId": "admin.workspaces.index",
+                "summary": "Every workspace, newest first, 25 a page; `search` matches a name, a slug, the owner's email or an id",
+                "tags": [
+                    "Workspace"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "workspaces": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "plan": {
+                                                        "type": "string"
+                                                    },
+                                                    "plan_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "interval": {
+                                                        "type": "string"
+                                                    },
+                                                    "internal": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "frozen": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "ai_paused": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "owner": {
+                                                        "type": [
+                                                            "object",
+                                                            "null"
+                                                        ],
+                                                        "properties": {
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "email": {
+                                                                "type": "string"
+                                                            },
+                                                            "verified": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "name",
+                                                            "email",
+                                                            "verified"
+                                                        ]
+                                                    },
+                                                    "feeds": {
+                                                        "type": "integer"
+                                                    },
+                                                    "feeds_paused": {
+                                                        "type": "integer"
+                                                    },
+                                                    "languages": {
+                                                        "type": "integer"
+                                                    },
+                                                    "products_this_period": {
+                                                        "type": "integer"
+                                                    },
+                                                    "credits_available": {
+                                                        "type": "integer"
+                                                    },
+                                                    "ai_credits_30d": {
+                                                        "type": "integer"
+                                                    },
+                                                    "last_import_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "name",
+                                                    "slug",
+                                                    "plan",
+                                                    "plan_name",
+                                                    "interval",
+                                                    "internal",
+                                                    "frozen",
+                                                    "ai_paused",
+                                                    "owner",
+                                                    "feeds",
+                                                    "feeds_paused",
+                                                    "languages",
+                                                    "products_this_period",
+                                                    "credits_available",
+                                                    "ai_credits_30d",
+                                                    "last_import_at",
+                                                    "created_at"
+                                                ]
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "pages": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "page",
+                                                "pages",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "workspaces",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/admin/workspaces/{workspace}": {
+            "get": {
+                "operationId": "admin.workspaces.show",
+                "summary": "One workspace in full: plan and usage, members, feeds, held work, credits, AI usage in credits and tokens, notices, and what staff did there",
+                "tags": [
+                    "Workspace"
+                ],
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "workspace": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "slug": {
+                                                    "type": "string"
+                                                },
+                                                "plan": {
+                                                    "type": "string"
+                                                },
+                                                "plan_name": {
+                                                    "type": "string"
+                                                },
+                                                "interval": {
+                                                    "type": "string"
+                                                },
+                                                "internal": {
+                                                    "type": "boolean"
+                                                },
+                                                "frozen": {
+                                                    "type": "boolean"
+                                                },
+                                                "ai_paused": {
+                                                    "type": "boolean"
+                                                },
+                                                "owner": {
+                                                    "type": [
+                                                        "object",
+                                                        "null"
+                                                    ],
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "email": {
+                                                            "type": "string"
+                                                        },
+                                                        "verified": {
+                                                            "type": "boolean"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "name",
+                                                        "email",
+                                                        "verified"
+                                                    ]
+                                                },
+                                                "feeds": {
+                                                    "type": "integer"
+                                                },
+                                                "feeds_paused": {
+                                                    "type": "integer"
+                                                },
+                                                "languages": {
+                                                    "type": "integer"
+                                                },
+                                                "products_this_period": {
+                                                    "type": "integer"
+                                                },
+                                                "credits_available": {
+                                                    "type": "integer"
+                                                },
+                                                "ai_credits_30d": {
+                                                    "type": "integer"
+                                                },
+                                                "last_import_at": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "created_at": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "name",
+                                                "slug",
+                                                "plan",
+                                                "plan_name",
+                                                "interval",
+                                                "internal",
+                                                "frozen",
+                                                "ai_paused",
+                                                "owner",
+                                                "feeds",
+                                                "feeds_paused",
+                                                "languages",
+                                                "products_this_period",
+                                                "credits_available",
+                                                "ai_credits_30d",
+                                                "last_import_at",
+                                                "created_at"
+                                            ]
+                                        },
+                                        "plan": {
+                                            "type": "object",
+                                            "properties": {
+                                                "started_at": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "ends_at": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "overrides": {
+                                                    "type": [
+                                                        "object",
+                                                        "null"
+                                                    ],
+                                                    "additionalProperties": {
+                                                        "type": [
+                                                            "integer",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "period_start": {
+                                                    "type": "string"
+                                                },
+                                                "period_end": {
+                                                    "type": "string"
+                                                },
+                                                "limits": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "feeds": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "languages": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "products": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "feeds",
+                                                        "languages",
+                                                        "products"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "started_at",
+                                                "ends_at",
+                                                "status",
+                                                "overrides",
+                                                "period_start",
+                                                "period_end",
+                                                "limits"
+                                            ]
+                                        },
+                                        "members": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "email": {
+                                                        "type": "string"
+                                                    },
+                                                    "role": {
+                                                        "type": "string"
+                                                    },
+                                                    "verified": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "staff": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "name",
+                                                    "email",
+                                                    "role",
+                                                    "verified",
+                                                    "staff"
+                                                ]
+                                            }
+                                        },
+                                        "languages": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "code": {
+                                                        "type": "string"
+                                                    },
+                                                    "paused": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "code",
+                                                    "paused"
+                                                ]
+                                            }
+                                        },
+                                        "feeds": {
+                                            "type": "array",
+                                            "description": "The feeds as their workspace sees them.",
+                                            "items": {
+                                                "$ref": "#/components/schemas/FeedResource"
+                                            }
+                                        },
+                                        "held": {
+                                            "type": "array",
+                                            "description": "Work that waits, by reason.",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "reason": {
+                                                        "type": "string"
+                                                    },
+                                                    "units": {
+                                                        "type": "integer"
+                                                    },
+                                                    "feeds": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "reason",
+                                                    "units",
+                                                    "feeds"
+                                                ]
+                                            }
+                                        },
+                                        "credits": {
+                                            "type": "object",
+                                            "properties": {
+                                                "available": {
+                                                    "type": "integer"
+                                                },
+                                                "reserved": {
+                                                    "type": "integer"
+                                                },
+                                                "transactions": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "kind": {
+                                                                "type": "string"
+                                                            },
+                                                            "credits": {
+                                                                "type": "integer"
+                                                            },
+                                                            "balance_after": {
+                                                                "type": "integer"
+                                                            },
+                                                            "note": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "id",
+                                                            "kind",
+                                                            "credits",
+                                                            "balance_after",
+                                                            "note",
+                                                            "created_at"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "available",
+                                                "reserved",
+                                                "transactions"
+                                            ]
+                                        },
+                                        "ai_usage_30d": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "purpose": {
+                                                        "type": "string"
+                                                    },
+                                                    "calls": {
+                                                        "type": "integer"
+                                                    },
+                                                    "failed": {
+                                                        "type": "integer"
+                                                    },
+                                                    "input_tokens": {
+                                                        "type": "integer"
+                                                    },
+                                                    "output_tokens": {
+                                                        "type": "integer"
+                                                    },
+                                                    "thinking_tokens": {
+                                                        "type": "integer"
+                                                    },
+                                                    "credits": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "purpose",
+                                                    "calls",
+                                                    "failed",
+                                                    "input_tokens",
+                                                    "output_tokens",
+                                                    "thinking_tokens",
+                                                    "credits"
+                                                ]
+                                            }
+                                        },
+                                        "notices": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "level": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "read": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "level",
+                                                    "title",
+                                                    "read",
+                                                    "created_at"
+                                                ]
+                                            }
+                                        },
+                                        "audit": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "user_email": {
+                                                        "type": "string"
+                                                    },
+                                                    "action": {
+                                                        "type": "string"
+                                                    },
+                                                    "method": {
+                                                        "type": "string"
+                                                    },
+                                                    "path": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "integer"
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "user_email",
+                                                    "action",
+                                                    "method",
+                                                    "path",
+                                                    "status",
+                                                    "created_at"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "workspace",
+                                        "plan",
+                                        "members",
+                                        "languages",
+                                        "feeds",
+                                        "held",
+                                        "credits",
+                                        "ai_usage_30d",
+                                        "notices",
+                                        "audit"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/workspace": {
             "get": {
                 "operationId": "workspace.show",
@@ -6320,6 +7062,25 @@
                     }
                 }
             },
+            "ModelNotFoundException": {
+                "description": "Not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
             "PlanLimitExceeded": {
                 "description": "A plan limit was reached, or the feature is part of a higher plan",
                 "content": {
@@ -6382,25 +7143,6 @@
                                 "requested",
                                 "plan",
                                 "upgrade_to",
-                                "message"
-                            ]
-                        }
-                    }
-                }
-            },
-            "ModelNotFoundException": {
-                "description": "Not found",
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "description": "Error overview."
-                                }
-                            },
-                            "required": [
                                 "message"
                             ]
                         }

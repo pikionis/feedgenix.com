@@ -95,3 +95,16 @@ export type ExportPreset = ExportsResponse['presets'][number]
 export type NoticesResponse = paths['/v1/notices']['get']['responses'][200]['content']['application/json']
 
 export type WorkspaceNotice = NoticesResponse['notices'][number]
+
+/** The staff list of workspaces (GET /v1/admin/workspaces): credits and tokens, never a cost. */
+export type AdminWorkspaces = paths['/v1/admin/workspaces']['get']['responses'][200]['content']['application/json']
+
+export type AdminWorkspaceRow = AdminWorkspaces['workspaces'][number]
+
+/** One workspace in full, for staff (GET /v1/admin/workspaces/{workspace}). */
+export type AdminWorkspace =
+  paths['/v1/admin/workspaces/{workspace}']['get']['responses'][200]['content']['application/json']
+
+/** The staff trail (GET /v1/admin/audit). */
+export type AdminAuditLine =
+  paths['/v1/admin/audit']['get']['responses'][200]['content']['application/json']['audit'][number]

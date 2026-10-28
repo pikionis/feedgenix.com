@@ -26,5 +26,10 @@ export default [
   ]),
 
   // The staff area: staff only, two-factor proven in the session (enforced by the API).
-  route('admin', 'routes/admin/layout.tsx', [index('routes/admin/index.tsx')]),
+  route('admin', 'routes/admin/layout.tsx', [
+    index('routes/admin/index.tsx'),
+    route('workspaces', 'routes/admin/workspaces.tsx'),
+    route('workspaces/:workspaceId', 'routes/admin/workspace.tsx'),
+    route('audit', 'routes/admin/audit.tsx'),
+  ]),
 ] satisfies RouteConfig

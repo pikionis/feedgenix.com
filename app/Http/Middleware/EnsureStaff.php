@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Domain\Identity\TwoFactor\TwoFactorSession;
+use App\Domain\Ops\StaffAudit;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
 use Closure;
@@ -18,7 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class EnsureStaff
 {
-    public function __construct(private TenantContext $context) {}
+    public function __construct(private TenantContext $context, private StaffAudit $audit) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -41,6 +42,10 @@ final readonly class EnsureStaff
 
         $this->context->system('staff request: '.$request->method().' '.$request->path());
 
-        return $next($request);
+        // Every staff request leaves one line in the trail, with the answer it got (ADR 0026).
+        $response = $next($request);
+        $this->audit->record($user, $request, $response->getStatusCode());
+
+        return $response;
     }
 }

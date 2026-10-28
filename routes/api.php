@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\WorkspaceController as AdminWorkspaceController;
 use App\Http\Controllers\App\ExportController;
 use App\Http\Controllers\App\FeedController;
 use App\Http\Controllers\App\FeedImportController;
@@ -69,6 +71,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
     // The staff admin API: two-factor proven in this session, system context (sees every workspace).
     Route::middleware('staff')->prefix('admin')->group(function (): void {
         Route::get('/overview', OverviewController::class)->name('admin.overview');
+        Route::get('/workspaces', [AdminWorkspaceController::class, 'index'])->name('admin.workspaces.index');
+        Route::get('/workspaces/{workspace}', [AdminWorkspaceController::class, 'show'])->name('admin.workspaces.show');
+        Route::get('/audit', AuditController::class)->name('admin.audit');
     });
 
     // The workspace the person acts in: every query below is limited to it (ADR 0002).

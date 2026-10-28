@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+  '/v1/admin/audit': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['admin.audit']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/auth/options': {
     parameters: {
       query?: never
@@ -866,6 +882,40 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/admin/workspaces': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Every workspace, newest first, 25 a page; `search` matches a name, a slug, the owner's email or an id */
+    get: operations['admin.workspaces.index']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/admin/workspaces/{workspace}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** One workspace in full: plan and usage, members, feeds, held work, credits, AI usage in credits and tokens, notices, and what staff did there */
+    get: operations['admin.workspaces.show']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/workspace': {
     parameters: {
       query?: never
@@ -1716,6 +1766,18 @@ export interface components {
         }
       }
     }
+    /** @description Not found */
+    ModelNotFoundException: {
+      headers: {
+        [name: string]: unknown
+      }
+      content: {
+        'application/json': {
+          /** @description Error overview. */
+          message: string
+        }
+      }
+    }
     /** @description A plan limit was reached, or the feature is part of a higher plan */
     PlanLimitExceeded: {
       headers: {
@@ -1741,18 +1803,6 @@ export interface components {
         }
       }
     }
-    /** @description Not found */
-    ModelNotFoundException: {
-      headers: {
-        [name: string]: unknown
-      }
-      content: {
-        'application/json': {
-          /** @description Error overview. */
-          message: string
-        }
-      }
-    }
   }
   parameters: never
   requestBodies: never
@@ -1761,6 +1811,40 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
+  'admin.audit': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            audit: {
+              id: number
+              user_email: string
+              action: string
+              method: string
+              path: string
+              status: number
+              subject_tenant_id: number | null
+              details: {
+                [key: string]: unknown
+              } | null
+              created_at: string | null
+            }[]
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+    }
+  }
   'auth.options': {
     parameters: {
       query?: never
@@ -3433,6 +3517,180 @@ export interface operations {
       401: components['responses']['AuthenticationException']
       404: components['responses']['ModelNotFoundException']
       422: components['responses']['ValidationException']
+    }
+  }
+  'admin.workspaces.index': {
+    parameters: {
+      query?: {
+        search?: string | null
+        page?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            workspaces: {
+              id: number
+              name: string
+              slug: string
+              plan: string
+              plan_name: string
+              interval: string
+              internal: boolean
+              frozen: boolean
+              ai_paused: boolean
+              owner: {
+                name: string
+                email: string
+                verified: boolean
+              } | null
+              feeds: number
+              feeds_paused: number
+              languages: number
+              products_this_period: number
+              credits_available: number
+              ai_credits_30d: number
+              last_import_at: string | null
+              created_at: string | null
+            }[]
+            meta: {
+              page: number
+              pages: number
+              total: number
+            }
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'admin.workspaces.show': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspace: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            workspace: {
+              id: number
+              name: string
+              slug: string
+              plan: string
+              plan_name: string
+              interval: string
+              internal: boolean
+              frozen: boolean
+              ai_paused: boolean
+              owner: {
+                name: string
+                email: string
+                verified: boolean
+              } | null
+              feeds: number
+              feeds_paused: number
+              languages: number
+              products_this_period: number
+              credits_available: number
+              ai_credits_30d: number
+              last_import_at: string | null
+              created_at: string | null
+            }
+            plan: {
+              started_at: string | null
+              ends_at: string | null
+              status: string
+              overrides: {
+                [key: string]: number | null
+              } | null
+              period_start: string
+              period_end: string
+              limits: {
+                feeds: number | null
+                languages: number | null
+                products: number | null
+              }
+            }
+            members: {
+              id: number
+              name: string
+              email: string
+              role: string
+              verified: boolean
+              staff: boolean
+            }[]
+            languages: {
+              code: string
+              paused: boolean
+            }[]
+            /** @description The feeds as their workspace sees them. */
+            feeds: components['schemas']['FeedResource'][]
+            /** @description Work that waits, by reason. */
+            held: {
+              reason: string
+              units: number
+              feeds: number
+            }[]
+            credits: {
+              available: number
+              reserved: number
+              transactions: {
+                id: number
+                kind: string
+                credits: number
+                balance_after: number
+                note: string | null
+                created_at: string
+              }[]
+            }
+            ai_usage_30d: {
+              purpose: string
+              calls: number
+              failed: number
+              input_tokens: number
+              output_tokens: number
+              thinking_tokens: number
+              credits: number
+            }[]
+            notices: {
+              id: number
+              level: string
+              title: string
+              read: boolean
+              created_at: string | null
+            }[]
+            audit: {
+              id: number
+              user_email: string
+              action: string
+              method: string
+              path: string
+              status: number
+              created_at: string | null
+            }[]
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
     }
   }
   'workspace.show': {

@@ -30,3 +30,4 @@ record supersedes them.
 | [0023](0023-export-triggers-and-feed-urls.md) | When exports are built, and how feed URLs answer (refines 0007, 0022) |
 | [0024](0024-plan-pauses.md) | What is over a plan's limits pauses, never disappears (refines 0005, 0007) |
 | [0025](0025-notices.md) | Notices: told once, with the choices (refines 0005, 0024) |
+| [0026](0026-staff-area-and-trail.md) | The staff area and its trail: one line per request, credits never a cost (refines 0002, 0005, 0016) |
