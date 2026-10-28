@@ -71,6 +71,8 @@ final class WorkspaceResource extends JsonResource
                 'used' => [
                     'feeds' => $entitlements->used('feeds'),
                     'languages' => $entitlements->used('languages'),
+                    /** Products counted against this period's allowance so far. */
+                    'products' => $entitlements->used('products'),
                 ],
                 'overage' => [
                     'available' => PlanCatalog::overageCreditsPerProduct($plan) !== null,

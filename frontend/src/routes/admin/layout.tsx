@@ -22,7 +22,7 @@ export function HydrateFallback() {
 
 export default function AdminLayout() {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-b-[0.5px] border-hairline bg-background">
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
           <Logo />

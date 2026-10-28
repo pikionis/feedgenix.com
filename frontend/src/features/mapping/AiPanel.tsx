@@ -1,7 +1,6 @@
 import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '~/components/ui/button'
-import { Card } from '~/components/ui/card'
 import { Notice } from '~/components/ui/notice'
 import type { Mapping } from '~/lib/api/types'
 import { cn } from '~/lib/utils'
@@ -27,11 +26,11 @@ export function AiPanel({
   const running = isSuggesting(mapping)
 
   return (
-    <Card className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 rounded-lg border border-dashed border-primary/40 bg-subtle px-5 py-4">
       <div className="flex items-start gap-3">
         <Sparkles size={18} strokeWidth={1.5} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="font-medium">Suggest with AI</h2>
+          <h2 className="text-[15px] font-medium">Suggest with AI</h2>
           <p className="text-sm text-muted-foreground">
             The AI reads your column names and a few example values (never prices, stock, ids or images) and suggests
             the fields that are still empty. What you set yourself is never changed.
@@ -82,6 +81,6 @@ export function AiPanel({
       {!ai.available && !running && (
         <p className="text-sm text-muted-foreground">{unavailableMessage(ai.unavailable_reason)}</p>
       )}
-    </Card>
+    </div>
   )
 }

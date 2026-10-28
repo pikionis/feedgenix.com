@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Check, Lock } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router'
+import { Check, Lock } from 'lucide-react'
+import { useSearchParams } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
+import { PageHeader } from '~/components/ui/page-header'
 import { euros } from '~/features/billing/format'
 import { type BillingPeriod, highlights, PeriodSwitch } from '~/features/billing/PlanCards'
 import { plansQuery, workspaceQuery } from '~/features/workspace/queries'
@@ -24,26 +25,16 @@ export default function Checkout() {
   const period: BillingPeriod = params.get('period') === 'monthly' ? 'monthly' : 'yearly'
   const plan = plans.data?.plans.find((item) => item.key === params.get('plan'))
 
-  const back = (
-    <Link
-      to="/app/billing/plans"
-      className="inline-flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" /> All plans
-    </Link>
-  )
+  const back = { to: '/app/billing/plans', label: 'All plans' }
 
   if (plans.data === undefined) return <div className="h-0.5 w-full animate-pulse bg-primary" aria-hidden="true" />
   if (plan === undefined || plan.price_monthly_eur === 0) {
     return (
-      <div className="flex flex-col gap-4">
-        {back}
-        <Card className="flex max-w-xl flex-col gap-2">
-          <h1 className="font-medium">Choose a paid plan first</h1>
-          <p className="text-sm text-muted-foreground">
-            This plan cannot be bought. Pick one of the plans to continue.
-          </p>
-        </Card>
+      <div className="flex flex-col gap-5">
+        <PageHeader back={back} title="Choose a paid plan first" />
+        <p className="max-w-xl rounded-lg bg-surface px-5 py-4 text-sm text-muted-foreground">
+          This plan cannot be bought. Pick one of the plans to continue.
+        </p>
       </div>
     )
   }
@@ -55,12 +46,7 @@ export default function Checkout() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        {back}
-        <h1 className="text-2xl font-medium tracking-tight">
-          {current ? `You are on ${plan.name}` : `Upgrade to ${plan.name}`}
-        </h1>
-      </div>
+      <PageHeader back={back} title={current ? `You are on ${plan.name}` : `Upgrade to ${plan.name}`} />
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="flex flex-col gap-4">

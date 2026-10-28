@@ -124,3 +124,14 @@ it('serialises concurrent language changes on the workspace row', function (): v
 
     expect($locks)->toHaveCount(1);
 });
+
+it("counts this period's products for the plan's quota", function (): void {
+    [$tenant, $feed] = translatingWorkspace(['en']);
+    expect(test()->actingAs(owner($tenant))->getJson('/api/v1/workspace')->json('entitlements.used.products'))->toBe(0);
+
+    startTranslation($tenant, $feed);
+
+    expect(test()->actingAs(owner($tenant))->getJson('/api/v1/workspace')->json('entitlements.used.products'))->toBe(5);
+    $this->travel(32)->days();
+    expect(test()->actingAs(owner($tenant))->getJson('/api/v1/workspace')->json('entitlements.used.products'))->toBe(0);
+});

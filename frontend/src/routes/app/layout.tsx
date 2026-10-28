@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, redirect, useNavigate } from 'react-router'
 import { Logo } from '~/components/brand/logo'
 import { Button } from '~/components/ui/button'
+import { Initials } from '~/components/ui/initials'
 import { Notice } from '~/components/ui/notice'
 import { UpgradeDialog } from '~/features/billing/UpgradeDialog'
 import { noticesQuery } from '~/features/notices/queries'
@@ -61,46 +62,48 @@ export default function AppLayout() {
     await navigate('/login')
   }
 
-  // One bar, two shapes: a 180px sidebar from lg (design/README.md), a sticky top bar below it. The
+  // One bar, two shapes: a 180px Mist sidebar from lg (the app kit), a sticky top bar below it. The
   // same elements reorder rather than render twice, so there is one navigation and one sign-out.
   return (
-    <div className="min-h-screen bg-surface lg:flex">
-      <aside className="sticky top-0 z-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-b-[0.5px] border-hairline bg-background px-4 py-3 sm:px-6 lg:h-screen lg:w-[180px] lg:shrink-0 lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-5 lg:border-r-[0.5px] lg:border-b-0 lg:px-3 lg:py-5">
-        <div className="lg:px-2">
-          <Logo />
-        </div>
-        {user.workspace !== null && <WorkspaceBadge name={user.workspace.name} plan={user.workspace.plan} />}
-        <nav aria-label="Workspace" className="order-1 flex gap-1 text-sm lg:order-2 lg:flex-col">
-          <NavItem to="/app" end icon={LayoutGrid}>
-            Overview
-          </NavItem>
-          <NavItem to="/app/feeds" icon={Rss}>
-            Feeds
-          </NavItem>
-          <NoticesItem />
-          <NavItem to="/app/billing" icon={CreditCard}>
-            Billing
-          </NavItem>
-          <NavItem to="/app/settings" icon={Settings}>
-            Settings
-          </NavItem>
-          {user.is_staff && (
-            <NavItem to="/admin" icon={ShieldCheck}>
-              Staff
+    <div className="min-h-screen bg-background lg:flex">
+      <aside className="sticky top-0 z-10 border-b-[0.5px] border-hairline bg-surface lg:static lg:w-[180px] lg:shrink-0 lg:border-r-[0.5px] lg:border-b-0">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6 lg:sticky lg:top-0 lg:h-screen lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-4 lg:px-3 lg:py-[18px]">
+          <div className="lg:px-1.5">
+            <Logo />
+          </div>
+          {user.workspace !== null && <WorkspaceCard name={user.workspace.name} plan={user.workspace.plan} />}
+          <nav aria-label="Workspace" className="order-1 flex gap-0.5 lg:order-2 lg:flex-col">
+            <NavItem to="/app" end icon={LayoutGrid}>
+              Overview
             </NavItem>
-          )}
-        </nav>
-        <Usage />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="order-3 ml-auto lg:order-4 lg:ml-0 lg:justify-start"
-          onClick={() => void signOut()}
-        >
-          Sign out
-        </Button>
+            <NavItem to="/app/feeds" icon={Rss}>
+              Feeds
+            </NavItem>
+            <NoticesItem />
+            <NavItem to="/app/billing" icon={CreditCard}>
+              Billing
+            </NavItem>
+            <NavItem to="/app/settings" icon={Settings}>
+              Settings
+            </NavItem>
+            {user.is_staff && (
+              <NavItem to="/admin" icon={ShieldCheck}>
+                Staff
+              </NavItem>
+            )}
+          </nav>
+          <Quota />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="order-3 ml-auto lg:order-4 lg:ml-0 lg:justify-start"
+            onClick={() => void signOut()}
+          >
+            Sign out
+          </Button>
+        </div>
       </aside>
-      <main className="mx-auto w-full max-w-[1200px] min-w-0 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-[1200px] min-w-0 px-4 py-7 sm:px-6 lg:px-8">
         {!user.email_verified && <VerifyEmailNotice email={user.email} />}
         <Outlet />
       </main>
@@ -111,62 +114,66 @@ export default function AppLayout() {
 
 const PLAN_NAMES: Record<string, string> = { free: 'Free', pro: 'Pro', ultra: 'Ultra', custom: 'Custom' }
 
-function WorkspaceBadge({ name, plan }: { name: string; plan: string }) {
-  const initials = name
-    .split(/\s+/)
-    .filter((word) => /^\p{L}/u.test(word))
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join('')
-
+/** The workspace (the app kit's switcher card): a Paper card with an Ink initials square. */
+function WorkspaceCard({ name, plan }: { name: string; plan: string }) {
   return (
-    <div className="order-2 hidden min-w-0 items-center gap-2 md:flex lg:order-1 lg:rounded-lg lg:bg-surface lg:p-2">
-      <span
-        aria-hidden="true"
-        className="hidden size-7 shrink-0 items-center justify-center rounded-md bg-primary-soft text-xs font-medium text-primary-hover lg:flex"
-      >
-        {initials || '·'}
-      </span>
+    <div className="order-2 hidden min-w-0 items-center gap-2.5 md:flex lg:order-1 lg:rounded-lg lg:border-[0.5px] lg:border-hairline lg:bg-background lg:p-2.5">
+      <Initials name={name} tone="ink" className="hidden size-7 lg:flex" />
       <div className="min-w-0">
-        <p className="max-w-[260px] truncate text-sm text-muted-foreground lg:max-w-none lg:text-foreground">{name}</p>
-        <p className="hidden text-xs text-faint lg:block">{PLAN_NAMES[plan] ?? plan} plan</p>
+        <p className="max-w-[260px] truncate text-sm text-muted-foreground lg:max-w-none lg:text-[13px] lg:leading-tight lg:font-medium lg:text-foreground">
+          {name}
+        </p>
+        <p className="hidden text-[11px] text-muted-foreground lg:block">{PLAN_NAMES[plan] ?? plan} plan</p>
       </div>
     </div>
   )
 }
 
-/** What the plan allows and what is in use: feeds and languages (products are metered later). */
-function Usage() {
+/**
+ * What the plan allows and what is in use (the app kit's quota widget): this period's products on
+ * an indigo tint, then feeds and languages.
+ */
+function Quota() {
   const workspace = useQuery(workspaceQuery)
   const entitlements = workspace.data?.entitlements
   if (entitlements === undefined) return null
 
+  const products = { used: entitlements.used.products, limit: entitlements.limits.products }
+  const percent =
+    products.limit === null || products.limit === 0
+      ? null
+      : Math.min(100, Math.round((products.used / products.limit) * 100))
   const rows = [
     { label: 'Feeds', used: entitlements.used.feeds, limit: entitlements.limits.feeds },
     { label: 'Languages', used: entitlements.used.languages, limit: entitlements.limits.languages },
   ]
 
   return (
-    <div className="hidden flex-col gap-3 px-2 text-xs lg:order-3 lg:mt-auto lg:flex">
-      <dl aria-label="Plan usage" className="flex flex-col gap-3">
+    <div className="hidden flex-col gap-3 rounded-lg bg-primary-soft p-3.5 text-xs text-primary-hover lg:order-3 lg:mt-auto lg:flex">
+      <div>
+        <div className="flex justify-between font-medium">
+          <span>Products this period</span>
+          {percent !== null && <span>{percent}%</span>}
+        </div>
+        {percent !== null && (
+          <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-background/70" aria-hidden="true">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+          </div>
+        )}
+        <p className="mt-1.5 font-mono text-[11px]">
+          {products.used.toLocaleString('en')} /{' '}
+          {products.limit === null ? 'unlimited' : products.limit.toLocaleString('en')}
+        </p>
+      </div>
+      <dl aria-label="Plan usage" className="flex flex-col gap-1">
         {rows.map((row) => (
-          <div key={row.label}>
-            <div className="flex justify-between text-muted-foreground">
-              <dt>{row.label}</dt>
-              <dd>{row.limit === null ? `${row.used} · unlimited` : `${row.used} of ${row.limit}`}</dd>
-            </div>
-            {row.limit !== null && (
-              <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface" aria-hidden="true">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${Math.min(100, (row.used / Math.max(1, row.limit)) * 100)}%` }}
-                />
-              </div>
-            )}
+          <div key={row.label} className="flex justify-between">
+            <dt>{row.label}</dt>
+            <dd>{row.limit === null ? `${row.used} · unlimited` : `${row.used} of ${row.limit}`}</dd>
           </div>
         ))}
       </dl>
-      <Link to="/app/billing/plans" className="text-primary hover:text-primary-hover">
+      <Link to="/app/billing/plans" className="font-medium text-primary hover:text-primary-hover">
         See plans
       </Link>
     </div>
@@ -204,8 +211,10 @@ function NavItem({
       end={end ?? false}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2 rounded-lg px-3 py-1.5 lg:px-2',
-          isActive ? 'bg-surface text-foreground' : 'text-muted-foreground hover:text-foreground',
+          'flex items-center gap-2.5 rounded-md border-[0.5px] px-3 py-2 text-[13px] transition-colors duration-200',
+          isActive
+            ? 'border-hairline bg-background font-medium text-foreground'
+            : 'border-transparent text-muted-foreground hover:bg-ink/[0.04] hover:text-foreground',
         )
       }
     >

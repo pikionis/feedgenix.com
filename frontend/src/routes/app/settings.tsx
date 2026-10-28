@@ -3,6 +3,8 @@ import { useEffect, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
+import { Initials } from '~/components/ui/initials'
+import { PageHeader } from '~/components/ui/page-header'
 import { PasswordForm, ProfileForm } from '~/features/workspace/AccountForms'
 import { LanguageSettings } from '~/features/workspace/LanguageSettings'
 import { workspaceQuery } from '~/features/workspace/queries'
@@ -36,7 +38,7 @@ function Section({
       style={{ borderTop: '0.5px solid var(--border-hair)' }}
     >
       <div>
-        <h2 id={id !== undefined ? `${id}-title` : undefined} className="font-medium">
+        <h2 id={id !== undefined ? `${id}-title` : undefined} className="text-[15px] font-medium">
           {title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
@@ -64,7 +66,9 @@ export default function Settings() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-medium tracking-tight">Settings</h1>
+      <div className="mb-6">
+        <PageHeader title="Settings" subtitle="Your workspace, its languages, and how you sign in." />
+      </div>
       <Section
         id="workspace"
         title="Workspace"
@@ -94,7 +98,10 @@ export default function Settings() {
       </Section>
       <Section id="plan" title="Plan and billing" description="Your plan, credits and invoices.">
         <Card className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm">{workspace.data.plan.name} plan</p>
+          <p className="flex items-center gap-3 text-sm">
+            <Initials name={workspace.data.plan.name} tone="ink" />
+            {workspace.data.plan.name} plan
+          </p>
           <Button asChild variant="secondary">
             <Link to="/app/billing">Open billing</Link>
           </Button>

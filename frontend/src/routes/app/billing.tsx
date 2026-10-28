@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
 import { Notice } from '~/components/ui/notice'
+import { PageHeader } from '~/components/ui/page-header'
 import { UsageBar } from '~/components/ui/usage-bar'
 import { euros } from '~/features/billing/format'
 import { highlights } from '~/features/billing/PlanCards'
@@ -35,12 +36,10 @@ export default function Billing() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Billing</h1>
-        <p className="mt-1 max-w-2xl text-muted-foreground">
-          Your plan is the platform fee. AI work is paid from prepaid credits, with an estimate before every job.
-        </p>
-      </div>
+      <PageHeader
+        title="Billing"
+        subtitle="Your plan is the platform fee. AI work is paid from prepaid credits, with an estimate before every job."
+      />
 
       {paused.length > 0 && (
         <Notice tone="warn">
@@ -50,8 +49,8 @@ export default function Billing() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">Plan</h2>
+        <div className="flex flex-col gap-3 rounded-lg bg-surface p-5">
+          <h2 className="text-xs text-muted-foreground">Plan</h2>
           <p className="text-[28px] leading-tight font-medium tracking-[-0.02em]">
             {plan.name}
             {!free && ` · ${yearly ? 'yearly' : 'monthly'}`}
@@ -76,10 +75,10 @@ export default function Billing() {
               <Link to="/app/billing/plans">{free ? 'Upgrade' : 'Change plan'}</Link>
             </Button>
           </div>
-        </Card>
+        </div>
 
-        <Card className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">Credits</h2>
+        <div className="flex flex-col gap-3 rounded-lg bg-surface p-5">
+          <h2 className="text-xs text-muted-foreground">Credits</h2>
           <p className="text-[28px] leading-tight font-medium tracking-[-0.02em]">Prepaid, never expire</p>
           <p className="text-sm text-muted-foreground">
             During the private beta, AI work for your workspace is funded by FeedGenix. Your balance and top-ups show
@@ -90,10 +89,10 @@ export default function Billing() {
               Buy credits
             </Button>
           </div>
-        </Card>
+        </div>
 
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-sm font-medium text-muted-foreground">This period</h2>
+        <div className="flex flex-col gap-4 rounded-lg bg-surface p-5">
+          <h2 className="text-xs text-muted-foreground">This period</h2>
           <UsageBar label="Feeds" used={entitlements.used.feeds} allowed={entitlements.limits.feeds} />
           <UsageBar
             label="Target languages"
@@ -111,14 +110,14 @@ export default function Billing() {
           <p className="text-xs text-faint">
             {longDate(entitlements.period.start)} – {longDate(entitlements.period.end)}
           </p>
-        </Card>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3">
-          <h2 className="font-medium">Payment method</h2>
+          <h2 className="text-[15px] font-medium">Payment method</h2>
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-md bg-surface text-muted-foreground">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface text-muted-foreground">
               <CreditCard size={18} strokeWidth={1.5} aria-hidden="true" />
             </span>
             <p className="text-sm text-muted-foreground">No card yet. You add one when you choose a paid plan.</p>
@@ -129,9 +128,9 @@ export default function Billing() {
           </p>
         </Card>
         <Card className="flex flex-col gap-3">
-          <h2 className="font-medium">Invoices</h2>
+          <h2 className="text-[15px] font-medium">Invoices</h2>
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-md bg-surface text-muted-foreground">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface text-muted-foreground">
               <FileText size={18} strokeWidth={1.5} aria-hidden="true" />
             </span>
             <p className="text-sm text-muted-foreground">No invoices yet. Each payment&rsquo;s invoice appears here.</p>

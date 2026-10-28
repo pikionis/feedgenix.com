@@ -66,3 +66,23 @@ the Sand band, how it works, pricing and the Ink footer. The look is the kit's; 
   20–24px; sidebar 180px; the app top bar is sticky, the marketing nav is not.
 - **Dark mode:** canvas `#15131F`, surfaces `#1F1D2E` / `#2A2438`, text `#F1EFE8`. Indigo and Emerald
   stay the same; status pills keep their tint (background darker, text lighter).
+
+## The workspace (app kit)
+The app follows `ui_kits/app` of the design system: a Mist sidebar on a white canvas, and no white
+cards on white. Each page is built from the same few parts in `frontend/src/components/ui/`:
+
+- `PageHeader`: the way back, the title (26px, 500), one line under it, the actions on the right.
+- `StatCard`: a number that matters, on Mist, 10px corners, no border.
+- `Section` and `Rows`: a heading with its content; rows in one hairline frame instead of a card each.
+- `Table` (`THead`, `TH`, `TR`, `TD`): a hairline frame, a quiet `#FAFAF7` header row, numbers
+  right-aligned in mono.
+- `Callout`: the next thing to do, in a dashed indigo frame, with one action.
+- `Initials`: a Mist (or Ink, for the workspace) square instead of a photo.
+- `LanguagePill`: the two-letter tint per language, never a flag.
+- `FeedStateBadge` (`features/feeds/FeedState.tsx`): one word or two with a coloured dot; the words
+  stay in the text colour.
+
+Facts about a thing (what a file holds, a run's progress, the figures of a plan) sit in a Mist band;
+lists and tables sit in hairline frames. `npm run build` then
+`FEEDGENIX_SCREENS=1 E2E_API_PORT=8010 npx playwright test e2e/screens.spec.ts` shoots every page at
+desktop and phone width into `frontend/screens/` (ignored by git) for a design review.

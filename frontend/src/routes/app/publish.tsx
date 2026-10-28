@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Notice } from '~/components/ui/notice'
+import { PageHeader } from '~/components/ui/page-header'
 import { feedQuery } from '~/features/feeds/queries'
 import { useExportActions } from '~/features/publish/actions'
 import { ExportCard } from '~/features/publish/ExportCard'
@@ -26,14 +26,7 @@ export default function PublishPage() {
   const actions = useExportActions(feedId)
   const [adding, setAdding] = useState(false)
 
-  const back = (
-    <Link
-      to={`/app/feeds/${feedId}`}
-      className="inline-flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" /> {feed.data?.name ?? 'The feed'}
-    </Link>
-  )
+  const back = { to: `/app/feeds/${feedId}`, label: feed.data?.name ?? 'The feed' }
   if (exports.isError) return <Notice tone="error">{exports.error.message}</Notice>
   if (exports.data === undefined) return <div className="h-0.5 w-full animate-pulse bg-primary" aria-hidden="true" />
 
@@ -43,24 +36,19 @@ export default function PublishPage() {
   const showForm = canManage && (adding || list.length === 0)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        {back}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-medium tracking-tight">Publish</h1>
-            <p className="mt-1 max-w-2xl text-muted-foreground">
-              Feed URLs your sales channels pull. Each serves a whole, checked build; new prices and stock from a new
-              file reach it within minutes, translations when they are done.
-            </p>
-          </div>
-          {canManage && list.length > 0 && !adding && (
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        back={back}
+        title="Publish"
+        subtitle="Feed URLs your sales channels pull. Each serves a whole, checked build; new prices and stock from a new file reach it within minutes, translations when they are done."
+        actions={
+          canManage && list.length > 0 && !adding ? (
             <Button variant="secondary" onClick={() => setAdding(true)}>
               New export
             </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       {feed.data?.run === null && (
         <Notice>The products are read into the catalogue when the mapping is approved: approve it first.</Notice>

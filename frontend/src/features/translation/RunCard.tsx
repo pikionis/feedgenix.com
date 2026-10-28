@@ -1,5 +1,4 @@
 import { Button } from '~/components/ui/button'
-import { Card } from '~/components/ui/card'
 import { Notice } from '~/components/ui/notice'
 import { UsageBar } from '~/components/ui/usage-bar'
 import type { PipelineRun } from '~/lib/api/types'
@@ -28,32 +27,32 @@ export function RunCard({
 
   if (run === null) {
     return (
-      <Card className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-surface px-5 py-4">
         <p className="text-sm text-muted-foreground">
           The products have not been read into the catalogue yet. They are read through the approved mapping.
         </p>
         {readAgain}
-      </Card>
+      </div>
     )
   }
   if (run.status === 'failed') {
     return (
-      <Card className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-surface px-5 py-4">
         <p role="alert" className="text-sm">
           {run.failure_message ?? 'The last run failed.'}
         </p>
         {readAgain}
-      </Card>
+      </div>
     )
   }
   if (run.stage === 'sync') {
     return (
-      <Card>
+      <div className="rounded-lg bg-surface px-5 py-4">
         <p className="flex items-center gap-2 text-sm" aria-live="polite">
           <span className="size-1.5 animate-pulse rounded-full bg-primary" aria-hidden="true" />
           Reading the products into the catalogue…
         </p>
-      </Card>
+      </div>
     )
   }
 
@@ -71,8 +70,8 @@ export function RunCard({
         </Notice>
       ))}
       {started && (
-        <Card className="flex flex-col gap-3" aria-live="polite">
-          <h2 className="font-medium">
+        <div className="flex flex-col gap-3 rounded-lg bg-surface px-5 py-4" aria-live="polite">
+          <h2 className="text-[15px] font-medium">
             {run.status === 'held' ? 'Waiting' : run.stage === 'done' ? 'Translated' : 'Translating…'}
           </h2>
           {planned > 0 && <UsageBar label="Translated with AI" used={done} allowed={planned} />}
@@ -90,7 +89,7 @@ export function RunCard({
               {texts(failed)} could not be translated and stay empty. Start again to try them once more.
             </Notice>
           )}
-        </Card>
+        </div>
       )}
     </>
   )

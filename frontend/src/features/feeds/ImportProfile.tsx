@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { Notice } from '~/components/ui/notice'
+import { Table, TD, TH, THead, TR } from '~/components/ui/table'
 import type { FeedImport } from '~/lib/api/types'
 import { formatBytes } from '~/lib/format'
 import { DELIMITERS, ENCODING_REASON, FORMAT, isDelimiter, KIND } from './labels'
@@ -10,7 +11,7 @@ const CELL_CHARS = 120
 /** How a file was read, what each column holds, and a few rows as they will be used. */
 export function ImportProfile({ data }: { data: FeedImport }) {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <ReadingFacts data={data} />
       {data.warnings.length > 0 && (
         <ul className="flex flex-col gap-2" aria-label="Warnings">
@@ -31,7 +32,7 @@ function ReadingFacts({ data }: { data: FeedImport }) {
   const containers = data.containers.length > 0 ? ` in ${data.containers.join(' in ')}` : ''
 
   return (
-    <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+    <dl className="grid gap-x-8 gap-y-3 rounded-lg bg-surface px-5 py-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
       {data.original_name !== null && <Fact term="File">{data.original_name}</Fact>}
       {data.format !== null && <Fact term="Format">{`${FORMAT[data.format]}${containers}`}</Fact>}
       {data.received_bytes !== null && <Fact term="Size">{formatBytes(data.received_bytes)}</Fact>}
@@ -68,7 +69,7 @@ function ReadingFacts({ data }: { data: FeedImport }) {
 function Fact({ term, children }: { term: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <dt className="text-muted-foreground">{term}</dt>
+      <dt className="text-xs text-muted-foreground">{term}</dt>
       <dd className="truncate">{children}</dd>
     </div>
   )
@@ -79,37 +80,41 @@ function Columns({ data }: { data: FeedImport }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 id={title} className="font-medium">
+      <h3 id={title} className="text-sm font-medium">
         Columns
       </h3>
-      <div className="overflow-x-auto rounded-xl border-[0.5px] border-hairline">
-        <table aria-labelledby={title} className="w-full text-left text-sm">
-          <thead className="bg-subtle text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 font-medium">Column</th>
-              <th className="px-3 py-2 font-medium">Looks like</th>
-              <th className="px-3 py-2 font-medium">Filled</th>
-              <th className="hidden px-3 py-2 font-medium md:table-cell">Longest</th>
-              <th className="px-3 py-2 font-medium">Examples</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.columns.map((column) => (
-              <tr key={column.position} className="border-t-[0.5px] border-hairline align-top">
-                <td className="px-3 py-2 font-mono text-xs break-all">{column.name}</td>
-                <td className="px-3 py-2 whitespace-nowrap">{KIND[column.kind]}</td>
-                <td className="px-3 py-2 whitespace-nowrap">{percent(column.fill_rate)}</td>
-                <td className="hidden px-3 py-2 md:table-cell">{column.max_length.toLocaleString('en')}</td>
-                <td className="max-w-[360px] px-3 py-2 text-muted-foreground">
-                  <span className="line-clamp-2 break-words" title={column.examples.join('\n')}>
-                    {column.examples.map((example) => cut(example)).join(' · ')}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table aria-labelledby={title}>
+        <THead>
+          <tr>
+            <TH>Column</TH>
+            <TH>Looks like</TH>
+            <TH numeric>Filled</TH>
+            <TH numeric className="hidden md:table-cell">
+              Longest
+            </TH>
+            <TH>Examples</TH>
+          </tr>
+        </THead>
+        <tbody>
+          {data.columns.map((column) => (
+            <TR key={column.position}>
+              <TD className="font-mono text-xs break-all">{column.name}</TD>
+              <TD className="whitespace-nowrap">{KIND[column.kind]}</TD>
+              <TD numeric className="whitespace-nowrap">
+                {percent(column.fill_rate)}
+              </TD>
+              <TD numeric className="hidden md:table-cell">
+                {column.max_length.toLocaleString('en')}
+              </TD>
+              <TD className="max-w-[360px] text-muted-foreground">
+                <span className="line-clamp-2 break-words" title={column.examples.join('\n')}>
+                  {column.examples.map((example) => cut(example)).join(' · ')}
+                </span>
+              </TD>
+            </TR>
+          ))}
+        </tbody>
+      </Table>
     </section>
   )
 }
@@ -124,35 +129,33 @@ function SampleRows({ data }: { data: FeedImport }) {
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h3 id={title} className="font-medium">
+        <h3 id={title} className="text-sm font-medium">
           Sample products
         </h3>
         <p className="text-sm text-muted-foreground">The first rows, exactly as read.</p>
       </div>
-      <div className="overflow-x-auto rounded-xl border-[0.5px] border-hairline">
-        <table aria-labelledby={title} className="text-left text-sm">
-          <thead className="bg-subtle text-muted-foreground">
-            <tr>
-              {names.map((name) => (
-                <th key={name} className="px-3 py-2 font-mono text-xs font-medium whitespace-nowrap">
-                  {name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ position, row }) => (
-              <tr key={position} className="border-t-[0.5px] border-hairline align-top">
-                {names.map((name) => (
-                  <td key={name} className="max-w-[280px] px-3 py-2" title={row[name] ?? ''}>
-                    <span className="line-clamp-3 break-words">{cut(row[name] ?? '')}</span>
-                  </td>
-                ))}
-              </tr>
+      <Table aria-labelledby={title}>
+        <THead>
+          <tr>
+            {names.map((name) => (
+              <TH key={name} className="font-mono whitespace-nowrap">
+                {name}
+              </TH>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </THead>
+        <tbody>
+          {rows.map(({ position, row }) => (
+            <TR key={position}>
+              {names.map((name) => (
+                <TD key={name} className="max-w-[280px]" title={row[name] ?? ''}>
+                  <span className="line-clamp-3 break-words">{cut(row[name] ?? '')}</span>
+                </TD>
+              ))}
+            </TR>
+          ))}
+        </tbody>
+      </Table>
     </section>
   )
 }

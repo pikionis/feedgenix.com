@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Lock } from 'lucide-react'
-import { Link, useParams } from 'react-router'
+import { Lock } from 'lucide-react'
+import { useParams } from 'react-router'
 import { Button } from '~/components/ui/button'
-import { Card } from '~/components/ui/card'
+import { Callout } from '~/components/ui/callout'
 import { Notice } from '~/components/ui/notice'
+import { PageHeader } from '~/components/ui/page-header'
+import { Rows, Section } from '~/components/ui/section'
+import { FeedStateBadge } from '~/features/feeds/FeedState'
 import { feedQuery } from '~/features/feeds/queries'
 import { formatWhen } from '~/features/feeds/labels'
 import { useMappingActions } from '~/features/mapping/actions'
@@ -25,23 +28,15 @@ export default function MappingPage() {
   const mapping = useQuery({ ...mappingQuery(valid ? feedId : 0), enabled: valid })
   const feed = useQuery({ ...feedQuery(valid ? feedId : 0), enabled: valid })
 
-  const back = (
-    <Link
-      to={`/app/feeds/${feedId}`}
-      className="inline-flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" /> {feed.data?.name ?? 'The feed'}
-    </Link>
-  )
+  const back = { to: `/app/feeds/${feedId}`, label: feed.data?.name ?? 'The feed' }
 
   if (mapping.error instanceof NoProfile) {
     return (
-      <div className="flex flex-col gap-4">
-        {back}
-        <Card className="flex max-w-xl flex-col gap-2">
-          <h1 className="font-medium">Nothing to map yet</h1>
-          <p className="text-sm text-muted-foreground">{mapping.error.message}</p>
-        </Card>
+      <div className="flex flex-col gap-5">
+        <PageHeader back={back} title="Nothing to map yet" />
+        <p className="max-w-xl rounded-lg bg-surface px-5 py-4 text-sm text-muted-foreground">
+          {mapping.error.message}
+        </p>
       </div>
     )
   }
@@ -51,7 +46,15 @@ export default function MappingPage() {
   return <MappingView feedId={feedId} mapping={mapping.data} back={back} />
 }
 
-function MappingView({ feedId, mapping, back }: { feedId: number; mapping: Mapping; back: React.ReactNode }) {
+function MappingView({
+  feedId,
+  mapping,
+  back,
+}: {
+  feedId: number
+  mapping: Mapping
+  back: { to: string; label: string }
+}) {
   const session = useSession()
   const role = session.data?.workspace?.role
   const canManage = role === 'owner' || role === 'admin'
@@ -59,37 +62,39 @@ function MappingView({ feedId, mapping, back }: { feedId: number; mapping: Mappi
   const sourceLocale = mapping.source_locale ?? 'en'
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        {back}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-medium tracking-tight">Mapping</h1>
-            <p className="mt-1 max-w-2xl text-muted-foreground">
-              Which column fills each product field. Anything uncertain stays empty until you choose.
-            </p>
-          </div>
-          <span className="rounded-full bg-surface px-3 py-1 text-sm">
-            {mapping.status === 'approved' ? 'Approved' : 'Draft'}
-          </span>
-        </div>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-5">
+        <PageHeader
+          back={back}
+          title="Mapping"
+          subtitle="Which column fills each product field. Anything uncertain stays empty until you choose."
+          actions={
+            <FeedStateBadge
+              state={
+                mapping.status === 'approved'
+                  ? { label: 'Approved', tone: 'success' }
+                  : { label: 'Draft', tone: 'warn' }
+              }
+            />
+          }
+        />
+
+        {actions.error !== undefined && <Notice tone="error">{actions.error}</Notice>}
+
+        <FeedLanguage
+          locale={mapping.source_locale}
+          canEdit={canManage}
+          busy={actions.busy === 'language'}
+          onChange={(locale) => void actions.setLanguage(locale)}
+        />
+        {mapping.status === 'approved' && mapping.approved_at !== null && (
+          <Notice tone="success">
+            Approved {formatWhen(mapping.approved_at)}. Changing a field sends it back to draft.
+          </Notice>
+        )}
+
+        {canManage && <AiPanel mapping={mapping} busy={actions.busy === 'suggest'} onSuggest={actions.suggest} />}
       </div>
-
-      {actions.error !== undefined && <Notice tone="error">{actions.error}</Notice>}
-
-      <FeedLanguage
-        locale={mapping.source_locale}
-        canEdit={canManage}
-        busy={actions.busy === 'language'}
-        onChange={(locale) => void actions.setLanguage(locale)}
-      />
-      {mapping.status === 'approved' && mapping.approved_at !== null && (
-        <Notice tone="success">
-          Approved {formatWhen(mapping.approved_at)}. Changing a field sends it back to draft.
-        </Notice>
-      )}
-
-      {canManage && <AiPanel mapping={mapping} busy={actions.busy === 'suggest'} onSuggest={actions.suggest} />}
 
       {GROUPS.map((group) => (
         <FieldGroup
@@ -107,14 +112,19 @@ function MappingView({ feedId, mapping, back }: { feedId: number; mapping: Mappi
       ))}
 
       {canManage && mapping.status === 'draft' && (
-        <Card className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
+        // Sticky: the button stays in reach on a long page.
+        <Callout
+          className="sticky bottom-4 z-10"
+          action={
+            <Button disabled={actions.busy !== null} onClick={() => void actions.approve()}>
+              {actions.busy === 'approve' ? 'Approving…' : 'Approve the mapping'}
+            </Button>
+          }
+        >
+          <p className="text-muted-foreground">
             When the SKU and the texts you want to translate are right, approve the mapping. You can change it later.
           </p>
-          <Button disabled={actions.busy !== null} onClick={() => void actions.approve()}>
-            {actions.busy === 'approve' ? 'Approving…' : 'Approve the mapping'}
-          </Button>
-        </Card>
+        </Callout>
       )}
     </div>
   )
@@ -134,7 +144,7 @@ function FeedLanguage({
   const languages = useQuery(languagesQuery)
 
   return (
-    <Card className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 rounded-lg bg-surface px-5 py-4">
       <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="feed-language" className="text-sm font-medium">
           The feed is written in
@@ -163,7 +173,7 @@ function FeedLanguage({
           filed under it.
         </Notice>
       )}
-    </Card>
+    </div>
   )
 }
 
@@ -212,26 +222,29 @@ function FieldGroup({
   )
 
   return (
-    <Card className="flex flex-col">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <h2 className="font-medium">{title}</h2>
-        {golden && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-warm px-2.5 py-0.5 text-xs font-medium">
-            <Lock size={12} strokeWidth={1.5} aria-hidden="true" />
-            Golden Rule
-          </span>
-        )}
-      </div>
-      <p className="text-sm text-muted-foreground">{note}</p>
-      <ul className="divide-y divide-hairline">{shown.map(render)}</ul>
+    <Section
+      title={
+        <span className="flex flex-wrap items-center gap-2.5">
+          {title}
+          {golden && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-warm px-2.5 py-0.5 text-xs font-medium">
+              <Lock size={12} strokeWidth={1.5} aria-hidden="true" />
+              Golden Rule
+            </span>
+          )}
+        </span>
+      }
+      description={note}
+    >
+      <Rows>{shown.map(render)}</Rows>
       {more.length > 0 && (
-        <details className="mt-2">
-          <summary className="cursor-pointer text-sm text-primary">
+        <details className="group flex flex-col gap-3">
+          <summary className="cursor-pointer text-sm text-primary hover:text-primary-hover">
             {more.length} more {more.length === 1 ? 'field' : 'fields'}
           </summary>
-          <ul className="divide-y divide-hairline">{more.map(render)}</ul>
+          <Rows className="mt-3">{more.map(render)}</Rows>
         </details>
       )}
-    </Card>
+    </Section>
   )
 }

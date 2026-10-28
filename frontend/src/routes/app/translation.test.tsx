@@ -58,7 +58,10 @@ it('shows the texts, the languages, the work with the memory, and the estimate i
   ).toEqual(['Title', 'English', '5', '2', '3'])
   expect(within(within(table).getByRole('row', { name: /Size/ })).getByText('kept as is')).toBeInTheDocument()
   expect(screen.getByText(/3 texts with AI: about/)).toHaveTextContent('about 1,200 credits, at most 4,800.')
-  expect(screen.getByRole('link', { name: 'Add one in the settings' })).toHaveAttribute('href', '/app/settings')
+  expect(screen.getByRole('link', { name: 'Add one in the settings' })).toHaveAttribute(
+    'href',
+    '/app/settings#languages',
+  )
 })
 
 it('saves a change with the version it was made on, keeping the other choices', async () => {

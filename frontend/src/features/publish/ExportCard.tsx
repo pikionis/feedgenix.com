@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Button } from '~/components/ui/button'
-import { Card } from '~/components/ui/card'
 import { Dialog, DialogClose } from '~/components/ui/dialog'
 import { Notice } from '~/components/ui/notice'
+import { FeedStateBadge } from '~/features/feeds/FeedState'
 import { formatWhen } from '~/features/feeds/labels'
 import type { ExportProfile } from '~/lib/api/types'
 import type { ExportActions } from './actions'
@@ -32,22 +32,26 @@ export function ExportCard({
   const attempt = latest !== null && latest.id !== published?.id ? latest : null
 
   return (
-    <Card className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4 overflow-hidden rounded-lg border-[0.5px] border-hairline bg-background p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-medium">{profile.name}</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-[15px] font-medium">{profile.name}</h2>
+          <p className="font-mono text-[11px] text-faint">
             {profile.preset_label} · {DIALECTS[profile.dialect]} · {LAYOUTS[profile.layout]}
           </p>
         </div>
-        <span className="rounded-full bg-surface px-3 py-1 text-sm" aria-live="polite">
-          {profile.status === 'paused'
-            ? 'Paused'
-            : building
-              ? 'Building…'
-              : published !== null
-                ? 'Live'
-                : 'Not built yet'}
+        <span aria-live="polite">
+          <FeedStateBadge
+            state={
+              profile.status === 'paused'
+                ? { label: 'Paused', tone: 'queued' }
+                : building
+                  ? { label: 'Building…', tone: 'running' }
+                  : published !== null
+                    ? { label: 'Live', tone: 'success' }
+                    : { label: 'Not built yet', tone: 'queued' }
+            }
+          />
         </span>
       </div>
 
@@ -147,7 +151,7 @@ export function ExportCard({
       )}
 
       {canManage && (
-        <div className="flex flex-wrap gap-2 border-t-[0.5px] border-hairline pt-4">
+        <div className="-mx-5 -mb-5 flex flex-wrap gap-2 border-t-[0.5px] border-hairline bg-subtle px-5 py-3">
           <Button
             size="sm"
             disabled={busy || building || profile.status === 'paused'}
@@ -203,7 +207,7 @@ export function ExportCard({
           </div>
         </Dialog>
       )}
-    </Card>
+    </section>
   )
 }
 
@@ -219,7 +223,7 @@ function UrlRow({ label, url, gzUrl }: { label: string; url: string; gzUrl: stri
           aria-label={`${label}: feed URL`}
           value={url}
           onFocus={(event) => event.target.select()}
-          className="h-9 min-w-0 flex-1 rounded-md border-[0.5px] border-hairline bg-subtle px-2 font-mono text-xs"
+          className="h-9 min-w-0 flex-1 rounded-md border-[0.5px] border-hairline bg-subtle px-3 font-mono text-xs"
         />
         <Button
           size="sm"

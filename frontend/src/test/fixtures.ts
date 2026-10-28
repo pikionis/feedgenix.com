@@ -100,7 +100,7 @@ export function workspace(overrides: Partial<Workspace> = {}): Workspace {
       paid_until: null,
       period: { start: '2027-01-01T00:00:00+00:00', end: '2027-02-01T00:00:00+00:00' },
       limits: { feeds: 1, languages: 1, products: 500, worker_slots: 1, feed_bytes: 2 * GIB, feed_rows: 5_000_000 },
-      used: { feeds: 0, languages: 0 },
+      used: { feeds: 0, languages: 0, products: 0 },
       overage: { available: false, enabled: true, credits_per_product: null },
     },
     languages: [],

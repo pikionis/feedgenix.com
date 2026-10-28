@@ -1657,6 +1657,8 @@ export interface components {
         used: {
           feeds: number
           languages: number
+          /** @description Products counted against this period's allowance so far. */
+          products: number
         }
         overage: {
           available: boolean

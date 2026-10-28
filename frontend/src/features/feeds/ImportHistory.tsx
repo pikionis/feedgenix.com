@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Rows } from '~/components/ui/section'
 import type { ImportSummary } from '~/lib/api/types'
 import { formatWhen } from './labels'
 import { feedImportsQuery } from './queries'
@@ -19,12 +20,9 @@ export function ImportHistory({ feedId, latest }: { feedId: number; latest: Impo
   if (imports.data === undefined || imports.data.length === 0) return null
 
   return (
-    <ol className="flex flex-col text-sm" aria-label="Imports">
+    <Rows className="text-sm" aria-label="Imports">
       {imports.data.map((item) => (
-        <li
-          key={item.id}
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t-[0.5px] border-hairline py-2.5 first:border-t-0"
-        >
+        <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
           <StatusBadge status={item.status} />
           <span>{ORIGIN[item.origin]}</span>
           {item.original_name !== null && (
@@ -34,11 +32,11 @@ export function ImportHistory({ feedId, latest }: { feedId: number; latest: Impo
             <span className="text-muted-foreground">{item.row_count.toLocaleString('en')} products</span>
           )}
           {item.failure !== null && <span className="text-muted-foreground">{item.failure.message}</span>}
-          <time className="ml-auto text-faint" dateTime={item.created_at ?? undefined}>
+          <time className="ml-auto text-xs text-faint" dateTime={item.created_at ?? undefined}>
             {formatWhen(item.created_at)}
           </time>
         </li>
       ))}
-    </ol>
+    </Rows>
   )
 }

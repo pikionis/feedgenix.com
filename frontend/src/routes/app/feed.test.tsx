@@ -279,6 +279,9 @@ it('says a feed is paused by the plan, and offers no new file for it', async () 
   renderFeed()
 
   expect(await screen.findByText(/This feed is paused by your plan/)).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'Upgrade, or delete another feed' })).toHaveAttribute('href', '/app/settings')
+  expect(screen.getByRole('link', { name: 'Upgrade, or delete another feed' })).toHaveAttribute(
+    'href',
+    '/app/billing/plans',
+  )
   expect(screen.getByRole('button', { name: 'Upload a new file' })).toBeDisabled()
 })

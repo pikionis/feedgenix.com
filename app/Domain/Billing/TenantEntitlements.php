@@ -9,6 +9,7 @@ use App\Domain\Tenancy\Models\TenantLanguage;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\Tenant;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
@@ -129,6 +130,11 @@ final readonly class TenantEntitlements
             'feeds' => resolve(TenantContext::class)->run(
                 $this->tenant->id,
                 static fn (): int => Feed::query()->count(),
+            ),
+            // Products counted in the current allowance period (each once, ADR 0005).
+            'products' => resolve(TenantContext::class)->run(
+                $this->tenant->id,
+                fn (): int => DB::table('usage_products')->where('period_start', $this->period()['start']->toDateString())->count(),
             ),
             default => throw new InvalidArgumentException("No usage counter for [{$key}]."),
         };

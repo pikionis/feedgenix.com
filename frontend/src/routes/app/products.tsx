@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 import { Button } from '~/components/ui/button'
-import { Card } from '~/components/ui/card'
 import { Notice } from '~/components/ui/notice'
+import { PageHeader } from '~/components/ui/page-header'
 import { feedQuery } from '~/features/feeds/queries'
 import { useReviewActions } from '~/features/review/actions'
 import { FILTERS } from '~/features/review/labels'
@@ -25,26 +24,18 @@ export default function ProductsPage() {
   const feed = useQuery({ ...feedQuery(valid ? feedId : 0), enabled: valid })
   const plan = useQuery({ ...translationPlanQuery(valid ? feedId : 0), enabled: valid })
 
-  const back = (
-    <Link
-      to={`/app/feeds/${feedId}/translation`}
-      className="inline-flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" /> {feed.data?.name ?? 'The feed'}: translation
-    </Link>
-  )
+  const back = { to: `/app/feeds/${feedId}/translation`, label: `${feed.data?.name ?? 'The feed'}: translation` }
 
   if (plan.isError) return <Notice tone="error">{plan.error.message}</Notice>
   if (plan.data === undefined) return <div className="h-0.5 w-full animate-pulse bg-primary" aria-hidden="true" />
   const languages = plan.data.workspace_locales.filter((locale) => plan.data.target_locales.includes(locale.code))
   if (languages.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
-        {back}
-        <Card className="flex max-w-xl flex-col gap-2">
-          <h1 className="font-medium">Nothing to review yet</h1>
-          <p className="text-sm text-muted-foreground">Choose a language to translate into first.</p>
-        </Card>
+      <div className="flex flex-col gap-5">
+        <PageHeader back={back} title="Nothing to review yet" />
+        <p className="max-w-xl rounded-lg bg-surface px-5 py-4 text-sm text-muted-foreground">
+          Choose a language to translate into first.
+        </p>
       </div>
     )
   }
@@ -59,7 +50,7 @@ function Review({
 }: {
   feedId: number
   languages: { code: string; name: string }[]
-  back: React.ReactNode
+  back: { to: string; label: string }
 }) {
   const [params, setParams] = useSearchParams()
   const chosen = params.get('locale')
@@ -87,19 +78,14 @@ function Review({
   const counts = products.data?.meta.counts
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        {back}
-        <div className="min-w-0">
-          <h1 className="text-2xl font-medium tracking-tight">Review the texts</h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">
-            One language at a time. What you write yourself is never replaced by the AI, and the same text elsewhere
-            reuses it.
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        back={back}
+        title="Review the texts"
+        subtitle="One language at a time. What you write yourself is never replaced by the AI, and the same text elsewhere reuses it."
+      />
 
-      <Card className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 rounded-lg bg-surface px-5 py-4">
         <div className="flex flex-wrap items-end gap-4">
           <label className="flex flex-col gap-1.5 text-sm">
             <span>Language</span>
@@ -139,7 +125,7 @@ function Review({
             </form>
           </search>
         </div>
-        <div role="tablist" aria-label="Show" className="flex flex-wrap gap-2">
+        <div role="tablist" aria-label="Show" className="flex flex-wrap gap-1 self-start">
           {FILTERS.map((item) => (
             <button
               key={item.key}
@@ -148,8 +134,10 @@ function Review({
               aria-selected={item.key === filter}
               onClick={() => go({ filter: item.key === 'all' ? null : item.key })}
               className={cn(
-                'rounded-full px-3 py-1 text-sm',
-                item.key === filter ? 'bg-primary text-primary-foreground' : 'bg-surface hover:bg-subtle',
+                'rounded-md border-[0.5px] px-3 py-1.5 text-[13px] transition-colors duration-200',
+                item.key === filter
+                  ? 'border-hairline bg-background font-medium text-foreground'
+                  : 'border-transparent text-muted-foreground hover:bg-ink/[0.04]',
               )}
             >
               {item.label}
@@ -157,28 +145,32 @@ function Review({
             </button>
           ))}
         </div>
-      </Card>
+      </div>
 
       {products.isError && <Notice tone="error">{products.error.message}</Notice>}
       {products.data === undefined && !products.isError && (
         <div className="h-0.5 w-full animate-pulse bg-primary" aria-hidden="true" />
       )}
       {products.data !== undefined && products.data.data.length === 0 && (
-        <Card>
-          <p className="text-sm text-muted-foreground">
-            {filter === 'review'
-              ? 'Nothing to review in this language.'
-              : search !== ''
-                ? 'No product matches the search.'
-                : 'No products here.'}
-          </p>
-        </Card>
+        <p className="rounded-lg border-[0.5px] border-hairline px-4 py-6 text-center text-sm text-muted-foreground">
+          {filter === 'review'
+            ? 'Nothing to review in this language.'
+            : search !== ''
+              ? 'No product matches the search.'
+              : 'No products here.'}
+        </p>
       )}
 
       {products.data?.data.map((product) => (
-        <Card key={product.id} className="flex flex-col">
-          <h2 className="font-mono text-sm font-medium">{product.sku}</h2>
-          <ul className="divide-y divide-hairline">
+        <section
+          key={product.id}
+          aria-label={product.sku}
+          className="overflow-hidden rounded-lg border-[0.5px] border-hairline bg-background"
+        >
+          <h2 className="border-b-[0.5px] border-hairline bg-subtle px-4 py-2 font-mono text-xs text-muted-foreground">
+            {product.sku}
+          </h2>
+          <ul className="divide-y-[0.5px] divide-hairline">
             {product.texts.map((text) => {
               const key = `${product.id}:${text.field}`
 
@@ -196,7 +188,7 @@ function Review({
               )
             })}
           </ul>
-        </Card>
+        </section>
       ))}
 
       {products.data !== undefined && products.data.meta.pages > 1 && (

@@ -19,7 +19,10 @@ function renderFeeds(feeds: Feed[], used = feeds.length) {
   server.use(
     http.get(apiUrl('/v1/feeds'), () => HttpResponse.json({ data: feeds })),
     http.get(apiUrl('/v1/workspace'), () =>
-      HttpResponse.json({ ...base, entitlements: { ...base.entitlements, used: { feeds: used, languages: 0 } } }),
+      HttpResponse.json({
+        ...base,
+        entitlements: { ...base.entitlements, used: { feeds: used, languages: 0, products: 0 } },
+      }),
     ),
   )
 
@@ -57,12 +60,14 @@ it('lists each feed with where it comes from, its size and how its last import w
 
   const main = await screen.findByRole('link', { name: /Main shop/ })
   expect(main).toHaveAttribute('href', '/app/feeds/7')
-  expect(main).toHaveTextContent('shop.example · CSV · 12,345 products · 42 columns')
-  expect(main).toHaveTextContent('Read')
+  expect(main).toHaveTextContent('shop.example · CSV · 42 columns')
+  expect(main).toHaveTextContent('12,345 products')
+  // The file is read; what waits now is the mapping.
+  expect(main).toHaveTextContent('Review the mapping')
 
   const spring = screen.getByRole('link', { name: /Spring catalogue/ })
   expect(spring).toHaveTextContent('Uploaded files')
   expect(spring).toHaveTextContent('No file yet')
 
-  expect(await screen.findByText('2 / 1')).toBeInTheDocument()
+  expect(await screen.findByText('2 of 1 feeds on your plan', { exact: false })).toBeInTheDocument()
 })

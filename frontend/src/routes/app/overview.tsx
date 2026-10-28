@@ -3,9 +3,10 @@ import { Link } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
 import { LanguagePill } from '~/components/ui/language-pill'
+import { PageHeader } from '~/components/ui/page-header'
 import { UsageBar } from '~/components/ui/usage-bar'
 import { feedsQuery } from '~/features/feeds/queries'
-import { StatusBadge } from '~/features/feeds/StatusBadge'
+import { feedState, FeedStateBadge } from '~/features/feeds/FeedState'
 import { workspaceQuery } from '~/features/workspace/queries'
 import { useSession } from '~/lib/session'
 import type { Route } from './+types/overview'
@@ -28,26 +29,40 @@ export default function Overview() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">Welcome, {firstName}</h1>
-          <p className="mt-1 text-muted-foreground">
-            {empty
-              ? 'Start with a feed: the address your shop publishes its products at, or a file.'
-              : 'Your feeds and your plan at a glance.'}
-          </p>
-        </div>
-        {canManage && !empty && feeds.data !== undefined && (
-          <Button asChild>
-            <Link to="/app/feeds">Add a feed</Link>
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={`Welcome, ${firstName}`}
+        subtitle={
+          empty
+            ? 'Start with a feed: the address your shop publishes its products at, or a file.'
+            : 'Your feeds and your plan at a glance.'
+        }
+        actions={
+          canManage && !empty && feeds.data !== undefined ? (
+            <Button asChild>
+              <Link to="/app/feeds">Add a feed</Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {feeds.data !== undefined && !empty && (
         <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat label="Feeds">{feeds.data.length.toLocaleString('en')}</Stat>
-          <Stat label="Products in the latest files">{products.toLocaleString('en')}</Stat>
+          <Stat
+            label="Feeds"
+            detail={
+              workspace.data?.entitlements.limits.feeds === null || workspace.data === undefined
+                ? undefined
+                : `of ${workspace.data.entitlements.limits.feeds} on your plan`
+            }
+          >
+            {feeds.data.length.toLocaleString('en')}
+          </Stat>
+          <Stat
+            label="Products in the latest files"
+            detail={`${(workspace.data?.entitlements.used.products ?? 0).toLocaleString('en')} counted this period`}
+          >
+            {products.toLocaleString('en')}
+          </Stat>
           <Stat label="Target languages">
             {workspace.data === undefined || workspace.data.languages.length === 0 ? (
               '0'
@@ -59,7 +74,9 @@ export default function Overview() {
               </span>
             )}
           </Stat>
-          <Stat label="Feed URLs live">{live.toLocaleString('en')}</Stat>
+          <Stat label="Feed URLs live" detail={live > 0 ? 'Pulled by your channels' : 'Publish a feed to get one'}>
+            {live.toLocaleString('en')}
+          </Stat>
         </dl>
       )}
 
@@ -111,7 +128,7 @@ export default function Overview() {
                     <Link to={`/app/feeds/${feed.id}`} className="truncate font-medium hover:text-primary">
                       {feed.name}
                     </Link>
-                    {feed.latest_import !== null && <StatusBadge status={feed.latest_import.status} />}
+                    <FeedStateBadge state={feedState(feed)} />
                   </li>
                 ))}
               </ul>
@@ -152,7 +169,7 @@ export default function Overview() {
         )}
       </div>
 
-      <Card className="flex flex-col gap-2 bg-subtle">
+      <Card className="flex flex-col gap-2 border-transparent bg-warm">
         <h2 className="font-medium">The Golden Rule</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           SKUs, GTINs, prices, currency, stock, weights and dimensions pass through byte-identical. They never reach a
@@ -163,11 +180,13 @@ export default function Overview() {
   )
 }
 
-function Stat({ label, children }: { label: string; children: React.ReactNode }) {
+/** The app kit's stat card: Mist, 10px corners, no border; label, number, one line under it. */
+function Stat({ label, detail, children }: { label: string; detail?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border-[0.5px] border-hairline bg-background p-5">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="mt-1.5 text-[28px] leading-tight font-medium tracking-[-0.01em]">{children}</dd>
+    <div className="flex flex-col rounded-lg bg-surface px-4 py-3.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="my-1.5 text-[26px] leading-none font-medium tracking-[-0.01em]">{children}</dd>
+      {detail !== undefined && <dd className="text-xs text-muted-foreground">{detail}</dd>}
     </div>
   )
 }

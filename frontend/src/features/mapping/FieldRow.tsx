@@ -42,7 +42,7 @@ export function FieldRow({
   const problems = (decision?.issues ?? []).filter((issue) => issue.severity !== 'info')
 
   return (
-    <li className="grid gap-x-6 gap-y-2 py-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]">
+    <li className="grid gap-x-6 gap-y-2 px-4 py-3.5 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <label htmlFor={selectId} className="text-sm font-medium">
           {label}

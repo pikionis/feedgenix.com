@@ -41,7 +41,7 @@ export function TextRow({
   const editable = canEdit && !text.provided && text.source !== null
 
   return (
-    <li className="flex flex-col gap-2 py-3">
+    <li className="flex flex-col gap-2.5 px-4 py-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">{text.label}</p>
         <span
@@ -54,27 +54,37 @@ export function TextRow({
           {state.label}
         </span>
       </div>
-      {text.source !== null && !text.provided && (
-        <p className="max-h-24 overflow-y-auto text-xs whitespace-pre-wrap text-muted-foreground">
-          <span className="text-faint">{languageName(text.source.locale)}: </span>
-          {text.source.value}
-        </p>
-      )}
+      <div className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+        {text.source !== null && !text.provided && (
+          <p className="max-h-40 overflow-y-auto text-sm whitespace-pre-wrap text-muted-foreground">
+            <span className="text-xs text-faint">{languageName(text.source.locale)}: </span>
+            {text.source.value}
+          </p>
+        )}
 
-      {draft === null ? (
-        <p className={cn('max-h-40 overflow-y-auto text-sm whitespace-pre-wrap', target === null && 'text-faint')}>
-          {target?.value ?? (text.provided ? '' : 'Translated at the next run.')}
-        </p>
-      ) : (
-        <textarea
-          aria-label={`${text.label}: your translation`}
-          value={draft}
-          rows={Math.min(10, Math.max(2, Math.ceil(draft.length / 80)))}
-          maxLength={20000}
-          onChange={(event) => setDraft(event.target.value)}
-          className="w-full rounded-md border-[0.5px] border-hairline bg-background px-3 py-2 text-sm"
-        />
-      )}
+        {draft === null ? (
+          <p
+            className={cn(
+              'max-h-40 overflow-y-auto text-sm whitespace-pre-wrap md:col-start-2',
+              target === null && 'text-faint',
+            )}
+          >
+            {target?.value ?? (text.provided ? '' : 'Translated at the next run.')}
+          </p>
+        ) : (
+          <textarea
+            aria-label={`${text.label}: your translation`}
+            value={draft}
+            rows={Math.min(10, Math.max(2, Math.ceil(draft.length / 80)))}
+            maxLength={20000}
+            onChange={(event) => setDraft(event.target.value)}
+            className={cn(
+              'w-full rounded-md border-[0.5px] border-hairline bg-background px-3 py-2 text-sm md:col-start-2',
+              'focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none',
+            )}
+          />
+        )}
+      </div>
 
       {target !== null && target.failures.length > 0 && !target.stale && (
         <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">

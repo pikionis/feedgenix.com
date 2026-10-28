@@ -1,15 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight, Link2, Upload } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '~/components/ui/button'
-import { Card } from '~/components/ui/card'
+import { Callout } from '~/components/ui/callout'
+import { Initials } from '~/components/ui/initials'
 import { Notice } from '~/components/ui/notice'
-import { UsageBar } from '~/components/ui/usage-bar'
+import { PageHeader } from '~/components/ui/page-header'
 import { AddFeedDialog } from '~/features/feeds/AddFeedDialog'
 import { FORMAT, formatWhen } from '~/features/feeds/labels'
 import { feedsQuery } from '~/features/feeds/queries'
-import { StatusBadge } from '~/features/feeds/StatusBadge'
+import { feedState, FeedStateBadge } from '~/features/feeds/FeedState'
 import { workspaceQuery } from '~/features/workspace/queries'
 import type { Feed } from '~/lib/api/types'
 import { useSession } from '~/lib/session'
@@ -25,47 +26,58 @@ export default function Feeds() {
   const role = session.data?.workspace?.role
   const canManage = role === 'owner' || role === 'admin'
 
+  const used = workspace.data?.entitlements.used.feeds
+  const limit = workspace.data?.entitlements.limits.feeds
+  const latest = feeds.data
+    ?.map((feed) => feed.latest_import?.created_at)
+    .filter((at): at is string => typeof at === 'string')
+    .reduce<string | undefined>((newest, at) => (newest === undefined || at > newest ? at : newest), undefined)
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">Feeds</h1>
-          <p className="mt-1 text-muted-foreground">Where your products come from.</p>
-        </div>
-        {canManage && <Button onClick={() => setAdding(true)}>Add a feed</Button>}
-      </div>
-
-      {workspace.data !== undefined && (
-        <div className="max-w-sm">
-          <UsageBar
-            label="Feeds on your plan"
-            used={workspace.data.entitlements.used.feeds}
-            allowed={workspace.data.entitlements.limits.feeds}
-          />
-        </div>
-      )}
+      <PageHeader
+        title="Feeds"
+        subtitle={[
+          used === undefined
+            ? 'Where your products come from'
+            : `${used} of ${limit ?? 'unlimited'} feeds on your plan`,
+          latest === undefined ? null : `last file ${formatWhen(latest)}`,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+        actions={canManage ? <Button onClick={() => setAdding(true)}>Add a feed</Button> : undefined}
+      />
 
       {feeds.isError && <Notice tone="error">{feeds.error.message}</Notice>}
       {feeds.data?.length === 0 && (
-        <Card className="flex flex-col items-start gap-3">
-          <h2 className="font-medium">No feeds yet</h2>
-          <p className="text-sm text-muted-foreground">
+        <Callout action={canManage ? <Button onClick={() => setAdding(true)}>Add your first feed</Button> : undefined}>
+          <p className="font-medium">No feeds yet</p>
+          <p className="mt-1 text-muted-foreground">
             Add the address your shop publishes its products at, or upload an export: CSV, XML, JSON or Excel. We read
             it and show you every column, before anything is translated.
           </p>
-          {canManage ? (
-            <Button onClick={() => setAdding(true)}>Add your first feed</Button>
-          ) : (
-            <p className="text-sm text-faint">The owner or an admin of the workspace adds feeds.</p>
-          )}
-        </Card>
+          {!canManage && <p className="mt-2 text-faint">The owner or an admin of the workspace adds feeds.</p>}
+        </Callout>
       )}
       {feeds.data !== undefined && feeds.data.length > 0 && (
-        <ul className="flex flex-col overflow-hidden rounded-xl border-[0.5px] border-hairline bg-background">
-          {feeds.data.map((feed) => (
-            <FeedRow key={feed.id} feed={feed} />
-          ))}
-        </ul>
+        <div className="overflow-hidden rounded-lg border-[0.5px] border-hairline bg-background">
+          <div
+            aria-hidden="true"
+            className="hidden grid-cols-[32px_minmax(0,1.6fr)_110px_minmax(0,1fr)_120px_16px] gap-4 bg-subtle px-4 py-2.5 text-xs text-faint md:grid"
+          >
+            <span />
+            <span>Feed</span>
+            <span className="text-right">Products</span>
+            <span>Status</span>
+            <span>Last file</span>
+            <span />
+          </div>
+          <ul>
+            {feeds.data.map((feed) => (
+              <FeedRow key={feed.id} feed={feed} />
+            ))}
+          </ul>
+        </div>
       )}
 
       {adding && <AddFeedDialog onClose={() => setAdding(false)} />}
@@ -75,34 +87,44 @@ export default function Feeds() {
 
 function FeedRow({ feed }: { feed: Feed }) {
   const latest = feed.latest_import
-  const Icon = feed.source === 'url' ? Link2 : Upload
-  const facts = [feed.source === 'url' ? (feed.host ?? '') : 'Uploaded files']
-  if (latest !== null && latest.format !== null) facts.push(FORMAT[latest.format])
-  if (latest !== null && latest.row_count !== null) facts.push(`${latest.row_count.toLocaleString('en')} products`)
-  if (latest !== null && latest.column_count !== null) facts.push(`${latest.column_count.toLocaleString('en')} columns`)
+  const source = [feed.source === 'url' ? (feed.host ?? 'its URL') : 'Uploaded files']
+  if (latest !== null && latest.format !== null) source.push(FORMAT[latest.format])
+  if (latest !== null && latest.column_count !== null)
+    source.push(`${latest.column_count.toLocaleString('en')} columns`)
 
   return (
-    <li className="border-t-[0.5px] border-hairline first:border-t-0">
+    <li className="border-t-[0.5px] border-hairline first:border-t-0 md:first:border-t-[0.5px]">
       <Link
         to={`/app/feeds/${feed.id}`}
-        className="flex items-center gap-4 px-5 py-3.5 transition-colors duration-200 hover:bg-subtle"
+        className="grid grid-cols-[32px_minmax(0,1fr)_16px] items-center gap-x-4 gap-y-2 px-4 py-3.5 transition-colors duration-200 hover:bg-subtle md:grid-cols-[32px_minmax(0,1.6fr)_110px_minmax(0,1fr)_120px_16px]"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface text-muted-foreground">
-          <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
+        <Initials name={feed.name} />
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate text-sm font-medium">{feed.name}</span>
+          <span className="truncate font-mono text-[11px] text-faint">{source.join(' · ')}</span>
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="truncate font-medium">{feed.name}</span>
-          <span className="truncate text-sm text-muted-foreground">{facts.join(' · ')}</span>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          {latest !== null ? (
-            <StatusBadge status={latest.status} />
+        <span className="col-start-2 font-mono text-[13px] md:col-start-auto md:text-right">
+          {latest?.row_count !== null && latest?.row_count !== undefined ? (
+            <>
+              {latest.row_count.toLocaleString('en')}
+              <span className="text-faint md:sr-only"> products</span>
+            </>
           ) : (
-            <span className="text-sm text-faint">No file yet</span>
+            <span className="text-faint">—</span>
           )}
-          {latest !== null && <span className="text-xs text-faint">{formatWhen(latest.created_at)}</span>}
-        </div>
-        <ChevronRight size={16} strokeWidth={1.5} className="shrink-0 text-faint" aria-hidden="true" />
+        </span>
+        <span className="col-start-2 md:col-start-auto">
+          <FeedStateBadge state={feedState(feed)} />
+        </span>
+        <span className="col-start-2 text-xs text-faint md:col-start-auto">
+          {latest !== null ? formatWhen(latest.created_at) : 'No file yet'}
+        </span>
+        <ChevronRight
+          size={16}
+          strokeWidth={1.5}
+          className="col-start-3 row-start-1 text-faint md:col-start-auto md:row-start-auto"
+          aria-hidden="true"
+        />
       </Link>
     </li>
   )

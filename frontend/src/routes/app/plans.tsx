@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
-import { Link } from 'react-router'
-import { Card } from '~/components/ui/card'
+import { PageHeader } from '~/components/ui/page-header'
+import { Section } from '~/components/ui/section'
+import { Table, TD, TH, THead, TR } from '~/components/ui/table'
 import { PlanCards } from '~/features/billing/PlanCards'
 import { plansQuery, workspaceQuery } from '~/features/workspace/queries'
 import type { Plan } from '~/lib/api/types'
@@ -53,68 +53,49 @@ export default function Plans() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <Link
-          to="/app/billing"
-          className="inline-flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" /> Billing
-        </Link>
-        <div>
-          <h1 className="text-2xl font-medium tracking-tight">Choose a plan</h1>
-          <p className="mt-1 max-w-2xl text-muted-foreground">
-            Upgrade any time. Yearly is paid once and saves 25%. No plan includes AI spend: AI work uses your credits.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        back={{ to: '/app/billing', label: 'Billing' }}
+        title="Choose a plan"
+        subtitle="Upgrade any time. Yearly is paid once and saves 25%. No plan includes AI spend: AI work uses your credits."
+      />
 
       {workspace.data !== undefined && <PlanCards current={workspace.data.plan.key} />}
 
       {plans.data !== undefined && (
-        <Card>
-          <h2 className="mb-3 font-medium">Compare the plans</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="text-muted-foreground">
-                <tr>
-                  <th className="py-2.5 pr-4 font-normal">
-                    <span className="sr-only">What is included</span>
-                  </th>
-                  {plans.data.plans.map((plan) => (
-                    <th
-                      key={plan.key}
-                      className={
-                        plan.key === plans.data.recommended
-                          ? 'px-3 py-2.5 font-medium text-primary'
-                          : 'px-3 py-2.5 font-medium text-foreground'
-                      }
-                    >
-                      {plan.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline border-t-[0.5px] border-hairline">
-                {ROWS.map((row) => (
-                  <tr key={row.label}>
-                    <th scope="row" className="py-2.5 pr-4 font-normal text-muted-foreground">
-                      {row.label}
-                    </th>
-                    {plans.data.plans.map((plan) => (
-                      <td key={plan.key} className="px-3 py-2.5">
-                        {row.value(plan)}
-                      </td>
-                    ))}
-                  </tr>
+        <Section
+          title="Compare the plans"
+          description="Changing to a smaller plan never deletes anything: feeds and languages above its limits pause, and the last export keeps serving."
+        >
+          <Table className="min-w-[720px]">
+            <THead>
+              <tr>
+                <TH>
+                  <span className="sr-only">What is included</span>
+                </TH>
+                {plans.data.plans.map((plan) => (
+                  <TH
+                    key={plan.key}
+                    className={plan.key === plans.data.recommended ? 'font-medium text-primary' : 'text-foreground'}
+                  >
+                    {plan.name}
+                  </TH>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Changing to a smaller plan never deletes anything: feeds and languages above its limits pause, and the last
-            export keeps serving.
-          </p>
-        </Card>
+              </tr>
+            </THead>
+            <tbody>
+              {ROWS.map((row) => (
+                <TR key={row.label}>
+                  <TH scope="row" className="py-3 text-sm text-muted-foreground">
+                    {row.label}
+                  </TH>
+                  {plans.data.plans.map((plan) => (
+                    <TD key={plan.key}>{row.value(plan)}</TD>
+                  ))}
+                </TR>
+              ))}
+            </tbody>
+          </Table>
+        </Section>
       )}
     </div>
   )

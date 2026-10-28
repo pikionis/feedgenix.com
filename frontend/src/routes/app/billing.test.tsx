@@ -37,7 +37,7 @@ it('shows the plan, its period and usage, and promises no payment it cannot take
       interval: 'year',
       paid_until: '2027-10-28T00:00:00+00:00',
       limits: { ...workspace().entitlements.limits, feeds: 5, languages: 5, products: 600_000 },
-      used: { feeds: 3, languages: 4 },
+      used: { feeds: 3, languages: 4, products: 1200 },
       overage: { available: true, enabled: true, credits_per_product: 10 },
     },
   })

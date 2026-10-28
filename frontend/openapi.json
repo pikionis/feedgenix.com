@@ -6170,11 +6170,16 @@
                                     },
                                     "languages": {
                                         "type": "integer"
+                                    },
+                                    "products": {
+                                        "type": "integer",
+                                        "description": "Products counted against this period's allowance so far."
                                     }
                                 },
                                 "required": [
                                     "feeds",
-                                    "languages"
+                                    "languages",
+                                    "products"
                                 ]
                             },
                             "overage": {

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Button } from '~/components/ui/button'
-import { Card } from '~/components/ui/card'
 import { Notice } from '~/components/ui/notice'
 import type { ExportPreset } from '~/lib/api/types'
 import type { NewExport } from './actions'
@@ -42,8 +41,8 @@ export function NewExportForm({
   const select = 'h-9 rounded-md border-[0.5px] border-hairline bg-background px-2 text-sm'
 
   return (
-    <Card className="flex flex-col gap-4">
-      <h2 className="font-medium">New export</h2>
+    <section className="flex flex-col gap-4 rounded-lg bg-surface px-5 py-4">
+      <h2 className="text-[15px] font-medium">New export</h2>
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
@@ -135,6 +134,6 @@ export function NewExportForm({
           )}
         </div>
       </form>
-    </Card>
+    </section>
   )
 }

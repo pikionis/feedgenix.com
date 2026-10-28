@@ -10,7 +10,7 @@ export function UsageBar({ used, allowed, label }: { used: number; allowed: numb
           {used.toLocaleString('en')} / {allowed === null ? 'unlimited' : allowed.toLocaleString('en')}
         </span>
       </div>
-      <div className="h-1 overflow-hidden rounded-full bg-surface" aria-hidden="true">
+      <div className="h-1 overflow-hidden rounded-full bg-ink/[0.08]" aria-hidden="true">
         <div className={percent >= 100 ? 'h-full bg-warn' : 'h-full bg-primary'} style={{ width: `${percent}%` }} />
       </div>
     </div>

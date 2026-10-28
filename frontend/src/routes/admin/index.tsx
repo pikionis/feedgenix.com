@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card } from '~/components/ui/card'
+import { PageHeader } from '~/components/ui/page-header'
 import { adminOverviewQuery, twoFactorStatusQuery } from '~/features/admin/queries'
 import { TwoFactorCodeForm } from '~/features/admin/TwoFactorCodeForm'
 import { TwoFactorSetup } from '~/features/admin/TwoFactorSetup'
@@ -59,13 +60,15 @@ function Overview() {
   ] as const
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-medium tracking-tight">Platform</h1>
+    <div className="flex flex-col gap-5">
+      <PageHeader title="Platform" subtitle="Every workspace, at a glance." />
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map(([label, value]) => (
-          <div key={label} className="rounded-lg border-[0.5px] border-hairline bg-background p-5">
-            <dt className="text-sm text-muted-foreground">{label}</dt>
-            <dd className="mt-1 text-2xl font-medium">{value?.toLocaleString('en') ?? '–'}</dd>
+          <div key={label} className="flex flex-col rounded-lg bg-surface px-4 py-3.5">
+            <dt className="text-xs text-muted-foreground">{label}</dt>
+            <dd className="mt-1.5 text-[26px] leading-none font-medium tracking-[-0.01em]">
+              {value?.toLocaleString('en') ?? '–'}
+            </dd>
           </div>
         ))}
       </dl>

@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link } from 'react-router'
-import { Card } from '~/components/ui/card'
 import { Notice } from '~/components/ui/notice'
+import { PageHeader } from '~/components/ui/page-header'
+import { Rows } from '~/components/ui/section'
 import { formatWhen } from '~/features/feeds/labels'
 import { noticesQuery } from '~/features/notices/queries'
 import { api } from '~/lib/api/client'
@@ -35,41 +36,39 @@ export default function NoticesPage() {
   if (notices.data === undefined) return <div className="h-0.5 w-full animate-pulse bg-primary" aria-hidden="true" />
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Notices</h1>
-        <p className="mt-1 max-w-2xl text-muted-foreground">
-          What your workspace was told: usage, work that waits, plan changes and held feeds. The owner and admins get
-          the ones that need a decision by email too.
-        </p>
-      </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Notices"
+        subtitle="What your workspace was told: usage, work that waits, plan changes and held feeds. The owner and admins get the ones that need a decision by email too."
+      />
       {notices.data.notices.length === 0 ? (
-        <Card>
-          <p className="text-sm text-muted-foreground">Nothing yet.</p>
-        </Card>
+        <p className="rounded-lg border-[0.5px] border-hairline px-4 py-6 text-center text-sm text-muted-foreground">
+          Nothing yet.
+        </p>
       ) : (
-        <ul className="flex flex-col gap-3" aria-label="Notices">
+        <Rows aria-label="Notices">
           {notices.data.notices.map((notice) => (
-            <li key={notice.id}>
-              <Card className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h2 className="flex items-center gap-2 font-medium">
-                    <span className={cn('size-1.5 shrink-0 rounded-full', LEVELS[notice.level])} aria-hidden="true" />
-                    {notice.title}
-                    {!notice.read && <span className="sr-only">(new)</span>}
-                  </h2>
-                  <span className="text-xs text-faint">{formatWhen(notice.created_at ?? '')}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{notice.body}</p>
-                {notice.action_label !== null && notice.action_path !== null && (
-                  <Link to={notice.action_path} className="self-start text-sm text-primary hover:text-primary-hover">
-                    {notice.action_label}
-                  </Link>
-                )}
-              </Card>
+            <li key={notice.id} className="flex flex-col gap-1.5 px-4 py-3.5">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-medium">
+                  <span className={cn('size-1.5 shrink-0 rounded-full', LEVELS[notice.level])} aria-hidden="true" />
+                  {notice.title}
+                  {!notice.read && <span className="sr-only">(new)</span>}
+                </h2>
+                <span className="text-xs text-faint">{formatWhen(notice.created_at ?? '')}</span>
+              </div>
+              <p className="pl-3.5 text-sm text-muted-foreground">{notice.body}</p>
+              {notice.action_label !== null && notice.action_path !== null && (
+                <Link
+                  to={notice.action_path}
+                  className="self-start pl-3.5 text-sm text-primary hover:text-primary-hover"
+                >
+                  {notice.action_label}
+                </Link>
+              )}
             </li>
           ))}
-        </ul>
+        </Rows>
       )}
     </div>
   )
