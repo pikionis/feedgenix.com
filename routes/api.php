@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\WorkController;
 use App\Http\Controllers\Admin\WorkspaceActionController;
 use App\Http\Controllers\Admin\WorkspaceController as AdminWorkspaceController;
 use App\Http\Controllers\App\ExportController;
@@ -77,6 +78,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::post('/workspaces/{workspace}/credits', [WorkspaceActionController::class, 'grantCredits'])->name('admin.workspaces.credits');
         Route::post('/workspaces/{workspace}/plan', [WorkspaceActionController::class, 'setPlan'])->name('admin.workspaces.plan');
         Route::get('/audit', AuditController::class)->name('admin.audit');
+        Route::get('/work', WorkController::class)->name('admin.work');
     });
 
     // The workspace the person acts in: every query below is limited to it (ADR 0002).

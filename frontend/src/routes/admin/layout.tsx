@@ -34,6 +34,7 @@ export default function AdminLayout() {
               Platform
             </StaffLink>
             <StaffLink to="/admin/workspaces">Workspaces</StaffLink>
+            <StaffLink to="/admin/work">Work</StaffLink>
             <StaffLink to="/admin/audit">Staff trail</StaffLink>
           </nav>
           <Link to="/app" className="ml-auto text-sm text-muted-foreground hover:text-foreground">

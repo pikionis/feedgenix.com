@@ -3289,6 +3289,179 @@
                 }
             }
         },
+        "/v1/admin/work": {
+            "get": {
+                "operationId": "admin.work",
+                "summary": "Runs that failed (7 days), wait or seem stuck (30 minutes without a change), held batches by reason, the queue, failed jobs and the reconciler",
+                "tags": [
+                    "Work"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "reconciler": {
+                                            "type": "object",
+                                            "properties": {
+                                                "last_at": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "running": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "last_at",
+                                                "running"
+                                            ]
+                                        },
+                                        "queue": {
+                                            "type": "object",
+                                            "properties": {
+                                                "pending": {
+                                                    "type": "integer"
+                                                },
+                                                "failed_24h": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "pending",
+                                                "failed_24h"
+                                            ]
+                                        },
+                                        "runs": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "tenant_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "workspace": {
+                                                        "type": "string"
+                                                    },
+                                                    "feed_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "feed": {
+                                                        "type": "string"
+                                                    },
+                                                    "stage": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "stuck": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "failure_message": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "updated_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "tenant_id",
+                                                    "workspace",
+                                                    "feed_id",
+                                                    "feed",
+                                                    "stage",
+                                                    "status",
+                                                    "stuck",
+                                                    "failure_message",
+                                                    "updated_at"
+                                                ]
+                                            }
+                                        },
+                                        "held": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "reason": {
+                                                        "type": "string"
+                                                    },
+                                                    "units": {
+                                                        "type": "integer"
+                                                    },
+                                                    "workspaces": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "reason",
+                                                    "units",
+                                                    "workspaces"
+                                                ]
+                                            }
+                                        },
+                                        "failed_jobs": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "job": {
+                                                        "type": "string"
+                                                    },
+                                                    "failed_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "error": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "job",
+                                                    "failed_at",
+                                                    "error"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "reconciler",
+                                        "queue",
+                                        "runs",
+                                        "held",
+                                        "failed_jobs"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/admin/workspaces": {
             "get": {
                 "operationId": "admin.workspaces.index",

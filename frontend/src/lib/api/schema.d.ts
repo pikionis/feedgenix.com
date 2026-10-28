@@ -882,6 +882,23 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/admin/work': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Runs that failed (7 days), wait or seem stuck (30 minutes without a change), held batches by reason, the queue, failed jobs and the reconciler */
+    get: operations['admin.work']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/admin/workspaces': {
     parameters: {
       query?: never
@@ -3551,6 +3568,58 @@ export interface operations {
       401: components['responses']['AuthenticationException']
       404: components['responses']['ModelNotFoundException']
       422: components['responses']['ValidationException']
+    }
+  }
+  'admin.work': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            reconciler: {
+              last_at: string | null
+              running: boolean
+            }
+            queue: {
+              pending: number
+              failed_24h: number
+            }
+            runs: {
+              id: number
+              tenant_id: number
+              workspace: string
+              feed_id: number
+              feed: string
+              stage: string
+              status: string
+              stuck: boolean
+              failure_message: string | null
+              updated_at: string | null
+            }[]
+            held: {
+              reason: string
+              units: number
+              workspaces: number
+            }[]
+            failed_jobs: {
+              id: string
+              job: string
+              failed_at: string | null
+              error: string
+            }[]
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
     }
   }
   'admin.workspaces.index': {

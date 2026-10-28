@@ -36,6 +36,9 @@ every `--dry-run` change nothing.
 - the firewall and SSH.
 
 `feedgenix-check` compares all of these with a fingerprint recorded before the first change.
+Inside the app, the staff page `/admin/work` says whether the reconciler ran in the last five
+minutes (a silent one means the scheduler timer stopped), how many jobs wait in the queue, the
+failed jobs of the last day and the runs that do not move.
 
 **Shared things that do change, and how:**
 - **nginx:** a graceful reload after `nginx -t` passes. The legacy site must answer afterwards,

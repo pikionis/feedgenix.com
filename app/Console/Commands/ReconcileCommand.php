@@ -13,6 +13,7 @@ use App\Domain\Export\Models\ExportProfile;
 use App\Domain\Feeds\Models\PipelineRun;
 use App\Domain\Ingest\ImportStatus;
 use App\Domain\Ingest\Models\Import;
+use App\Domain\Ops\Work;
 use App\Domain\Tenancy\TenantContext;
 use App\Domain\Translation\Models\WorkUnit;
 use App\Domain\Translation\RunProgress;
@@ -103,6 +104,8 @@ final class ReconcileCommand extends Command
         $this->line('Queued '.count($due).' export build(s).');
 
         $this->line('Dispatched '.$dispatcher->pump().' unit(s).');
+        // Staff see when the last pass ended: a silent reconciler means a stopped scheduler.
+        Work::reconcilerRan();
 
         return self::SUCCESS;
     }

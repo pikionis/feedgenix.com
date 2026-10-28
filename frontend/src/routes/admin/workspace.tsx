@@ -6,6 +6,7 @@ import { Rows, Section } from '~/components/ui/section'
 import { StatCard } from '~/components/ui/stat-card'
 import { Table, TD, TH, THead, TR } from '~/components/ui/table'
 import { adminWorkspaceQuery } from '~/features/admin/queries'
+import { holdLabel } from '~/features/admin/labels'
 import { GrantCreditsForm, SetPlanForm } from '~/features/admin/StaffActions'
 import { feedState, FeedStateBadge } from '~/features/feeds/FeedState'
 import { formatWhen } from '~/features/feeds/labels'
@@ -17,19 +18,6 @@ export const meta: Route.MetaFunction = () => [
   { title: 'Workspace — FeedGenix staff' },
   { name: 'robots', content: 'noindex' },
 ]
-
-// The reasons RunProgress names (Domain/Translation/RunProgress.php), in staff words.
-const HOLDS: Record<string, string> = {
-  credits: 'Not enough credits',
-  allowance: 'Over the period’s products',
-  ai_disabled: 'AI switched off',
-  unpriced_model: 'No priced model',
-  provider_unavailable: 'Provider unavailable',
-  ai_paused: 'AI paused for the workspace',
-  workspace_frozen: 'Workspace frozen',
-  feed_paused: 'Feed paused by the plan',
-  language_paused: 'Language paused by the plan',
-}
 
 const KINDS: Record<string, string> = {
   grant: 'Grant',
@@ -187,7 +175,7 @@ function WorkspaceView({ data }: { data: AdminWorkspace }) {
             <tbody>
               {data.held.map((held) => (
                 <TR key={held.reason}>
-                  <TD>{HOLDS[held.reason] ?? held.reason}</TD>
+                  <TD>{holdLabel(held.reason)}</TD>
                   <TD numeric>{held.units.toLocaleString('en')}</TD>
                   <TD numeric>{held.feeds.toLocaleString('en')}</TD>
                 </TR>

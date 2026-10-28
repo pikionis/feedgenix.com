@@ -2,13 +2,14 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, it, vi } from 'vitest'
-import type { AdminAuditLine, AdminWorkspace, AdminWorkspaceRow } from '~/lib/api/types'
+import type { AdminAuditLine, AdminWork, AdminWorkspace, AdminWorkspaceRow } from '~/lib/api/types'
 import { apiUrl, feed, plansResponse, sessionUser } from '~/test/fixtures'
 import { csrfCookie } from '~/test/handlers'
 import { renderRoutes } from '~/test/render'
 import { server } from '~/test/server'
 import AdminAudit from './audit'
 import AdminLayout, { clientLoader } from './layout'
+import AdminWorkPage from './work'
 import AdminWorkspacePage from './workspace'
 import AdminWorkspaces from './workspaces'
 
@@ -122,6 +123,7 @@ function renderStaff(entry: string) {
           { path: 'workspaces', Component: AdminWorkspaces },
           { path: 'workspaces/:workspaceId', Component: AdminWorkspacePage },
           { path: 'audit', Component: AdminAudit },
+          { path: 'work', Component: AdminWorkPage },
         ],
       },
     ],
@@ -367,4 +369,80 @@ it('sends the paid-until date with a paid plan', async () => {
 
   expect(await form.findByText('On Ultra now.')).toBeInTheDocument()
   expect(bodies).toEqual([{ plan: 'ultra', interval: 'year', until: '2027-03-31' }])
+})
+
+function work(overrides: Partial<AdminWork> = {}): AdminWork {
+  return {
+    reconciler: { last_at: '2026-10-28T12:59:00+00:00', running: true },
+    queue: { pending: 3, failed_24h: 1 },
+    runs: [
+      {
+        id: 31,
+        tenant_id: 7,
+        workspace: 'Alpine Outfitters',
+        feed_id: 11,
+        feed: 'Main shop',
+        stage: 'sync',
+        status: 'failed',
+        stuck: false,
+        failure_message: 'The products could not be read.',
+        updated_at: '2026-10-28T11:00:00+00:00',
+      },
+      {
+        id: 32,
+        tenant_id: 9,
+        workspace: 'Harbour Tools',
+        feed_id: 12,
+        feed: 'Harbour feed',
+        stage: 'translate',
+        status: 'running',
+        stuck: true,
+        failure_message: null,
+        updated_at: '2026-10-28T10:00:00+00:00',
+      },
+    ],
+    held: [{ reason: 'reservation_exhausted', units: 4, workspaces: 2 }],
+    failed_jobs: [
+      {
+        id: 'a1',
+        job: 'BuildExportJob',
+        failed_at: '2026-10-28T12:00:00+00:00',
+        error: 'RuntimeException: The disk is full.',
+      },
+    ],
+    ...overrides,
+  }
+}
+
+it('shows what does not move in every workspace, in words', async () => {
+  staff()
+  server.use(http.get(apiUrl('/v1/admin/work'), () => HttpResponse.json(work())))
+
+  renderStaff('/admin/work')
+
+  const runs = await screen.findByRole('table', { name: 'Runs' })
+  const harbour = within(runs).getByRole('row', { name: /Harbour Tools/ })
+  expect(within(harbour).getByText('Stuck running')).toBeInTheDocument()
+  expect(within(harbour).getByRole('link', { name: 'Harbour Tools' })).toHaveAttribute('href', '/admin/workspaces/9')
+  expect(within(runs).getByText('The products could not be read.')).toBeInTheDocument()
+  expect(
+    within(screen.getByRole('table', { name: 'Batches that wait' })).getByText('Its reservation ran out'),
+  ).toBeInTheDocument()
+  expect(within(screen.getByRole('table', { name: 'Failed jobs' })).getByText('BuildExportJob')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+it('raises the alarm when the reconciler is silent', async () => {
+  staff()
+  server.use(
+    http.get(apiUrl('/v1/admin/work'), () =>
+      HttpResponse.json(work({ reconciler: { last_at: null, running: false }, runs: [], held: [], failed_jobs: [] })),
+    ),
+  )
+
+  renderStaff('/admin/work')
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('The reconciler has not run')
+  expect(screen.getByText('Every run moves.')).toBeInTheDocument()
+  expect(screen.getByText('Silent')).toBeInTheDocument()
 })

@@ -64,3 +64,15 @@ export const adminAuditQuery = queryOptions({
     return data.audit
   },
 })
+
+export const adminWorkQuery = queryOptions({
+  queryKey: ['admin', 'work'],
+  queryFn: async () => {
+    const { data, response } = await api.GET('/v1/admin/work')
+    if (data === undefined) throw new Error(`Could not load the work (${response.status}).`)
+
+    return data
+  },
+  // Staff watch this page while something is wrong: it follows on its own.
+  refetchInterval: 30_000,
+})

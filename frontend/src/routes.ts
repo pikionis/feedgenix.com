@@ -30,6 +30,7 @@ export default [
     index('routes/admin/index.tsx'),
     route('workspaces', 'routes/admin/workspaces.tsx'),
     route('workspaces/:workspaceId', 'routes/admin/workspace.tsx'),
+    route('work', 'routes/admin/work.tsx'),
     route('audit', 'routes/admin/audit.tsx'),
   ]),
 ] satisfies RouteConfig

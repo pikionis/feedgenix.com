@@ -108,3 +108,6 @@ export type AdminWorkspace =
 /** The staff trail (GET /v1/admin/audit). */
 export type AdminAuditLine =
   paths['/v1/admin/audit']['get']['responses'][200]['content']['application/json']['audit'][number]
+
+/** What does not move, across every workspace (GET /v1/admin/work). */
+export type AdminWork = paths['/v1/admin/work']['get']['responses'][200]['content']['application/json']
