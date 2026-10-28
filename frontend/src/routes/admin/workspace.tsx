@@ -6,6 +6,7 @@ import { Rows, Section } from '~/components/ui/section'
 import { StatCard } from '~/components/ui/stat-card'
 import { Table, TD, TH, THead, TR } from '~/components/ui/table'
 import { adminWorkspaceQuery } from '~/features/admin/queries'
+import { GrantCreditsForm, SetPlanForm } from '~/features/admin/StaffActions'
 import { feedState, FeedStateBadge } from '~/features/feeds/FeedState'
 import { formatWhen } from '~/features/feeds/labels'
 import { NotFound } from '~/features/feeds/queries'
@@ -106,6 +107,13 @@ function WorkspaceView({ data }: { data: AdminWorkspace }) {
           />
         </div>
       </div>
+
+      <Section title="Staff actions" description="Each change goes into the staff trail, with what it changed.">
+        <div className="grid gap-6 rounded-lg border-[0.5px] border-hairline p-5 md:grid-cols-2">
+          <GrantCreditsForm workspace={workspace} />
+          <SetPlanForm key={`${workspace.plan}:${workspace.interval}`} workspace={workspace} />
+        </div>
+      </Section>
 
       <Section
         title="Members"

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\WorkspaceActionController;
 use App\Http\Controllers\Admin\WorkspaceController as AdminWorkspaceController;
 use App\Http\Controllers\App\ExportController;
 use App\Http\Controllers\App\FeedController;
@@ -73,6 +74,8 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function (): void {
         Route::get('/overview', OverviewController::class)->name('admin.overview');
         Route::get('/workspaces', [AdminWorkspaceController::class, 'index'])->name('admin.workspaces.index');
         Route::get('/workspaces/{workspace}', [AdminWorkspaceController::class, 'show'])->name('admin.workspaces.show');
+        Route::post('/workspaces/{workspace}/credits', [WorkspaceActionController::class, 'grantCredits'])->name('admin.workspaces.credits');
+        Route::post('/workspaces/{workspace}/plan', [WorkspaceActionController::class, 'setPlan'])->name('admin.workspaces.plan');
         Route::get('/audit', AuditController::class)->name('admin.audit');
     });
 

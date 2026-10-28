@@ -17,6 +17,9 @@ final class Millicredits
 {
     public const int PER_CREDIT = 1000;
 
+    /** The most one staff grant adds, in euros of credit. */
+    public const string MAX_GRANT_EUROS = '10000';
+
     /** Euros to millicredits, rounded up to a whole millicredit. */
     public static function fromEuros(BigNumber|string $euros): int
     {
@@ -24,6 +27,24 @@ final class Millicredits
             ->multipliedBy(self::PER_CREDIT)
             ->dividedBy(self::creditEur(), 0, RoundingMode::Up)
             ->toInt();
+    }
+
+    /**
+     * A staff grant typed in euros ("10", "2.50"): positive, at most 4 decimals, up to
+     * MAX_GRANT_EUROS. Anything else (a sign, an exponent, a comma, a space) is refused.
+     *
+     * @throws InvalidArgumentException
+     */
+    public static function parseGrantEuros(string $euros): int
+    {
+        $valid = preg_match('/^\d{1,5}(?:\.\d{1,4})?$/', $euros) === 1
+            && BigDecimal::of($euros)->isPositive()
+            && BigDecimal::of($euros)->isLessThanOrEqualTo(self::MAX_GRANT_EUROS);
+        if (! $valid) {
+            throw new InvalidArgumentException('The amount must be a positive number of euros up to '.self::MAX_GRANT_EUROS.', with at most 4 decimals (e.g. 10 or 2.50).');
+        }
+
+        return self::fromEuros($euros);
     }
 
     /** What a customer reads: whole credits, rounded up (a started credit is a credit). */

@@ -956,6 +956,40 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/admin/workspaces/{workspace}/credits': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Grant credits worth an amount in euros (the private-beta AI budget, a goodwill gesture), with why */
+    post: operations['admin.workspaces.credits']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/admin/workspaces/{workspace}/plan': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Put the workspace on a plan; what is over the new limits pauses at once, what fits again resumes */
+    post: operations['admin.workspaces.plan']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -3764,6 +3798,83 @@ export interface operations {
       }
       401: components['responses']['AuthenticationException']
       402: components['responses']['PlanLimitExceeded']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'admin.workspaces.credits': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspace: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          euros: string
+          note: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            granted: number
+            available: number
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
+      422: components['responses']['ValidationException']
+    }
+  }
+  'admin.workspaces.plan': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspace: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Which plans exist is SetPlan's to say (PlanCatalog): one list, refused below as a 422. */
+          plan: string
+          /** @enum {string} */
+          interval: 'month' | 'year'
+          /** Format: date */
+          until?: string | null
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            plan: string
+            plan_name: string
+            ends_at: string | null
+            feeds_paused: number
+            feeds_resumed: number
+            languages_paused: number
+            languages_resumed: number
+          }
+        }
+      }
+      401: components['responses']['AuthenticationException']
+      404: components['responses']['ModelNotFoundException']
       422: components['responses']['ValidationException']
     }
   }

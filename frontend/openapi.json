@@ -4046,6 +4046,193 @@
                     }
                 }
             }
+        },
+        "/v1/admin/workspaces/{workspace}/credits": {
+            "post": {
+                "operationId": "admin.workspaces.credits",
+                "summary": "Grant credits worth an amount in euros (the private-beta AI budget, a goodwill gesture), with why",
+                "tags": [
+                    "WorkspaceAction"
+                ],
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "euros": {
+                                        "type": "string",
+                                        "maxLength": 16
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 255
+                                    }
+                                },
+                                "required": [
+                                    "euros",
+                                    "note"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "granted": {
+                                            "type": "integer"
+                                        },
+                                        "available": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "granted",
+                                        "available"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/admin/workspaces/{workspace}/plan": {
+            "post": {
+                "operationId": "admin.workspaces.plan",
+                "summary": "Put the workspace on a plan; what is over the new limits pauses at once, what fits again resumes",
+                "tags": [
+                    "WorkspaceAction"
+                ],
+                "parameters": [
+                    {
+                        "name": "workspace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "plan": {
+                                        "type": "string",
+                                        "description": "Which plans exist is SetPlan's to say (PlanCatalog): one list, refused below as a 422.",
+                                        "maxLength": 16
+                                    },
+                                    "interval": {
+                                        "type": "string",
+                                        "enum": [
+                                            "month",
+                                            "year"
+                                        ]
+                                    },
+                                    "until": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "date"
+                                    }
+                                },
+                                "required": [
+                                    "plan",
+                                    "interval"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "plan": {
+                                            "type": "string"
+                                        },
+                                        "plan_name": {
+                                            "type": "string"
+                                        },
+                                        "ends_at": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "feeds_paused": {
+                                            "type": "integer"
+                                        },
+                                        "feeds_resumed": {
+                                            "type": "integer"
+                                        },
+                                        "languages_paused": {
+                                            "type": "integer"
+                                        },
+                                        "languages_resumed": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "plan",
+                                        "plan_name",
+                                        "ends_at",
+                                        "feeds_paused",
+                                        "feeds_resumed",
+                                        "languages_paused",
+                                        "languages_resumed"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
         }
     },
     "components": {

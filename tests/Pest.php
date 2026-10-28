@@ -27,6 +27,7 @@ require_once __DIR__.'/Support/catalog.php';
 require_once __DIR__.'/Support/translation.php';
 require_once __DIR__.'/Support/export.php';
 require_once __DIR__.'/Support/billing.php';
+require_once __DIR__.'/Support/ops.php';
 
 function tenancy(): TenantContext
 {

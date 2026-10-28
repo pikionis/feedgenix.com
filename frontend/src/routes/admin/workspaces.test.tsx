@@ -1,9 +1,9 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import type { AdminAuditLine, AdminWorkspace, AdminWorkspaceRow } from '~/lib/api/types'
-import { apiUrl, feed, sessionUser } from '~/test/fixtures'
+import { apiUrl, feed, plansResponse, sessionUser } from '~/test/fixtures'
 import { csrfCookie } from '~/test/handlers'
 import { renderRoutes } from '~/test/render'
 import { server } from '~/test/server'
@@ -235,4 +235,136 @@ it('shows the staff trail with links to the workspaces', async () => {
   const table = await screen.findByRole('table', { name: 'Staff trail' })
   expect(within(table).getByRole('link', { name: '#7' })).toHaveAttribute('href', '/admin/workspaces/7')
   expect(within(table).getAllByRole('row')).toHaveLength(3)
+})
+
+it('grants credits with why, and shows what the wallet holds now', async () => {
+  staff()
+  const bodies: unknown[] = []
+  let loads = 0
+  server.use(
+    http.get(apiUrl('/plans'), () => HttpResponse.json(plansResponse)),
+    http.get(apiUrl('/v1/admin/workspaces/7'), () => {
+      loads++
+      return HttpResponse.json(detail())
+    }),
+    http.post(apiUrl('/v1/admin/workspaces/7/credits'), async ({ request }) => {
+      bodies.push(await request.json())
+      return HttpResponse.json({ granted: 100000, available: 102500 })
+    }),
+  )
+  const user = userEvent.setup()
+  renderStaff('/admin/workspaces/7')
+  const form = within(await screen.findByRole('form', { name: 'Grant credits' }))
+
+  // Checked here first: an exponent is not an amount, and nothing is sent.
+  await user.type(form.getByLabelText('Worth, in euros'), '1e3')
+  await user.type(form.getByLabelText('Why'), 'beta budget')
+  await user.click(form.getByRole('button', { name: 'Grant credits' }))
+  expect(await form.findByText('A positive amount in euros, like 10 or 2.50.')).toBeInTheDocument()
+  expect(bodies).toEqual([])
+
+  await user.clear(form.getByLabelText('Worth, in euros'))
+  await user.type(form.getByLabelText('Worth, in euros'), '10')
+  await user.click(form.getByRole('button', { name: 'Grant credits' }))
+
+  expect(await form.findByText('Granted 100,000 credits. Available now: 102,500.')).toBeInTheDocument()
+  expect(bodies).toEqual([{ euros: '10', note: 'beta budget' }])
+  await vi.waitFor(() => expect(loads).toBe(2))
+})
+
+it("shows the server's reason when a grant is refused", async () => {
+  staff()
+  server.use(
+    http.get(apiUrl('/plans'), () => HttpResponse.json(plansResponse)),
+    http.get(apiUrl('/v1/admin/workspaces/7'), () => HttpResponse.json(detail())),
+    http.post(apiUrl('/v1/admin/workspaces/7/credits'), () =>
+      HttpResponse.json(
+        { message: 'x', errors: { euros: ['The amount must be a positive number of euros up to 10000.'] } },
+        { status: 422 },
+      ),
+    ),
+  )
+  const user = userEvent.setup()
+  renderStaff('/admin/workspaces/7')
+  const form = within(await screen.findByRole('form', { name: 'Grant credits' }))
+
+  await user.type(form.getByLabelText('Worth, in euros'), '10000.01')
+  await user.type(form.getByLabelText('Why'), 'too much')
+  await user.click(form.getByRole('button', { name: 'Grant credits' }))
+
+  expect(await form.findByText('The amount must be a positive number of euros up to 10000.')).toBeInTheDocument()
+})
+
+it('changes the plan only after it says what pauses, and reports what did', async () => {
+  staff()
+  const bodies: unknown[] = []
+  server.use(
+    http.get(apiUrl('/plans'), () => HttpResponse.json(plansResponse)),
+    http.get(apiUrl('/v1/admin/workspaces/7'), () => HttpResponse.json(detail())),
+    http.post(apiUrl('/v1/admin/workspaces/7/plan'), async ({ request }) => {
+      bodies.push(await request.json())
+      return HttpResponse.json({
+        plan: 'free',
+        plan_name: 'Free',
+        ends_at: null,
+        feeds_paused: 2,
+        feeds_resumed: 0,
+        languages_paused: 1,
+        languages_resumed: 0,
+      })
+    }),
+  )
+  const user = userEvent.setup()
+  renderStaff('/admin/workspaces/7')
+  const form = within(await screen.findByRole('form', { name: 'Change the plan' }))
+
+  await form.findByRole('option', { name: 'Free' })
+  await user.selectOptions(form.getByLabelText('Plan'), 'free')
+  await user.click(form.getByRole('button', { name: 'Change the plan' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Put Alpine Outfitters on Free?' })
+  expect(dialog).toHaveTextContent('Nothing is deleted')
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+  expect(bodies).toEqual([])
+
+  await user.click(form.getByRole('button', { name: 'Change the plan' }))
+  await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Put on Free' }))
+
+  expect(await form.findByText('On Free now. Paused 2 feeds, 1 language.')).toBeInTheDocument()
+  expect(bodies).toEqual([{ plan: 'free', interval: 'month' }])
+})
+
+it('sends the paid-until date with a paid plan', async () => {
+  staff()
+  const bodies: unknown[] = []
+  server.use(
+    http.get(apiUrl('/plans'), () => HttpResponse.json(plansResponse)),
+    http.get(apiUrl('/v1/admin/workspaces/7'), () =>
+      HttpResponse.json(detail({ workspace: row({ plan: 'free', plan_name: 'Free' }) })),
+    ),
+    http.post(apiUrl('/v1/admin/workspaces/7/plan'), async ({ request }) => {
+      bodies.push(await request.json())
+      return HttpResponse.json({
+        plan: 'ultra',
+        plan_name: 'Ultra',
+        ends_at: '2027-03-31T23:59:59+00:00',
+        feeds_paused: 0,
+        feeds_resumed: 0,
+        languages_paused: 0,
+        languages_resumed: 0,
+      })
+    }),
+  )
+  const user = userEvent.setup()
+  renderStaff('/admin/workspaces/7')
+  const form = within(await screen.findByRole('form', { name: 'Change the plan' }))
+
+  await form.findByRole('option', { name: 'Free' })
+  await user.selectOptions(form.getByLabelText('Plan'), 'ultra')
+  await user.selectOptions(form.getByLabelText('Billed'), 'year')
+  await user.type(form.getByLabelText('Paid until'), '2027-03-31')
+  await user.click(form.getByRole('button', { name: 'Change the plan' }))
+  await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Put on Ultra' }))
+
+  expect(await form.findByText('On Ultra now.')).toBeInTheDocument()
+  expect(bodies).toEqual([{ plan: 'ultra', interval: 'year', until: '2027-03-31' }])
 })

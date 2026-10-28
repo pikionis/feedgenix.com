@@ -8,7 +8,6 @@ use App\Domain\Feeds\Models\Feed;
 use App\Domain\Ops\Workspaces;
 use App\Domain\Tenancy\TenantContext;
 use App\Http\Resources\FeedResource;
-use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -36,10 +35,7 @@ final readonly class WorkspaceController
     /** One workspace in full: plan and usage, members, feeds, held work, credits, AI usage in credits and tokens, notices, and what staff did there. */
     public function show(string $workspace, TenantContext $context): JsonResponse
     {
-        // Only digits reach the database: PostgreSQL answers "alpine" or a 20-digit id with an error (a 500), not a 404.
-        $workspace = ctype_digit($workspace) && strlen($workspace) < 19
-            ? Tenant::query()->findOrFail((int) $workspace)
-            : abort(404);
+        $workspace = $this->workspaces->find($workspace);
         $detail = $this->workspaces->detail($workspace);
         $feeds = $context->run($workspace->id, static fn () => Feed::query()->withSummary()->orderBy('id')->get());
 

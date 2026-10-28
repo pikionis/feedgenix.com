@@ -19,6 +19,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * The staff view of the workspaces (ADR 0026): every workspace with its plan and usage, and one
@@ -34,6 +35,21 @@ final readonly class Workspaces
     private const int RECENT = 15;
 
     public function __construct(private TenantContext $context) {}
+
+    /**
+     * The workspace a staff URL names. Only digits reach the database: PostgreSQL answers a word or
+     * a 20-digit number with an error (a 500), not a 404.
+     *
+     * @throws ModelNotFoundException<Tenant>
+     */
+    public function find(string $id): Tenant
+    {
+        if (! ctype_digit($id) || strlen($id) > 18) {
+            throw (new ModelNotFoundException)->setModel(Tenant::class, [$id]);
+        }
+
+        return Tenant::query()->findOrFail((int) $id);
+    }
 
     /**
      * The workspaces, newest first; the search matches a name, a slug, the owner's email or an id.
@@ -111,14 +127,14 @@ final readonly class Workspaces
                         'reason' => (string) $held->reason, 'units' => (int) $held->units, 'feeds' => (int) $held->feeds,
                     ])->all()),
                 'credits' => [
-                    'available' => intdiv($wallet?->available() ?? 0, Millicredits::PER_CREDIT),
-                    'reserved' => intdiv($wallet->reserved ?? 0, Millicredits::PER_CREDIT),
+                    'available' => self::credits($wallet?->available() ?? 0),
+                    'reserved' => self::credits($wallet->reserved ?? 0),
                     'transactions' => array_values(CreditTransaction::query()->orderByDesc('id')->limit(self::RECENT)->get()
                         ->map(static fn (CreditTransaction $transaction): array => [
                             'id' => $transaction->id,
                             'kind' => $transaction->kind,
-                            'credits' => intdiv($transaction->amount, Millicredits::PER_CREDIT),
-                            'balance_after' => intdiv($transaction->balance_after, Millicredits::PER_CREDIT),
+                            'credits' => self::credits($transaction->amount),
+                            'balance_after' => self::credits($transaction->balance_after),
                             'note' => $transaction->note,
                             'created_at' => $transaction->created_at->toIso8601String(),
                         ])->all()),
@@ -138,7 +154,7 @@ final readonly class Workspaces
                         'input_tokens' => (int) $usage->input_tokens,
                         'output_tokens' => (int) $usage->output_tokens,
                         'thinking_tokens' => (int) $usage->thinking_tokens,
-                        'credits' => intdiv((int) $usage->millicredits, Millicredits::PER_CREDIT),
+                        'credits' => self::credits((int) $usage->millicredits),
                     ])->all()),
                 'notices' => array_values(Notice::query()->orderByDesc('id')->limit(10)->get()->map(static fn (Notice $notice): array => [
                     'id' => $notice->id,
@@ -231,6 +247,12 @@ final readonly class Workspaces
             SQL);
     }
 
+    /** Credits as the customer reads them (rounded up), keeping the sign of a charge. */
+    private static function credits(int $millicredits): int
+    {
+        return $millicredits < 0 ? -Millicredits::toCredits(-$millicredits) : Millicredits::toCredits($millicredits);
+    }
+
     /** @return Row */
     private function row(Tenant $tenant): array
     {
@@ -259,8 +281,8 @@ final readonly class Workspaces
             'feeds_paused' => (int) $tenant->getAttribute('feeds_paused_count'),
             'languages' => (int) $tenant->getAttribute('languages_count'),
             'products_this_period' => $entitlements->used('products'),
-            'credits_available' => intdiv((int) $tenant->getAttribute('available_millicredits'), Millicredits::PER_CREDIT),
-            'ai_credits_30d' => intdiv((int) $tenant->getAttribute('ai_millicredits_30d'), Millicredits::PER_CREDIT),
+            'credits_available' => self::credits((int) $tenant->getAttribute('available_millicredits')),
+            'ai_credits_30d' => self::credits((int) $tenant->getAttribute('ai_millicredits_30d')),
             'last_import_at' => $lastImport === null ? null : CarbonImmutable::parse((string) $lastImport)->toIso8601String(),
             'created_at' => $tenant->created_at?->toIso8601String(),
         ];

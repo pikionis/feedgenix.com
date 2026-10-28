@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Billing\Actions\SetPlan;
 use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanCatalog;
-use App\Domain\Billing\PlanLimitsApplier;
 use App\Models\Tenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Attributes\Signature;
@@ -28,13 +28,13 @@ use Throwable;
         {--override=* : A limit override as key=value ("null" = unlimited, "-" removes it)}')]
 final class SetPlanCommand extends Command
 {
-    public function handle(PlanLimitsApplier $limits): int
+    public function handle(SetPlan $setPlan): int
     {
         try {
             $tenant = $this->tenant();
             $plan = $this->planArgument();
             $interval = $this->interval();
-            $until = $this->until($interval);
+            $until = $this->until();
             $overrides = $this->overrides($tenant);
         } catch (InvalidArgumentException $invalid) {
             $this->error($invalid->getMessage());
@@ -42,21 +42,7 @@ final class SetPlanCommand extends Command
             return self::INVALID;
         }
 
-        $changes = ['limits_override' => $overrides === [] ? null : $overrides, 'plan_status' => 'active'];
-        if ($plan === 'free') {
-            $changes += ['plan' => 'free', 'billing_interval' => null, 'plan_started_at' => null, 'plan_ends_at' => null];
-        } else {
-            $isNewTerm = $tenant->plan !== $plan || $tenant->billing_interval !== $interval || $tenant->plan_started_at === null;
-            $changes += [
-                'plan' => $plan,
-                'billing_interval' => $interval,
-                'plan_started_at' => $isNewTerm ? CarbonImmutable::now() : $tenant->plan_started_at,
-                'plan_ends_at' => $until,
-            ];
-        }
-
-        $tenant->forceFill($changes)->save();
-        $applied = $limits->apply($tenant);
+        $applied = $setPlan->handle($tenant, $plan, $interval, $until, $overrides);
 
         $entitlements = Entitlements::for($tenant);
         $this->info("Workspace {$tenant->slug} (#{$tenant->id}) is on ".PlanCatalog::name($entitlements->plan()).'.');
@@ -95,11 +81,12 @@ final class SetPlanCommand extends Command
         return in_array($interval, ['month', 'year'], true) ? $interval : throw new InvalidArgumentException('--interval must be month or year.');
     }
 
-    private function until(string $interval): CarbonImmutable
+    /** The paid-through date given, or null for one interval from today. */
+    private function until(): ?CarbonImmutable
     {
         $until = $this->option('until');
         if ($until === null) {
-            return $interval === 'year' ? CarbonImmutable::now()->addYear() : CarbonImmutable::now()->addMonth();
+            return null;
         }
 
         try {

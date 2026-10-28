@@ -9,7 +9,6 @@ use App\Domain\Credits\Millicredits;
 use App\Domain\Credits\Models\CreditWallet;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\Tenant;
-use Brick\Math\BigDecimal;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use InvalidArgumentException;
@@ -27,8 +26,6 @@ use Symfony\Component\Console\Attribute\AsCommand;
         {--note= : Why, kept with the transaction}')]
 final class GrantCreditsCommand extends Command
 {
-    private const string MAX_EUROS = '10000';
-
     public function handle(TenantContext $context, GrantCredits $grant): int
     {
         try {
@@ -64,14 +61,6 @@ final class GrantCreditsCommand extends Command
 
     private function millicredits(): int
     {
-        $euros = (string) $this->argument('euros');
-        $valid = preg_match('/^\d{1,5}(?:\.\d{1,4})?$/', $euros) === 1
-            && BigDecimal::of($euros)->isPositive()
-            && BigDecimal::of($euros)->isLessThanOrEqualTo(self::MAX_EUROS);
-        if (! $valid) {
-            throw new InvalidArgumentException('euros must be a positive amount up to '.self::MAX_EUROS.', with at most 4 decimals (e.g. 10 or 2.50).');
-        }
-
-        return Millicredits::fromEuros($euros);
+        return Millicredits::parseGrantEuros((string) $this->argument('euros'));
     }
 }
