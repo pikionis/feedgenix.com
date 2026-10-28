@@ -65,6 +65,7 @@ final readonly class StartTranslation
         }
         $admission = $this->admission->admit(Tenant::query()->findOrFail($feed->tenant_id), array_keys($products));
         $waiting = array_fill_keys($admission['waiting'], true);
+        $holdReason = AdmitWaitingWork::holdReason($admission['waiting_for']);
         foreach ($batches as $batch) {
             // One batch, two units at most: what was admitted runs, what is over the allowance waits.
             $admitted = array_filter($batch['items'], static fn (string $hash, int|string $productId): bool => ! isset($waiting[(int) $productId]), ARRAY_FILTER_USE_BOTH);
@@ -74,7 +75,7 @@ final readonly class StartTranslation
                 $counts['units']++;
             }
             if ($held !== []) {
-                $this->unit($run, $feed, $batch, $held, 'allowance');
+                $this->unit($run, $feed, $batch, $held, $holdReason);
                 $counts['units_waiting']++;
             }
         }
@@ -86,7 +87,9 @@ final readonly class StartTranslation
             'finished_at' => $finished ? now() : null,
             'warnings' => $admission['held'] ? [[
                 'code' => 'allowance',
-                'message' => count($admission['waiting']).' products are over this period\'s allowance: they wait until '.substr($admission['resets_at'], 0, 10).', or start at once when you upgrade.',
+                'message' => $admission['waiting_for'] === 'credits'
+                    ? count($admission['waiting']).' products are over this period\'s allowance and wait for credits for their overage fee.'
+                    : count($admission['waiting']).' products are over this period\'s allowance: they wait until '.substr($admission['resets_at'], 0, 10).', or start at once when you upgrade.',
                 'count' => count($admission['waiting']),
             ]] : [],
         ])->save();

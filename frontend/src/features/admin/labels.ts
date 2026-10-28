@@ -6,6 +6,7 @@ export const HOLDS: Record<string, string> = {
   credits: 'Not enough credits',
   reservation_exhausted: 'Its reservation ran out',
   allowance: 'Over the period’s products',
+  overage_credits: 'Overage fee not covered',
   ai_disabled: 'AI switched off',
   unpriced_model: 'No priced model',
   provider_unavailable: 'Provider unavailable',

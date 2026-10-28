@@ -59,6 +59,7 @@ final class RunProgress
         return match ($reason) {
             'credits' => 'Some texts wait for credits: the workspace does not hold enough for them.',
             'allowance' => 'Some products are over this period\'s allowance: upgrade, or they wait for the next period.',
+            'overage_credits' => 'Some products are over this period\'s allowance and wait for credits for their overage fee. They continue by themselves once there are credits.',
             'ai_disabled', 'unpriced_model', 'provider_unavailable' => 'Some texts wait: AI is not available right now.',
             'ai_paused', 'workspace_frozen' => 'AI is paused for this workspace.',
             'feed_paused' => 'This feed is paused by your plan: its texts wait until it is active again.',

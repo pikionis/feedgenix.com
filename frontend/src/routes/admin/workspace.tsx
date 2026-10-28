@@ -23,6 +23,7 @@ const KINDS: Record<string, string> = {
   grant: 'Grant',
   purchase: 'Purchase',
   ai_usage: 'AI work',
+  overage: 'Overage fee',
   refund: 'Refund',
   adjustment: 'Adjustment',
 }

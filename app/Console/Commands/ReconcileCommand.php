@@ -57,7 +57,7 @@ final class ReconcileCommand extends Command
 
         // Work waiting for the allowance is counted, once there is room again, before it runs (ADR 0027).
         $waiting = $context->runAsSystem('find workspaces with work waiting for the allowance', static fn (): array => WorkUnit::query()
-            ->where('status', 'held')->where('hold_reason', 'allowance')->distinct()->pluck('tenant_id')->map(intval(...))->all());
+            ->where('status', 'held')->whereIn('hold_reason', AdmitWaitingWork::REASONS)->distinct()->pluck('tenant_id')->map(intval(...))->all());
         $admitted = [];
         foreach ($waiting as $tenantId) {
             $tenant = Tenant::query()->find($tenantId);

@@ -7,6 +7,9 @@ namespace App\Domain\Metering;
 use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanCatalog;
 use App\Domain\Billing\TenantEntitlements;
+use App\Domain\Credits\Actions\ChargeFee;
+use App\Domain\Credits\Millicredits;
+use App\Domain\Credits\Models\CreditWallet;
 use App\Domain\Notices\Notify;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
@@ -14,17 +17,19 @@ use Illuminate\Support\Facades\DB;
 /**
  * Counts the products a run will work on against the plan's allowance (ADR 0005, ADR 0027): a
  * product counts once per period, however often it is translated. The products that fit (and those
- * already counted this period) go ahead; above the allowance, a paid plan with overage on goes ahead
- * too (the overage products are flagged; their fee is charged with the wallet, M7), otherwise the
- * products over it wait, uncounted, and are admitted again when the next period begins. Nothing is
- * ever worked on that was not counted.
+ * already counted this period) go ahead. Above the allowance, a paid plan with overage on goes ahead
+ * for as many products as the available credits pay the overage fee of (ADR 0028), charged with the
+ * count in one transaction; otherwise the products over it wait, uncounted, and are admitted again
+ * once there is room. Nothing is ever worked on that was not counted, or counted twice.
  *
  * The workspace is told (ADR 0025) when its usage passes 80% of the allowance, and when products
  * wait for the next period, with what it can do about it.
  */
-final class Admission
+final readonly class Admission
 {
     private const float HEADS_UP = 0.8;
+
+    public function __construct(private ChargeFee $fee) {}
 
     /**
      * What admitting these products would do, without counting them: for the plan page before a run.
@@ -42,10 +47,11 @@ final class Admission
 
     /**
      * Count what fits and say what waits: the first new products in the order given fill what is
-     * left of the allowance; `waiting` lists the ones over it (empty with overage on).
+     * left of the allowance; with overage on, the next ones go ahead as far as the available credits
+     * pay their fee. `waiting` lists the rest, and `waiting_for` why: the allowance or credits.
      *
      * @param  list<int>  $productIds  in the order the work was planned
-     * @return array{held: bool, new: int, over: int, allowance: int|null, used: int, resets_at: string, waiting: list<int>}
+     * @return array{held: bool, new: int, over: int, allowance: int|null, used: int, resets_at: string, waiting: list<int>, waiting_for: 'allowance'|'credits'}
      */
     public function admit(Tenant $tenant, array $productIds): array
     {
@@ -53,25 +59,100 @@ final class Admission
         [$result, $new, $start] = $this->count($entitlements, $productIds);
         $overage = $this->overageAllowed($entitlements, $tenant);
         $fits = count($new) - $result['over'];
-        $counted = $overage ? $new : array_slice($new, 0, $fits);
-        $waiting = $overage ? [] : array_slice($new, $fits);
+        $fee = $overage ? (int) PlanCatalog::overageCreditsPerProduct($entitlements->plan()) * Millicredits::PER_CREDIT : 0;
 
+        $paid = $this->record($tenant, $entitlements, $start, array_slice($new, 0, $fits), $overage ? array_slice($new, $fits) : [], $fee);
+        $waiting = array_slice($new, $fits + $paid);
+        $waitingFor = $overage ? 'credits' : 'allowance';
+
+        $this->tellUsage($tenant, $entitlements, $result, $start);
+        if ($waiting !== []) {
+            $waitingFor === 'credits'
+                ? $this->tellOverageHeld($tenant, $entitlements, count($waiting), $fee, $start)
+                : $this->tellHeld($tenant, $entitlements, $result, $start);
+        }
+
+        return ['held' => $waiting !== [], ...$result, 'waiting' => $waiting, 'waiting_for' => $waitingFor];
+    }
+
+    /**
+     * Count the products that fit, and as many overage products as the available credits pay the
+     * fee of, and charge that fee, in one transaction. The wallet row is locked first, so what is
+     * available cannot change between counting and charging; a fee is charged only for products
+     * this call counted, so never twice.
+     *
+     * @param  list<int>  $fitting
+     * @param  list<int>  $overage  over the allowance, overage on
+     * @return int how many of the overage products go ahead
+     */
+    private function record(Tenant $tenant, TenantEntitlements $entitlements, string $start, array $fitting, array $overage, int $fee): int
+    {
+        return DB::transaction(function () use ($tenant, $entitlements, $start, $fitting, $overage, $fee): int {
+            $this->insert($tenant, $start, $fitting, false);
+            if ($overage === [] || $fee === 0) {
+                $this->insert($tenant, $start, $overage, true);
+
+                return count($overage);
+            }
+
+            $available = (int) DB::scalar('SELECT balance - reserved FROM credit_wallets WHERE tenant_id = ? FOR UPDATE', [$tenant->id], false);
+            $paid = min(count($overage), intdiv(max(0, $available), $fee));
+            $counted = $this->insert($tenant, $start, array_slice($overage, 0, $paid), true);
+            if ($counted > 0) {
+                $this->fee->handle($counted * $fee, 'overage', sprintf(
+                    'Overage: %s %s over the %s plan\'s allowance (period from %s)',
+                    number_format($counted), $counted === 1 ? 'product' : 'products', PlanCatalog::name($entitlements->plan()), $start,
+                ));
+            }
+
+            return $paid;
+        });
+    }
+
+    /**
+     * @param  list<int>  $productIds
+     * @return int how many were counted now (not already counted this period)
+     */
+    private function insert(Tenant $tenant, string $start, array $productIds, bool $overage): int
+    {
         $now = now();
-        foreach (array_chunk($counted, 1_000, true) as $chunk) {
-            DB::table('usage_products')->insertOrIgnore(array_map(static fn (int $productId, int $index): array => [
+        $counted = 0;
+        foreach (array_chunk($productIds, 1_000) as $chunk) {
+            $counted += DB::table('usage_products')->insertOrIgnore(array_map(static fn (int $productId): array => [
                 'tenant_id' => $tenant->id,
                 'period_start' => $start,
                 'product_id' => $productId,
-                'overage' => $index >= $fits,
+                'overage' => $overage,
                 'created_at' => $now,
-            ], $chunk, array_keys($chunk)));
-        }
-        $this->tellUsage($tenant, $entitlements, $result, $start);
-        if ($waiting !== []) {
-            $this->tellHeld($tenant, $entitlements, $result, $start);
+            ], $chunk));
         }
 
-        return ['held' => $waiting !== [], ...$result, 'waiting' => $waiting];
+        return $counted;
+    }
+
+    /**
+     * Room for at least one more product this period, for the workspace in context: unlimited,
+     * under the allowance, or overage on a paid plan with the credits for one more fee.
+     */
+    public function hasRoom(Tenant $tenant): bool
+    {
+        $entitlements = Entitlements::for($tenant);
+        $allowance = $entitlements->productAllowance();
+        if ($allowance === null || $entitlements->used('products') < $allowance) {
+            return true;
+        }
+        if (! $this->overageAllowed($entitlements, $tenant)) {
+            return false;
+        }
+        $fee = (int) PlanCatalog::overageCreditsPerProduct($entitlements->plan()) * Millicredits::PER_CREDIT;
+
+        return $this->available() >= $fee;
+    }
+
+    /** Credits the workspace in context can spend now: the balance less what running work holds. */
+    private function available(): int
+    {
+        return (int) (CreditWallet::query()->first()?->available() ?? 0);
     }
 
     /**
@@ -104,7 +185,7 @@ final class Admission
     private function tellUsage(Tenant $tenant, TenantEntitlements $entitlements, array $result, string $start): void
     {
         $allowance = $result['allowance'];
-        $after = $result['used'] + $result['new'] - ($tenant->overage_enabled && $entitlements->isPaid() ? 0 : $result['over']);
+        $after = min($result['used'] + $result['new'], $allowance ?? PHP_INT_MAX);
         // Once a period (the notice's key): the first admission that reaches 80%.
         if ($allowance === null || $allowance === 0 || $after < $allowance * self::HEADS_UP) {
             return;
@@ -129,6 +210,15 @@ final class Admission
         Notify::send($tenant->id, 'allowance', "allowance_held:{$start}", 'action', 'Products wait for the next period',
             "{$this->number($result['over'])} ".($result['over'] === 1 ? 'product is' : 'products are')." over the {$this->number((int) $result['allowance'])} products your {$plan} plan includes until {$this->date($result['resets_at'])}. The others are translated now; these start by themselves then, or at once when you upgrade.",
             'See the plans', '/app/billing/plans', email: true);
+    }
+
+    private function tellOverageHeld(Tenant $tenant, TenantEntitlements $entitlements, int $waiting, int $fee, string $start): void
+    {
+        $plan = PlanCatalog::name($entitlements->plan());
+        $each = intdiv($fee, Millicredits::PER_CREDIT);
+        Notify::send($tenant->id, 'overage', "overage_held:{$start}", 'action', 'Products over the allowance wait for credits',
+            "{$this->number($waiting)} ".($waiting === 1 ? 'product is' : 'products are')." over the products your {$plan} plan includes this period. Each is {$this->number($each)} credits as overage, and the workspace does not hold enough credits for them. They continue by themselves once there are credits.",
+            'See billing', '/app/billing', email: true);
     }
 
     private function number(int $value): string
