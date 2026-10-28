@@ -291,7 +291,7 @@ it('says before a start what it counts against the allowance, and what is over i
   renderPlan()
 
   expect(await screen.findByText(/2 products are over the 3 your plan includes until 2027-02-01/)).toHaveTextContent(
-    'Their translation waits until then, or starts at once when you upgrade.',
+    'They wait until then, or start at once when you upgrade; the others are translated now.',
   )
 })
 

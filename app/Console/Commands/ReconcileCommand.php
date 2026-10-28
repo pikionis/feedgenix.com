@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Domain\Billing\Entitlements;
 use App\Domain\Catalog\Actions\StartCatalogSync;
 use App\Domain\Export\Actions\QueueExportBuild;
 use App\Domain\Export\Jobs\BuildExportJob;
@@ -15,9 +14,11 @@ use App\Domain\Ingest\ImportStatus;
 use App\Domain\Ingest\Models\Import;
 use App\Domain\Ops\Work;
 use App\Domain\Tenancy\TenantContext;
+use App\Domain\Translation\Actions\AdmitWaitingWork;
 use App\Domain\Translation\Models\WorkUnit;
 use App\Domain\Translation\RunProgress;
 use App\Domain\Translation\WorkDispatcher;
+use App\Models\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -26,7 +27,8 @@ use Symfony\Component\Console\Attribute\AsCommand;
  * The one reconciler (ADR 0006), every minute on one server. It never fetches a feed and never
  * calls AI. Each pass: expired leases go back to pending; units held for credits or AI are tried
  * again after five minutes (the executor holds them again if the cause remains); units held for
- * the allowance resume in a new period; runs whose units are all finished advance; a file that
+ * the allowance are counted once there is room again (a new period, an upgrade), and what fits
+ * runs (ADR 0027); runs whose units are all finished advance; a file that
  * arrived while its feed was busy is read now that it is free (ADR 0019); exports whose catalogue
  * changed since their last build are built while nothing reads or translates the feed, and builds
  * killed mid-way are marked failed (ADR 0022); then the dispatcher pumps every workspace.
@@ -36,7 +38,7 @@ final class ReconcileCommand extends Command
 {
     private const array RETRY_HOLDS = ['credits', 'ai_disabled', 'unpriced_model', 'provider_unavailable', 'ai_paused', 'reservation_exhausted', 'owner_unverified'];
 
-    public function handle(TenantContext $context, WorkDispatcher $dispatcher, StartCatalogSync $sync, QueueExportBuild $exports): int
+    public function handle(TenantContext $context, WorkDispatcher $dispatcher, StartCatalogSync $sync, QueueExportBuild $exports, AdmitWaitingWork $admitWaiting): int
     {
         $touched = $context->runAsSystem('reconcile AI work', function (): array {
             $runs = [];
@@ -48,18 +50,23 @@ final class ReconcileCommand extends Command
             $runs = [...$runs, ...(clone $retry)->pluck('run_id')->all()];
             $released = $retry->update(['status' => 'pending', 'hold_reason' => null]);
 
-            $allowance = 0;
-            foreach (WorkUnit::query()->where('status', 'held')->where('hold_reason', 'allowance')->get(['id', 'tenant_id', 'run_id', 'updated_at']) as $unit) {
-                if ($unit->updated_at !== null && $unit->updated_at->lessThan(Entitlements::for($unit->tenant_id)->period()['start'])) {
-                    WorkUnit::query()->whereKey($unit->id)->update(['status' => 'pending', 'hold_reason' => null]);
-                    $runs[] = $unit->run_id;
-                    $allowance++;
-                }
-            }
-            $this->line("Requeued {$requeued} expired lease(s), released {$released} hold(s) and {$allowance} for a new period.");
+            $this->line("Requeued {$requeued} expired lease(s) and released {$released} hold(s).");
 
             return array_values(array_unique(array_map(intval(...), $runs)));
         });
+
+        // Work waiting for the allowance is counted, once there is room again, before it runs (ADR 0027).
+        $waiting = $context->runAsSystem('find workspaces with work waiting for the allowance', static fn (): array => WorkUnit::query()
+            ->where('status', 'held')->where('hold_reason', 'allowance')->distinct()->pluck('tenant_id')->map(intval(...))->all());
+        $admitted = [];
+        foreach ($waiting as $tenantId) {
+            $tenant = Tenant::query()->find($tenantId);
+            if ($tenant instanceof Tenant) {
+                $admitted = [...$admitted, ...$context->run($tenantId, static fn (): array => $admitWaiting->handle($tenant))];
+            }
+        }
+        $touched = array_values(array_unique([...$touched, ...$admitted]));
+        $this->line('Admitted waiting work of '.count($admitted).' run(s).');
 
         foreach ($touched as $runId) {
             $tenant = $context->runAsSystem('find the workspace of a run', static fn (): ?int => WorkUnit::query()->where('run_id', $runId)->value('tenant_id'));

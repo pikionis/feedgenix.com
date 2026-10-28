@@ -20,9 +20,10 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Turns the plan into work: "keep" fields and the translation memory's repeats are written at
- * once at no cost; everything else is cut into work units (one field, one source and one target
- * language, a bounded batch), counted against the allowance, and handed to the dispatcher. The
- * plan that was started is saved as it was shown.
+ * once at no cost; everything else is cut into batches (one field, one source and one target
+ * language, bounded), counted against the allowance, and made work units: the products admitted go
+ * to the dispatcher, the ones over the allowance wait in units of their own (ADR 0027). The plan
+ * that was started is saved as it was shown.
  */
 final readonly class StartTranslation
 {
@@ -50,33 +51,46 @@ final readonly class StartTranslation
         $run = $running ?? $this->newRun($feed);
         $run->forceFill(['stage' => 'translate', 'status' => 'running', 'started_at' => $run->started_at ?? now()])->save();
 
-        $counts = ['kept' => 0, 'memory' => 0, 'planned' => 0, 'units' => 0];
+        $counts = ['kept' => 0, 'memory' => 0, 'planned' => 0, 'units' => 0, 'units_waiting' => 0];
         $products = [];
+        $batches = [];
         $preferred = $this->planner->preferredSource($feed);
         foreach ($plan->fields as $field => $mode) {
             if ($mode === 'skip') {
                 continue;
             }
             foreach ($this->planner->targets($plan) as $target) {
-                $this->plan($run, $feed, (string) $field, (string) $mode, (string) $target, $preferred, $counts, $products);
+                $this->plan($feed, (string) $field, (string) $mode, (string) $target, $preferred, $counts, $products, $batches);
             }
         }
-
         $admission = $this->admission->admit(Tenant::query()->findOrFail($feed->tenant_id), array_keys($products));
+        $waiting = array_fill_keys($admission['waiting'], true);
+        foreach ($batches as $batch) {
+            // One batch, two units at most: what was admitted runs, what is over the allowance waits.
+            $admitted = array_filter($batch['items'], static fn (string $hash, int|string $productId): bool => ! isset($waiting[(int) $productId]), ARRAY_FILTER_USE_BOTH);
+            $held = array_diff_key($batch['items'], $admitted);
+            if ($admitted !== []) {
+                $this->unit($run, $feed, $batch, $admitted);
+                $counts['units']++;
+            }
+            if ($held !== []) {
+                $this->unit($run, $feed, $batch, $held, 'allowance');
+                $counts['units_waiting']++;
+            }
+        }
+        $finished = $counts['units'] === 0 && $counts['units_waiting'] === 0;
         $run->forceFill([
             'counts' => [...$counts, 'products' => count($products), 'over_allowance' => $admission['over']],
-            'status' => $admission['held'] ? 'held' : ($counts['units'] === 0 ? 'done' : 'running'),
-            'stage' => $counts['units'] === 0 && ! $admission['held'] ? 'done' : 'translate',
-            'finished_at' => $counts['units'] === 0 && ! $admission['held'] ? now() : null,
+            'status' => $finished ? 'done' : ($counts['units'] === 0 ? 'held' : 'running'),
+            'stage' => $finished ? 'done' : 'translate',
+            'finished_at' => $finished ? now() : null,
             'warnings' => $admission['held'] ? [[
                 'code' => 'allowance',
-                'message' => "{$admission['over']} products are over this period's allowance. Upgrade, or the translation waits until ".substr($admission['resets_at'], 0, 10).'.',
-                'count' => $admission['over'],
+                'message' => count($admission['waiting']).' products are over this period\'s allowance: they wait until '.substr($admission['resets_at'], 0, 10).', or start at once when you upgrade.',
+                'count' => count($admission['waiting']),
             ]] : [],
         ])->save();
-        if ($admission['held']) {
-            WorkUnit::query()->where('run_id', $run->id)->where('status', 'pending')->update(['status' => 'held', 'hold_reason' => 'allowance']);
-        } else {
+        if ($counts['units'] > 0) {
             $this->dispatcher->pump($feed->tenant_id);
         }
         // Kept texts and the memory's repeats were written at once.
@@ -88,11 +102,12 @@ final readonly class StartTranslation
     /**
      * @param  array<string, int>  $counts
      * @param  array<int, true>  $products
+     * @param  list<array{field: string, source: string, target: string, items: array<int|string, string>}>  $batches
      */
-    private function plan(PipelineRun $run, Feed $feed, string $field, string $mode, string $target, ?string $preferred, array &$counts, array &$products): void
+    private function plan(Feed $feed, string $field, string $mode, string $target, ?string $preferred, array &$counts, array &$products, array &$batches): void
     {
-        /** @var array<string, array{items: array<int|string, string>, bytes: int}> $batches by source language; items: product id => source hash */
-        $batches = [];
+        /** @var array<string, array{items: array<int|string, string>, bytes: int}> $open by source language; items: product id => source hash */
+        $open = [];
         foreach ($this->planner->pending($feed, $field, $target, $preferred) as $row) {
             $values = (array) $row;
             $productId = (int) $values['product_id'];
@@ -115,38 +130,39 @@ final readonly class StartTranslation
                 continue;
             }
 
-            $batches[$source] ??= ['items' => [], 'bytes' => 0];
-            $batches[$source]['items'][(string) $productId] = $hash;
-            $batches[$source]['bytes'] += strlen($text);
+            $open[$source] ??= ['items' => [], 'bytes' => 0];
+            $open[$source]['items'][(string) $productId] = $hash;
+            $open[$source]['bytes'] += strlen($text);
             $products[$productId] = true;
             $counts['planned']++;
-            if (count($batches[$source]['items']) >= UnitSizing::maxItems($field) || $batches[$source]['bytes'] >= UnitSizing::MAX_BYTES) {
-                $this->unit($run, $feed, $field, $source, $target, $batches[$source]['items'], $counts);
-                $batches[$source] = ['items' => [], 'bytes' => 0];
+            if (count($open[$source]['items']) >= UnitSizing::maxItems($field) || $open[$source]['bytes'] >= UnitSizing::MAX_BYTES) {
+                $batches[] = ['field' => $field, 'source' => $source, 'target' => $target, 'items' => $open[$source]['items']];
+                $open[$source] = ['items' => [], 'bytes' => 0];
             }
         }
-        foreach ($batches as $source => $batch) {
+        foreach ($open as $source => $batch) {
             if ($batch['items'] !== []) {
-                $this->unit($run, $feed, $field, (string) $source, $target, $batch['items'], $counts);
+                $batches[] = ['field' => $field, 'source' => (string) $source, 'target' => $target, 'items' => $batch['items']];
             }
         }
     }
 
     /**
+     * @param  array{field: string, source: string, target: string}  $batch
      * @param  array<int|string, string>  $items  product id => source hash
-     * @param  array<string, int>  $counts
      */
-    private function unit(PipelineRun $run, Feed $feed, string $field, string $source, string $target, array $items, array &$counts): void
+    private function unit(PipelineRun $run, Feed $feed, array $batch, array $items, ?string $holdReason = null): void
     {
         WorkUnit::query()->forceCreate([
             'run_id' => $run->id,
             'feed_id' => $feed->id,
-            'field' => $field,
-            'source_locale' => $source,
-            'target_locale' => $target,
+            'field' => $batch['field'],
+            'source_locale' => $batch['source'],
+            'target_locale' => $batch['target'],
             'items' => $items,
+            'status' => $holdReason === null ? 'pending' : 'held',
+            'hold_reason' => $holdReason,
         ]);
-        $counts['units']++;
     }
 
     private function newRun(Feed $feed): PipelineRun

@@ -39,7 +39,7 @@ it('gives a heads-up at 80% of the allowance, once a period, by email', function
 
     $notices = noticesOf($tenant);
     expect($notices)->toHaveCount(1)
-        ->and($notices[0])->toMatchArray(['kind' => 'usage', 'level' => 'warn', 'title' => "80% of this period's products used", 'action_path' => '/app/settings'])
+        ->and($notices[0])->toMatchArray(['kind' => 'usage', 'level' => 'warn', 'title' => "80% of this period's products used", 'action_path' => '/app/billing/plans'])
         ->and($notices[0]['body'])->toContain('used 5 of the 6 products its Free plan includes', 'new products wait')
         ->and($notices[0]['emailed_at'])->not->toBeNull();
     Notification::assertSentTo(owner($tenant), NoticeMail::class, fn (NoticeMail $mail): bool => $mail->title === "80% of this period's products used");
@@ -62,7 +62,7 @@ it('says which products wait for the next period and what to do', function (): v
 
     $held = collect(noticesOf($tenant))->firstWhere('kind', 'allowance');
     expect($held)->toMatchArray(['level' => 'action', 'title' => 'Products wait for the next period'])
-        ->and($held['body'])->toContain('2 products are over the 3 products your Free plan includes', 'starts by itself then, or at once when you upgrade');
+        ->and($held['body'])->toContain('2 products are over the 3 products your Free plan includes', 'The others are translated now; these start by themselves then, or at once when you upgrade');
 });
 
 it('shows on the plan, before a start, what it would count against the allowance', function (): void {

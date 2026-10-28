@@ -300,7 +300,7 @@ function Allowance({ plan }: { plan: TranslationPlan }) {
       {over.toLocaleString('en')} {over === 1 ? 'product is' : 'products are'} over the {allowance.toLocaleString('en')}{' '}
       your plan includes until {until}.{' '}
       {held
-        ? 'Their translation waits until then, or starts at once when you upgrade.'
+        ? 'They wait until then, or start at once when you upgrade; the others are translated now.'
         : 'They go ahead as overage, charged per product.'}{' '}
       <Link to="/app/billing/plans" className="text-primary hover:text-primary-hover">
         See the plans

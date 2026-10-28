@@ -145,16 +145,24 @@ it('holds the work without credits, and resumes it by itself once they are there
     expect(targetsOf($tenant, 'en'))->toHaveCount(5)->and(latestRun($tenant, $feed)->status)->toBe('done');
 });
 
-it('waits at the allowance on Free, and counts no product twice', function (): void {
-    [$tenant, $feed, $fakes] = translatingWorkspace(['en']);
+it('translates what fits the allowance on Free and holds only the rest, uncounted', function (): void {
+    [$tenant, $feed] = translatingWorkspace(['en']);
     $tenant->forceFill(['limits_override' => ['products_per_month' => 3]])->save();
 
     $plan = startTranslation($tenant, $feed);
 
+    // Before ADR 0027 a run over the allowance held everything and counted nothing.
     expect($plan['run']['status'])->toBe('held')
-        ->and($plan['run']['warnings'][0]['code'])->toBe('allowance')
-        ->and($fakes['gemini']->calls)->toBe([])
-        ->and(tenancy()->run($tenant->id, fn (): int => DB::table('usage_products')->count()))->toBe(0);
+        ->and($plan['run']['warnings'][0]['code'])->toBe('held_allowance')
+        ->and(targetsOf($tenant, 'en'))->toHaveCount(3)
+        ->and(tenancy()->run($tenant->id, fn (): int => DB::table('usage_products')->count()))->toBe(3)
+        // Each batch split in two: what fits is done, the rest waits; nothing is pending.
+        ->and(array_keys(unitStatuses($tenant)))->toEqualCanonicalizing(['done', 'held']);
+
+    // Started again in the same period: nothing is counted twice, the rest still waits.
+    startTranslation($tenant, $feed);
+    expect(tenancy()->run($tenant->id, fn (): int => DB::table('usage_products')->count()))->toBe(3)
+        ->and(targetsOf($tenant, 'en'))->toHaveCount(3);
 });
 
 it('lets a paid plan go over the allowance, flagging the overage', function (): void {
