@@ -127,11 +127,11 @@ it('never charges a fee for a product counted without one: Free waits, it does n
 it('takes a fee all or nothing, only as overage, and never below one millicredit', function (): void {
     $tenant = Tenant::factory()->create();
     tenancy()->run($tenant->id, fn () => resolve(GrantCredits::class)->handle(5_000));
-    $charge = fn (int $millicredits, string $kind = 'overage') => tenancy()->run($tenant->id, fn () => resolve(ChargeFee::class)->handle($millicredits, $kind, 'test'));
+    $charge = fn (int $millicredits, string $kind = 'overage'): mixed => tenancy()->run($tenant->id, fn () => resolve(ChargeFee::class)->handle($millicredits, $kind, 'test'));
 
-    expect(fn () => $charge(6_000))->toThrow(InsufficientCredits::class)
-        ->and(fn () => $charge(0))->toThrow(InvalidArgumentException::class)
-        ->and(fn () => $charge(1_000, 'ai_usage'))->toThrow(InvalidArgumentException::class)
+    expect(fn (): mixed => $charge(6_000))->toThrow(InsufficientCredits::class)
+        ->and(fn (): mixed => $charge(0))->toThrow(InvalidArgumentException::class)
+        ->and(fn (): mixed => $charge(1_000, 'ai_usage'))->toThrow(InvalidArgumentException::class)
         ->and(walletOf($tenant)?->balance)->toBe(5_000);
 
     $charge(5_000);
