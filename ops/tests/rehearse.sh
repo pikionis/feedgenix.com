@@ -432,7 +432,10 @@ expect_ok "and the worker runs it" wait_until 45 worker_on_live
 expect_ok "moving back is one re-run with the old flags" "$OPS/provision.sh" "${back_args[@]}"
 expect_ok "healthy on the old name again" healthy
 expect_ok ".env names the old name again" grep -qx "APP_URL=https://$DOMAIN" "$ENV_FILE"
-expect_ok "the new name is no longer FeedGenix's" test "$(answer "$NEW" "https://$NEW/api/health")" != "200 "
+# (Not by asking it: on a dedicated server FeedGenix is nginx's only, so default, site for any name.)
+served_names() { nginx -T 2>/dev/null | awk '$1 == "server_name" { for (i = 2; i <= NF; i++) { gsub(";", "", $i); print $i } }' | sort -u; }
+expect_ok "no server block names the new names any more" bash -c \
+  "$(declare -f served_names); names=\$(served_names); ! grep -qxF '$NEW' <<<\"\$names\" && ! grep -qxF 'www.$NEW' <<<\"\$names\" && grep -qxF '$DOMAIN' <<<\"\$names\""
 expect_ok "feedgenix-check passes" feedgenix-check
 
 section "Restarts"
