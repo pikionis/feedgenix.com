@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, LayoutGrid, type LucideIcon, Rss, Settings, ShieldCheck } from 'lucide-react'
+import { Bell, CreditCard, LayoutGrid, type LucideIcon, Rss, Settings, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, redirect, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet, redirect, useNavigate } from 'react-router'
 import { Logo } from '~/components/brand/logo'
 import { Button } from '~/components/ui/button'
 import { Notice } from '~/components/ui/notice'
@@ -78,6 +78,9 @@ export default function AppLayout() {
             Feeds
           </NavItem>
           <NoticesItem />
+          <NavItem to="/app/billing" icon={CreditCard}>
+            Billing
+          </NavItem>
           <NavItem to="/app/settings" icon={Settings}>
             Settings
           </NavItem>
@@ -144,24 +147,29 @@ function Usage() {
   ]
 
   return (
-    <dl aria-label="Plan usage" className="hidden flex-col gap-3 px-2 text-xs lg:order-3 lg:mt-auto lg:flex">
-      {rows.map((row) => (
-        <div key={row.label}>
-          <div className="flex justify-between text-muted-foreground">
-            <dt>{row.label}</dt>
-            <dd>{row.limit === null ? `${row.used} · unlimited` : `${row.used} of ${row.limit}`}</dd>
-          </div>
-          {row.limit !== null && (
-            <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface" aria-hidden="true">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${Math.min(100, (row.used / Math.max(1, row.limit)) * 100)}%` }}
-              />
+    <div className="hidden flex-col gap-3 px-2 text-xs lg:order-3 lg:mt-auto lg:flex">
+      <dl aria-label="Plan usage" className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <div key={row.label}>
+            <div className="flex justify-between text-muted-foreground">
+              <dt>{row.label}</dt>
+              <dd>{row.limit === null ? `${row.used} · unlimited` : `${row.used} of ${row.limit}`}</dd>
             </div>
-          )}
-        </div>
-      ))}
-    </dl>
+            {row.limit !== null && (
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface" aria-hidden="true">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${Math.min(100, (row.used / Math.max(1, row.limit)) * 100)}%` }}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </dl>
+      <Link to="/app/billing/plans" className="text-primary hover:text-primary-hover">
+        See plans
+      </Link>
+    </div>
   )
 }
 

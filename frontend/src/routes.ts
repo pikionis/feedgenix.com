@@ -19,6 +19,9 @@ export default [
     route('feeds/:feedId/products', 'routes/app/products.tsx'),
     route('feeds/:feedId/publish', 'routes/app/publish.tsx'),
     route('notices', 'routes/app/notices.tsx'),
+    route('billing', 'routes/app/billing.tsx'),
+    route('billing/plans', 'routes/app/plans.tsx'),
+    route('billing/checkout', 'routes/app/checkout.tsx'),
     route('settings', 'routes/app/settings.tsx'),
   ]),
 

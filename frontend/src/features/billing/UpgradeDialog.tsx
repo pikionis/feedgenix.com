@@ -76,7 +76,7 @@ export function UpgradeDialog() {
               <Button variant="secondary">Not now</Button>
             </DialogClose>
             <Button asChild>
-              <Link to="/app/settings#plan" onClick={() => setHit(null)}>
+              <Link to="/app/billing/plans" onClick={() => setHit(null)}>
                 {target !== null ? `See ${target.name}` : 'See plans'}
               </Link>
             </Button>

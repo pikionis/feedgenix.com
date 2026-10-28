@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
@@ -96,6 +96,7 @@ function MappingView({ feedId, mapping, back }: { feedId: number; mapping: Mappi
           key={group.title}
           title={group.title}
           note={group.note}
+          golden={group.classes.includes('golden')}
           fields={mapping.available_fields.filter((field) => group.classes.includes(field.class))}
           mapping={mapping}
           sourceLocale={sourceLocale}
@@ -167,6 +168,7 @@ function FeedLanguage({
 }
 
 function FieldGroup({
+  golden,
   title,
   note,
   fields,
@@ -176,6 +178,7 @@ function FieldGroup({
   busyKey,
   onChange,
 }: {
+  golden: boolean
   title: string
   note: string
   fields: CanonicalField[]
@@ -210,7 +213,15 @@ function FieldGroup({
 
   return (
     <Card className="flex flex-col">
-      <h2 className="font-medium">{title}</h2>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h2 className="font-medium">{title}</h2>
+        {golden && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-warm px-2.5 py-0.5 text-xs font-medium">
+            <Lock size={12} strokeWidth={1.5} aria-hidden="true" />
+            Golden Rule
+          </span>
+        )}
+      </div>
       <p className="text-sm text-muted-foreground">{note}</p>
       <ul className="divide-y divide-hairline">{shown.map(render)}</ul>
       {more.length > 0 && (

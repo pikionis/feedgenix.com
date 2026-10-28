@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, type ReactNode } from 'react'
-import { useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
+import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
-import { PlanCards } from '~/features/billing/PlanCards'
 import { PasswordForm, ProfileForm } from '~/features/workspace/AccountForms'
 import { LanguageSettings } from '~/features/workspace/LanguageSettings'
 import { workspaceQuery } from '~/features/workspace/queries'
@@ -92,8 +92,13 @@ export default function Settings() {
           <PasswordForm hasPassword={session.data.has_password} />
         </Card>
       </Section>
-      <Section id="plan" title="Plan" description="Upgrade any time. Yearly is paid once and saves 25%." wide>
-        <PlanCards current={workspace.data.plan.key} />
+      <Section id="plan" title="Plan and billing" description="Your plan, credits and invoices.">
+        <Card className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-sm">{workspace.data.plan.name} plan</p>
+          <Button asChild variant="secondary">
+            <Link to="/app/billing">Open billing</Link>
+          </Button>
+        </Card>
       </Section>
     </div>
   )

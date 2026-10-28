@@ -23,7 +23,7 @@ it('opens on a plan limit with the server’s wording, the numbers and the plan 
   expect(dialog).toHaveTextContent('You have reached your plan’s limit')
   expect(dialog).toHaveTextContent(languageLimit.message)
   expect(dialog).toHaveTextContent('2 / 1')
-  expect(await screen.findByRole('link', { name: 'See Pro' })).toHaveAttribute('href', '/app/settings#plan')
+  expect(await screen.findByRole('link', { name: 'See Pro' })).toHaveAttribute('href', '/app/billing/plans')
 })
 
 it('offers a conversation when no plan fits', async () => {

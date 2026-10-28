@@ -8,6 +8,12 @@ import { plansQuery } from '~/features/workspace/queries'
 import type { Plan } from '~/lib/api/types'
 import { cn } from '~/lib/utils'
 
+const CREDIT_FACTS = [
+  ['An estimate first', 'Every job shows what it will use before it starts, and is charged only what it used.'],
+  ['Credits never expire', 'Prepaid in packs of €10, €50 or €100, or the amount you choose.'],
+  ['From memory, at no cost', 'A text translated once is reused, never paid for twice.'],
+] as const
+
 /**
  * The public plans, read live from /api/plans so the page can never show a stale price. Prices,
  * public limits and features only: never a cost, a provider price or the credit markup.
@@ -36,6 +42,14 @@ export function Pricing() {
               <PlanCard key={plan.key} plan={plan} recommended={plan.key === plans.data.recommended} />
             ))}
           </div>
+          <ul className="mt-10 grid gap-3 md:grid-cols-3">
+            {CREDIT_FACTS.map(([title, body]) => (
+              <li key={title} className="rounded-lg bg-surface p-5">
+                <p className="font-medium">{title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+              </li>
+            ))}
+          </ul>
           <p className="mt-6 text-center text-sm text-faint">
             During the beta every account starts on Free; paid plans open with checkout.
           </p>

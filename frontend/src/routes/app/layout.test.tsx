@@ -62,7 +62,7 @@ it('has one navigation and one sign-out, with the plan and its usage', async () 
     within(nav)
       .getAllByRole('link')
       .map((link) => link.textContent),
-  ).toEqual(['Overview', 'Feeds', 'Notices', 'Settings'])
+  ).toEqual(['Overview', 'Feeds', 'Notices', 'Billing', 'Settings'])
   expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(1)
   expect(screen.getByText('Free plan')).toBeInTheDocument()
   // The fixture's Free plan: 0 of 1 feed, 0 of 1 language.

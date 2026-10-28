@@ -248,9 +248,10 @@ function Estimate({ plan, toAi }: { plan: TranslationPlan; toAi: number }) {
   if (!estimate.available) return <Notice tone="warn">{unavailableMessage(estimate.unavailable_reason)}</Notice>
 
   return (
-    <p className="text-sm">
-      {texts(toAi)} with AI: about <strong>{(estimate.about_credits ?? 0).toLocaleString('en')} credits</strong>, at
-      most {(estimate.at_most_credits ?? 0).toLocaleString('en')}.
+    <p className="rounded-lg bg-surface px-4 py-3 text-sm">
+      {texts(toAi)} with AI: about{' '}
+      <strong className="font-medium">{(estimate.about_credits ?? 0).toLocaleString('en')} credits</strong>, at most{' '}
+      {(estimate.at_most_credits ?? 0).toLocaleString('en')}.
     </p>
   )
 }

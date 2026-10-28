@@ -83,8 +83,13 @@ function FeedRow({ feed }: { feed: Feed }) {
 
   return (
     <li className="border-t-[0.5px] border-hairline first:border-t-0">
-      <Link to={`/app/feeds/${feed.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-subtle">
-        <Icon size={18} strokeWidth={1.5} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+      <Link
+        to={`/app/feeds/${feed.id}`}
+        className="flex items-center gap-4 px-5 py-3.5 transition-colors duration-200 hover:bg-subtle"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface text-muted-foreground">
+          <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
+        </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="truncate font-medium">{feed.name}</span>
           <span className="truncate text-sm text-muted-foreground">{facts.join(' · ')}</span>

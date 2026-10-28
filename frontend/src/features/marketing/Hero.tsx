@@ -10,7 +10,7 @@ export function Hero() {
     <section className="grid items-center gap-12 py-16 lg:grid-cols-2 lg:gap-16 lg:py-20">
       <div>
         <span className="inline-flex items-center rounded-full bg-primary-soft px-3 py-1.5 text-xs font-medium tracking-wide text-primary-hover">
-          Private beta · invite only
+          ✦ Private beta · invite only
         </span>
         <h1 className="mt-6 mb-5 text-3xl leading-[1.05] font-medium tracking-[-0.022em] sm:text-4xl">
           Ship your catalog in every language your buyers shop in.
