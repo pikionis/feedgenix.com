@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: staging
-      url: https://staging.feedgenix.com
+      url: https://feedgenix.com
     env:
       REVISION: ${{ github.event.workflow_run.head_sha || github.sha }}
       ACTION: ${{ inputs.action || 'deploy' }}

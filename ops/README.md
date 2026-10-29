@@ -96,7 +96,8 @@ certificate if DNS does not point here yet (re-run once it does).
 **4. CI deploys:**
 1. On a laptop: `ssh-keygen -t ed25519 -N '' -C feedgenix-ci-deploy -f feedgenix-deploy`.
 2. Copy `feedgenix-deploy.pub` to the server. Re-run step 3 with
-   `--deploy-key=/root/feedgenix-deploy.pub`.
+   `--deploy-key=/root/feedgenix-deploy.pub` (on the beta VPS today, with the names from "Moving the
+   site to another name").
 3. In GitHub, under *Settings → Secrets and variables → Actions*, add:
 
    | Kind | Name | Value |
@@ -237,6 +238,10 @@ Wait out the record's TTL, or, once `nslookup` from outside agrees, add `--skip-
 
 **Back to `staging.feedgenix.com`:** the same command with `--domain=staging.feedgenix.com` and no
 `--redirect-from`. Its old certificate is still there.
+
+**The beta moved on 2026-10-29.** Every later run on the beta VPS (a new deploy key, an upgrade) uses
+the command in step 3, with any extra flags. The first-setup command above names
+`staging.feedgenix.com`, so it would move the site back.
 
 ## Removing FeedGenix from the shared host
 ```bash
