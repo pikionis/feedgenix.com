@@ -15,7 +15,8 @@ use RuntimeException;
  *    is pinned to the first one, so DNS rebinding cannot switch it to an internal address;
  * 3. redirects are followed by hand, up to the limit, and every hop goes through 1 and 2 again;
  * 4. the body streams to disk up to the size cap, and a Content-Length that does not match what
- *    arrived is a cut-off download, not a feed.
+ *    arrived is a cut-off download, not a feed;
+ * 5. a login travels over https to the address's own origin only: a redirect elsewhere goes without it.
  *
  * 403 and 429 mean "come back later" (the legacy lesson: a rate limit is not a broken feed).
  */
@@ -32,9 +33,15 @@ final readonly class HttpFetcher implements Fetcher
         return new self(new DnsResolver, new CurlTransport, FetchSettings::fromConfig());
     }
 
-    public function fetch(string $url, string $destination, ?string $etag = null, ?string $lastModified = null, ?int $maxBytes = null): FetchResult
+    public function fetch(string $url, string $destination, ?string $etag = null, ?string $lastModified = null, ?int $maxBytes = null, ?Credentials $credentials = null): FetchResult
     {
         $maxBytes = min($maxBytes ?? PHP_INT_MAX, $this->settings->maxBytes);
+        $origin = UrlGuard::check($url);
+        $refusal = $credentials?->refusalFor($origin);
+        if ($refusal !== null) {
+            throw FetchFailed::because(FetchFailure::InvalidUrl, $refusal);
+        }
+
         $current = $url;
         for ($hop = 0; ; $hop++) {
             $target = UrlGuard::check($current);
@@ -46,6 +53,10 @@ final readonly class HttpFetcher implements Fetcher
             }
             if ($lastModified !== null) {
                 $headers['If-Modified-Since'] = $lastModified;
+            }
+            $loginSent = $credentials instanceof Credentials && $target->origin() === $origin->origin();
+            if ($loginSent) {
+                $headers = [...$headers, ...$credentials->httpHeaders()];
             }
 
             $sink = fopen($destination, 'wb');
@@ -73,7 +84,7 @@ final readonly class HttpFetcher implements Fetcher
                 return new FetchResult(true, 0, $current, etag: $etag, lastModified: $lastModified);
             }
 
-            $this->assertSuccess($status, $response);
+            $this->assertSuccess($status, $response, $credentials instanceof Credentials, $loginSent);
 
             $declared = $response->header('content-length');
             if ($declared !== null && ctype_digit($declared) && (int) $declared !== $response->bytes) {
@@ -110,15 +121,18 @@ final readonly class HttpFetcher implements Fetcher
         return $addresses[0];
     }
 
-    private function assertSuccess(int $status, TransportResponse $response): void
+    private function assertSuccess(int $status, TransportResponse $response, bool $hasLogin, bool $loginSent): void
     {
         if ($status >= 200 && $status < 300) {
             return;
         }
 
         throw match (true) {
-            $status === 403, $status === 429 => FetchFailed::because(FetchFailure::RateLimited, "The server refused for now (HTTP {$status}). FeedGenix will try again later.", $status, $this->retryAfter($response->header('retry-after'))),
-            $status === 401 => FetchFailed::because(FetchFailure::HttpStatus, 'The address needs a login (HTTP 401). Use a feed URL that works without one.', $status),
+            $status === 401 && $loginSent => FetchFailed::because(FetchFailure::LoginRefused, 'The server refused the login (HTTP 401). Check it in the feed’s source settings.', $status),
+            $status === 403 && $loginSent => FetchFailed::because(FetchFailure::RateLimited, 'The server refused for now (HTTP 403). Try again later; if it keeps refusing, check the login in the feed’s source settings.', $status, $this->retryAfter($response->header('retry-after'))),
+            $status === 403, $status === 429 => FetchFailed::because(FetchFailure::RateLimited, "The server refused for now (HTTP {$status}). Try again later.", $status, $this->retryAfter($response->header('retry-after'))),
+            $status === 401 && $hasLogin => FetchFailed::because(FetchFailure::HttpStatus, 'The address redirected to another server, which asks for a login (HTTP 401). The saved login is only sent to the feed’s own server.', $status),
+            $status === 401 => FetchFailed::because(FetchFailure::LoginNeeded, 'The address needs a login (HTTP 401). Add one in the feed’s source settings.', $status),
             $status === 404, $status === 410 => FetchFailed::because(FetchFailure::HttpStatus, "Nothing was found at this address (HTTP {$status}). Check it is still valid.", $status),
             default => FetchFailed::because(FetchFailure::HttpStatus, "The server answered HTTP {$status}.", $status),
         };

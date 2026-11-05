@@ -8,12 +8,14 @@ use App\Domain\Ingest\Fetch\FetchFailed;
 use App\Domain\Ingest\Fetch\UrlGuard;
 use App\Domain\Ingest\ParseOptions;
 use App\Http\Requests\App\Concerns\ValidatesParseOptions;
+use App\Http\Requests\App\Concerns\ValidatesSourceLogin;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreFeedRequest extends FormRequest
 {
     use ValidatesParseOptions;
+    use ValidatesSourceLogin;
 
     /**
      * @return array<string, mixed>
@@ -22,11 +24,12 @@ final class StoreFeedRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:1', 'max:120'],
-            // Without a URL the feed is fed by uploads.
-            'url' => ['nullable', 'string', 'max:2048', self::feedUrl()],
+            // Without a URL the feed is fed by uploads, and a login has nothing to open.
+            'url' => ['nullable', 'required_with:auth', 'string', 'max:2048', self::feedUrl()],
             // The size of the first file to upload, when known: a file the plan cannot read is
             // refused before the feed is made, so nothing is left behind.
             'upload_size' => ['nullable', 'integer', 'min:1', 'prohibits:url'],
+            ...$this->loginRules(),
             ...$this->parseOptionRules(),
         ];
     }

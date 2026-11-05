@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useForm, useWatch, type UseFormRegisterReturn } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { z } from 'zod'
 import { Button } from '~/components/ui/button'
@@ -11,9 +11,9 @@ import { Notice } from '~/components/ui/notice'
 import { workspaceQuery } from '~/features/workspace/queries'
 import { api } from '~/lib/api/client'
 import { applyServerErrors, zodResolver } from '~/lib/forms'
-import { cn } from '~/lib/utils'
 import { feedErrorMessage } from './errors'
 import { FileField, UploadProgressBar } from './FileField'
+import { ChoiceOption, EMPTY_LOGIN, HTTPS_ONLY, LoginFields, loginBody, loginIssues, loginValues } from './LoginFields'
 import { feedsQuery } from './queries'
 import { useFileUpload } from './useFileUpload'
 
@@ -22,14 +22,24 @@ const schema = z
     name: z.string().trim().min(1, { error: 'Name the feed.' }).max(120, { error: 'Use at most 120 characters.' }),
     source: z.enum(['url', 'upload']),
     url: z.string().trim(),
+    login: z.enum(['none', 'password', 'header']),
+    ...loginValues,
   })
   .superRefine((values, context) => {
-    if (values.source === 'url' && !/^https?:\/\/\S+$/i.test(values.url)) {
+    if (values.source !== 'url') return
+    if (!/^https?:\/\/\S+$/i.test(values.url)) {
       context.addIssue({ code: 'custom', path: ['url'], message: 'Enter the full address, starting with https://.' })
+    } else if (values.login !== 'none' && !/^https:/i.test(values.url)) {
+      context.addIssue({ code: 'custom', path: ['url'], message: HTTPS_ONLY })
+    }
+    if (values.login !== 'none') {
+      for (const [field, message] of loginIssues(values.login, values)) {
+        context.addIssue({ code: 'custom', path: [field], message })
+      }
     }
   })
 
-const DEFAULTS: z.input<typeof schema> = { name: '', source: 'url', url: '' }
+const DEFAULTS: z.input<typeof schema> = { name: '', source: 'url', url: '', login: 'none', ...EMPTY_LOGIN }
 
 /**
  * Add a feed: a URL is fetched and read at once; a file is uploaded in chunks, then read. Either
@@ -47,6 +57,7 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
   const [createdFeedId, setCreatedFeedId] = useState<number | null>(null)
   const { errors, isSubmitting } = form.formState
   const source = useWatch({ control: form.control, name: 'source' })
+  const login = useWatch({ control: form.control, name: 'login' })
 
   const open = async (feedId: number) => {
     await Promise.all([
@@ -70,7 +81,11 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
         // With a file, its size goes first: a file the plan cannot read is refused before a feed is made.
         body:
           values.source === 'url'
-            ? { name: values.name, url: values.url }
+            ? {
+                name: values.name,
+                url: values.url,
+                ...(values.login === 'none' ? {} : { auth: loginBody(values.login, values) }),
+              }
             : file === null
               ? { name: values.name }
               : { name: values.name, upload_size: file.size },
@@ -127,32 +142,62 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
         <fieldset className="flex flex-col gap-2" disabled={createdFeedId !== null || busy}>
           <legend className="mb-2 text-sm font-medium">Where the products come from</legend>
           <div className="grid grid-cols-2 gap-2">
-            <SourceOption value="url" current={source} register={form.register('source')}>
+            <ChoiceOption value="url" current={source} register={form.register('source')}>
               A URL
-            </SourceOption>
-            <SourceOption value="upload" current={source} register={form.register('source')}>
+            </ChoiceOption>
+            <ChoiceOption value="upload" current={source} register={form.register('source')}>
               A file
-            </SourceOption>
+            </ChoiceOption>
           </div>
         </fieldset>
 
         {source === 'url' ? (
-          <Field
-            label="Feed URL"
-            hint="Fetched now and whenever you ask. It stays private: only its host is shown."
-            error={errors.url?.message}
-          >
-            {(control) => (
-              <Input
-                type="url"
-                inputMode="url"
-                placeholder="https://shop.example/feed.xml"
-                autoComplete="off"
-                {...control}
-                {...form.register('url')}
+          <>
+            <Field
+              label="Feed URL"
+              hint="Fetched now and whenever you ask. It stays private: only its host is shown."
+              error={errors.url?.message}
+            >
+              {(control) => (
+                <Input
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://shop.example/feed.xml"
+                  autoComplete="off"
+                  {...control}
+                  {...form.register('url')}
+                />
+              )}
+            </Field>
+
+            <fieldset className="flex flex-col gap-2" disabled={busy}>
+              <legend className="mb-2 text-sm font-medium">Does this address need a login?</legend>
+              <div className="grid grid-cols-3 gap-2">
+                <ChoiceOption value="none" current={login} register={form.register('login')}>
+                  No
+                </ChoiceOption>
+                <ChoiceOption value="password" current={login} register={form.register('login')}>
+                  Password
+                </ChoiceOption>
+                <ChoiceOption value="header" current={login} register={form.register('login')}>
+                  Header
+                </ChoiceOption>
+              </div>
+            </fieldset>
+
+            {login !== 'none' && (
+              <LoginFields
+                kind={login}
+                register={(field) => form.register(field)}
+                errors={{
+                  username: errors.username?.message,
+                  password: errors.password?.message,
+                  headerName: errors.headerName?.message,
+                  headerValue: errors.headerValue?.message,
+                }}
               />
             )}
-          </Field>
+          </>
         ) : (
           <FileField
             file={file}
@@ -192,29 +237,5 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
         </div>
       </form>
     </Dialog>
-  )
-}
-
-function SourceOption({
-  value,
-  current,
-  register,
-  children,
-}: {
-  value: 'url' | 'upload'
-  current: string
-  register: UseFormRegisterReturn<'source'>
-  children: string
-}) {
-  return (
-    <label
-      className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md border-[0.5px] px-3 py-2 text-sm has-disabled:cursor-not-allowed has-disabled:opacity-60',
-        current === value ? 'border-primary bg-primary/5' : 'border-hairline hover:bg-surface',
-      )}
-    >
-      <input type="radio" value={value} className="accent-primary" {...register} />
-      {children}
-    </label>
   )
 }

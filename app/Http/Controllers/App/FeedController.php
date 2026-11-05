@@ -7,10 +7,10 @@ namespace App\Http\Controllers\App;
 use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanLimitExceeded;
 use App\Domain\Billing\PlanLimitsApplier;
+use App\Domain\Feeds\Actions\ChangeFeedSource;
 use App\Domain\Feeds\Actions\CreateFeed;
 use App\Domain\Feeds\Actions\DeleteFeed;
 use App\Domain\Feeds\Models\Feed;
-use App\Domain\Feeds\Models\FeedSource;
 use App\Domain\Ingest\Actions\QueueImport;
 use App\Domain\Ingest\FeedSizeLimit;
 use App\Domain\Ingest\Fetch\UrlGuard;
@@ -23,7 +23,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Validation\ValidationException;
 
 final class FeedController
 {
@@ -55,7 +54,7 @@ final class FeedController
             FeedSizeLimit::for(Entitlements::for($this->workspace()))->assertUploadFits($uploadSize, 'upload_size');
         }
 
-        $feed = $create->handle($this->workspace(), $request->name(), $request->url(), $request->parseOptions());
+        $feed = $create->handle($this->workspace(), $request->name(), $request->url(), $request->parseOptions(), $request->login());
         if ($feed->source === 'url') {
             $queue->fetch($feed);
         }
@@ -70,10 +69,11 @@ final class FeedController
     }
 
     /**
-     * Rename a feed, change its URL or its reading options (owner or admin). What is not sent is
-     * kept: an omitted URL never clears the stored one.
+     * Rename a feed, change its URL, its login or its reading options (owner or admin). What is not
+     * sent is kept: an omitted URL or login never clears the stored one, and `auth: null` removes the
+     * login. A new URL on another origin also drops the stored login, unless a new one comes with it.
      */
-    public function update(UpdateFeedRequest $request, Feed $feed): FeedResource
+    public function update(UpdateFeedRequest $request, Feed $feed, ChangeFeedSource $change): FeedResource
     {
         $this->authorizeManage($request);
 
@@ -86,16 +86,9 @@ final class FeedController
             $feed->fill(['parse_options' => $options->toArray()]);
         }
 
-        if ($request->has('url')) {
-            if ($feed->source !== 'url') {
-                throw ValidationException::withMessages(['url' => 'This feed is fed by uploads; create a URL feed instead.']);
-            }
-
-            $target = UrlGuard::check((string) $request->validated('url'));
-            // A new address: the old one's ETag and Last-Modified say nothing about it.
-            FeedSource::query()->where('feed_id', $feed->id)->firstOrFail()
-                ->fill(['url' => $target->url, 'host' => $target->host, 'etag' => null, 'last_modified' => null])
-                ->save();
+        if ($request->has('url') || $request->has('auth')) {
+            $target = $request->has('url') ? UrlGuard::check((string) $request->validated('url')) : null;
+            $change->handle($feed, $target, $request->has('auth'), $request->login());
         }
 
         $feed->save();

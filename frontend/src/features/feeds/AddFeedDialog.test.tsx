@@ -102,6 +102,87 @@ it('adds a URL feed and opens its page', async () => {
   expect(created).toEqual([{ name: 'Main shop', url: 'https://shop.example/feed.xml' }])
 })
 
+it('sends no login unless one was chosen, even after typing one and changing their mind', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('Main shop', 'https://shop.example/feed.xml')
+  await user.click(screen.getByLabelText('Password'))
+  await user.type(screen.getByLabelText('Username'), 'someone')
+  await user.click(screen.getByRole('radio', { name: 'No' }))
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
+  expect(created).toEqual([{ name: 'Main shop', url: 'https://shop.example/feed.xml' }])
+})
+
+it('adds a feed with a username and password, exactly as typed', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('Main shop', 'https://shop.example/feed.xml')
+  await user.click(screen.getByRole('radio', { name: 'Password' }))
+  await user.type(screen.getByLabelText('Username'), ' someone ')
+  await user.type(screen.getByLabelText('Password', { selector: 'input[type=password]' }), '  pass phrase  ')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
+  expect(created).toEqual([
+    {
+      name: 'Main shop',
+      url: 'https://shop.example/feed.xml',
+      auth: { type: 'password', username: ' someone ', password: '  pass phrase  ' },
+    },
+  ])
+})
+
+it('adds a feed with a header login', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('Main shop', 'https://shop.example/feed.xml')
+  await user.click(screen.getByRole('radio', { name: 'Header' }))
+  await user.type(screen.getByLabelText('Header name'), 'X-Api-Key')
+  await user.type(screen.getByLabelText('Header value'), 'key-123')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
+  expect(created).toEqual([
+    {
+      name: 'Main shop',
+      url: 'https://shop.example/feed.xml',
+      auth: { type: 'header', name: 'X-Api-Key', value: 'key-123' },
+    },
+  ])
+})
+
+it('asks for what the login is missing, and refuses plain http, before sending anything', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('Main shop', 'http://shop.example/feed.xml')
+  await user.click(screen.getByRole('radio', { name: 'Password' }))
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Enter the username.')).toBeInTheDocument()
+  expect(screen.getByText('Enter the password.')).toBeInTheDocument()
+  expect(screen.getByText('A login is only ever sent over https. Use an https:// address.')).toBeInTheDocument()
+  expect(created).toEqual([])
+})
+
+it('keeps the browser from filling the login with what it saved for FeedGenix', async () => {
+  renderDialog()
+
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('radio', { name: 'Password' }))
+
+  expect(screen.getByLabelText('Username')).toHaveAttribute('autocomplete', 'off')
+  expect(screen.getByLabelText('Password', { selector: 'input[type=password]' })).toHaveAttribute(
+    'autocomplete',
+    'new-password',
+  )
+})
+
 it('checks the address before sending anything', async () => {
   acceptFeeds()
   renderDialog()

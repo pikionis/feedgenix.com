@@ -155,6 +155,7 @@ export function feed(overrides: Partial<Feed> = {}): Feed {
     name: 'Main shop',
     source: 'url',
     host: 'shop.example',
+    auth: null,
     status: 'active',
     parse_options: { encoding: null, delimiter: null, quoted: true, xml_item_path: null },
     latest_import: importSummary(),

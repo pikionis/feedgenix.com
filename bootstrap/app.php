@@ -27,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // The SPA is served from the same origin: Sanctum's cookie session for API requests.
         $middleware->statefulApi();
 
+        // A feed source's login reaches its server exactly as typed, spaces included (ADR 0030).
+        $middleware->trimStrings(except: ['auth.username', 'auth.password', 'auth.value']);
+
         $middleware->alias([
             'tenant' => ResolveTenant::class,
             'staff' => EnsureStaff::class,

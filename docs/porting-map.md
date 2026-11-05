@@ -57,7 +57,7 @@ code in its module, with its tests. Nothing is copied blindly.
 | D13 | 429 responses were never retried | M3 |
 | D14 | daily spend was not updated atomically | M3 |
 | D15 | checkpoint resume never actually resumed | M4 |
-| D16 | re-saving a URL import without credentials wiped the stored credentials | M8 |
+| D16 | re-saving a URL import without credentials wiped the stored credentials | M8 (fixed: ADR 0030) |
 | D17 | a stats route was reachable without authentication | M1 |
 | D18 | no rate limiting on authentication | M1 |
 | D19 | forgot-password revealed whether an account exists | M1 |
@@ -512,3 +512,12 @@ the scan, so a file it could not read had no record of its own.
 ### M7 · New — the overage fee (`Metering\Admission`, `Credits\Actions\ChargeFee`, ADR 0028)
 - **What:** on a paid plan with overage on, the products over the allowance are charged 10 credits each in the same transaction that counts them (the wallet row locked, only available credits, never twice); what the credits do not pay for waits as `overage_credits` and is admitted, and charged, once credits arrive. The ledger has a new kind, `overage`.
 - **Proof:** `tests/Feature/Credits/OverageFeeTest.php` (7 tests); 8 of 8 guard mutants caught (fee from held credits, the conditional debit removed, every overage product let in, no fee charged, fee-held work not re-admitted, retried blindly by the reconciler, credits never making room, waiting for the allowance instead of credits).
+
+### M8 · `FeedImportController::importUrl`, `FeedDownloadService::downloadHttp` (its login) → `Domain/Ingest/Fetch/Credentials`, `Domain/Feeds/Actions/ChangeFeedSource`, `features/feeds/{LoginFields,EditSourceDialog}` (ADR 0030)
+- **Kept:** a username and password on a URL feed.
+- **Fixed:**
+  - D16: saving a feed without the login wiped it; now only `auth: null` removes it, and an empty form is refused.
+  - The password sat in a plain column and in the queue payload; now it is encrypted, jobs carry ids, and no response or log shows it.
+  - A login could go over plain `http`, and could follow the address to any server; now https only, and one origin only, on redirects and on a changed address alike.
+- **New:** a request header as a login (`X-Api-Key`); the page says whether a login is missing or refused, and offers the source settings.
+- **Proof:** `tests/Feature/Ingest/SourceLoginTest.php`, the logins in `tests/Unit/Ingest/FetchTest.php`, the source settings on the feed page; 30 of 30 guard mutants caught (2 of them only after new tests: a final line break in a username, and a missing `#[SensitiveParameter]` hidden by `zend.exception_ignore_args`).

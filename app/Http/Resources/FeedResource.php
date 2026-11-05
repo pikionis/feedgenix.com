@@ -13,8 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * A feed and its latest import. A URL feed shows its host only: the full URL often carries an
- * access token and never leaves the server.
+ * A feed and its latest import. A URL feed shows its host and the kind of its login only: the full
+ * URL often carries an access token, and neither it nor the login ever leaves the server.
  *
  * @property Feed $resource
  */
@@ -39,6 +39,12 @@ final class FeedResource extends JsonResource
             /** @var 'url'|'upload' */
             'source' => $feed->source,
             'host' => $feed->feedSource?->host,
+            /**
+             * The kind of login saved for the URL; its values are never returned.
+             *
+             * @var 'password'|'header'|null
+             */
+            'auth' => $feed->feedSource?->auth_type,
             /** @var 'active'|'paused' */
             'status' => $feed->status,
             'parse_options' => [

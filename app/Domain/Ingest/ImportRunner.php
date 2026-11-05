@@ -140,6 +140,7 @@ final readonly class ImportRunner
             $conditional ? $source->etag : null,
             $conditional ? $source->last_modified : null,
             $size->bytes,
+            $source->login(),
         );
 
         $validators = ['etag' => $result->etag, 'last_modified' => $result->lastModified];

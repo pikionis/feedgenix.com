@@ -246,8 +246,9 @@ export interface paths {
     options?: never
     head?: never
     /**
-     * Rename a feed, change its URL or its reading options (owner or admin). What is not sent is
-     *     kept: an omitted URL never clears the stored one
+     * Rename a feed, change its URL, its login or its reading options (owner or admin). What is not
+     *     sent is kept: an omitted URL or login never clears the stored one, and `auth: null` removes the
+     *     login. A new URL on another origin also drops the stored login, unless a new one comes with it
      */
     patch: operations['feeds.update']
     trace?: never
@@ -1118,6 +1119,11 @@ export interface components {
       /** @enum {string} */
       source: 'url' | 'upload'
       host: string | null
+      /**
+       * @description The kind of login saved for the URL; its values are never returned.
+       * @enum {string|null}
+       */
+      auth: 'password' | 'header' | null
       /** @enum {string} */
       status: 'active' | 'paused'
       parse_options: {
@@ -1500,13 +1506,25 @@ export interface components {
     /** StoreFeedRequest */
     StoreFeedRequest: {
       name: string
-      /** @description Without a URL the feed is fed by uploads. */
+      /** @description Without a URL the feed is fed by uploads, and a login has nothing to open. */
       url?: string | null
       /**
        * @description The size of the first file to upload, when known: a file the plan cannot read is
        *     refused before the feed is made, so nothing is left behind.
        */
       upload_size?: number | null
+      /**
+       * @description The source's login: `password` needs username and password, `header` needs name and
+       *     value. An empty object is not "no login": only an explicit null removes one.
+       */
+      auth?: {
+        /** @enum {string} */
+        type: 'password' | 'header'
+        username?: string | null
+        password?: string | null
+        name?: string | null
+        value?: string | null
+      } | null
       parse_options?: {
         /** @enum {string|null} */
         encoding:
@@ -1610,11 +1628,23 @@ export interface components {
     }
     /**
      * UpdateFeedRequest
-     * @description Only what is sent changes: an omitted URL keeps the stored one (legacy D16).
+     * @description Only what is sent changes: an omitted URL or login keeps the stored one (legacy D16).
      */
     UpdateFeedRequest: {
       name?: string
       url?: string
+      /**
+       * @description The source's login: `password` needs username and password, `header` needs name and
+       *     value. An empty object is not "no login": only an explicit null removes one.
+       */
+      auth?: {
+        /** @enum {string} */
+        type: 'password' | 'header'
+        username?: string | null
+        password?: string | null
+        name?: string | null
+        value?: string | null
+      } | null
       parse_options?: {
         /** @enum {string|null} */
         encoding:

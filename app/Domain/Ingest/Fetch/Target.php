@@ -19,6 +19,12 @@ final readonly class Target
         return filter_var($this->host, FILTER_VALIDATE_IP) !== false;
     }
 
+    /** Scheme, host and port: what a login belongs to. */
+    public function origin(): string
+    {
+        return "{$this->scheme}://{$this->host}:{$this->port}";
+    }
+
     /** A Location header, absolute or relative, resolved against this URL. */
     public function resolve(string $location): string
     {

@@ -1,7 +1,7 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { beforeEach, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import type { Feed } from '~/lib/api/types'
 import { apiUrl, feed, feedImport, importSummary, sessionUser } from '~/test/fixtures'
 import { csrfCookie } from '~/test/handlers'
@@ -161,6 +161,196 @@ it('says how long a rate-limited source asked us to wait', async () => {
   renderFeed()
 
   expect(await screen.findByText(/try again in 10 minutes/)).toBeInTheDocument()
+})
+
+describe('the source', () => {
+  let patched: unknown[]
+
+  function acceptPatch(answer: () => Response = () => HttpResponse.json({ feed: feed({ auth: 'password' }) })) {
+    patched = []
+    server.use(
+      http.patch(apiUrl('/v1/feeds/7'), async ({ request }) => {
+        patched.push(await request.json())
+        return answer()
+      }),
+    )
+  }
+
+  it('says a login is saved, and never asks for the old one', async () => {
+    serveFeed(feed({ auth: 'password' }))
+    renderFeed()
+
+    expect(await screen.findByText('Fetched from shop.example with a saved login')).toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Source' }))
+
+    expect(await screen.findByRole('radio', { name: 'Keep the saved one' })).toBeChecked()
+    expect(screen.queryByLabelText('Username')).not.toBeInTheDocument()
+  })
+
+  it('D16: changing only the address sends no login, so the saved one stays', async () => {
+    serveFeed(feed({ auth: 'password' }))
+    acceptPatch()
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    await user.type(await screen.findByLabelText('New feed URL'), 'https://shop.example/new.xml')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(patched).toEqual([{ url: 'https://shop.example/new.xml' }]))
+  })
+
+  it('removes a saved login only when asked', async () => {
+    serveFeed(feed({ auth: 'header' }))
+    acceptPatch()
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    await user.click(await screen.findByRole('radio', { name: 'Remove it' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(patched).toEqual([{ auth: null }]))
+  })
+
+  it('saves a new login', async () => {
+    serveFeed(feed())
+    acceptPatch()
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    await user.click(await screen.findByRole('radio', { name: 'Password' }))
+    await user.type(screen.getByLabelText('Username'), 'someone')
+    await user.type(screen.getByLabelText('Password', { selector: 'input[type=password]' }), 'secret')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() =>
+      expect(patched).toEqual([{ auth: { type: 'password', username: 'someone', password: 'secret' } }]),
+    )
+  })
+
+  it('sends nothing when nothing changed', async () => {
+    serveFeed(feed({ auth: 'password' }))
+    acceptPatch()
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    await user.click(await screen.findByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(patched).toEqual([])
+  })
+
+  it('refuses a new login on an http address, and shows what the server refuses', async () => {
+    const reason = 'A login is only ever sent over https. Use an https:// address.'
+    serveFeed(feed())
+    acceptPatch(() => HttpResponse.json({ message: reason, errors: { auth: [reason] } }, { status: 422 }))
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    await user.type(await screen.findByLabelText('New feed URL'), 'http://shop.example/feed.xml')
+    await user.click(screen.getByRole('radio', { name: 'Header' }))
+    await user.type(screen.getByLabelText('Header name'), 'X-Key')
+    await user.type(screen.getByLabelText('Header value'), 'v')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText(reason)).toBeInTheDocument()
+    expect(patched).toEqual([])
+
+    await user.clear(screen.getByLabelText('New feed URL'))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(reason)
+    expect(patched).toHaveLength(1)
+  })
+
+  it('offers to change the login where a refused one is reported', async () => {
+    serveFeed(
+      feed({
+        auth: 'password',
+        latest_import: importSummary({
+          id: 101,
+          status: 'failed',
+          failure: {
+            reason: 'login_refused',
+            message: 'The server refused the login (HTTP 401). Check it in the feed’s source settings.',
+            retry_after_seconds: null,
+          },
+        }),
+      }),
+    )
+    server.use(
+      http.get(apiUrl('/v1/imports/101'), () =>
+        HttpResponse.json({ import: feedImport({ id: 101, can_reread: false }) }),
+      ),
+    )
+    renderFeed()
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Change the login' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Feed source' })).toBeInTheDocument()
+  })
+
+  it('offers to add a login when the source asks for one', async () => {
+    serveFeed(
+      feed({
+        latest_import: importSummary({
+          id: 101,
+          status: 'failed',
+          failure: {
+            reason: 'login_needed',
+            message: 'The address needs a login (HTTP 401). Add one in the feed’s source settings.',
+            retry_after_seconds: null,
+          },
+        }),
+      }),
+    )
+    server.use(
+      http.get(apiUrl('/v1/imports/101'), () =>
+        HttpResponse.json({ import: feedImport({ id: 101, can_reread: false }) }),
+      ),
+    )
+    renderFeed()
+
+    expect(await screen.findByRole('button', { name: 'Add the login' })).toBeInTheDocument()
+  })
+
+  it('offers no login where the failure has nothing to do with one', async () => {
+    serveFeed(feed({ latest_import: FAILED }))
+    server.use(
+      http.get(apiUrl('/v1/imports/101'), () =>
+        HttpResponse.json({ import: feedImport({ id: 101, can_reread: false }) }),
+      ),
+    )
+    renderFeed()
+
+    expect(await screen.findByText(/The XML is broken/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /the login/ })).not.toBeInTheDocument()
+  })
+
+  it('offers no source settings on a feed fed by uploads, or to a member', async () => {
+    serveFeed(feed({ source: 'upload', host: null }))
+    const { unmount } = renderFeed()
+    expect(await screen.findByRole('button', { name: 'Upload a new file' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Source' })).not.toBeInTheDocument()
+    unmount()
+
+    const base = sessionUser()
+    server.use(
+      http.get(apiUrl('/v1/auth/user'), () =>
+        HttpResponse.json({
+          user: { ...base, workspace: base.workspace === null ? null : { ...base.workspace, role: 'member' } },
+        }),
+      ),
+    )
+    serveFeed(feed())
+    renderFeed()
+    expect(await screen.findByRole('button', { name: 'Fetch now' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Source' })).not.toBeInTheDocument()
+  })
 })
 
 it('fetches on demand and follows the new import', async () => {

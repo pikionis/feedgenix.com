@@ -945,7 +945,7 @@
             },
             "patch": {
                 "operationId": "feeds.update",
-                "summary": "Rename a feed, change its URL or its reading options (owner or admin). What is not sent is\nkept: an omitted URL never clears the stored one",
+                "summary": "Rename a feed, change its URL, its login or its reading options (owner or admin). What is not\nsent is kept: an omitted URL or login never clears the stored one, and `auth: null` removes the\nlogin. A new URL on another origin also drops the stored login, unless a new one comes with it",
                 "tags": [
                     "Feed"
                 ],
@@ -988,14 +988,14 @@
                             }
                         }
                     },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             },
@@ -4858,6 +4858,18 @@
                             "null"
                         ]
                     },
+                    "auth": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The kind of login saved for the URL; its values are never returned.",
+                        "enum": [
+                            "password",
+                            "header",
+                            null
+                        ]
+                    },
                     "status": {
                         "type": "string",
                         "enum": [
@@ -5113,6 +5125,7 @@
                     "name",
                     "source",
                     "host",
+                    "auth",
                     "status",
                     "parse_options",
                     "latest_import",
@@ -6445,7 +6458,7 @@
                             "string",
                             "null"
                         ],
-                        "description": "Without a URL the feed is fed by uploads.",
+                        "description": "Without a URL the feed is fed by uploads, and a login has nothing to open.",
                         "maxLength": 2048
                     },
                     "upload_size": {
@@ -6455,6 +6468,57 @@
                         ],
                         "description": "The size of the first file to upload, when known: a file the plan cannot read is\nrefused before the feed is made, so nothing is left behind.",
                         "minimum": 1
+                    },
+                    "auth": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "The source's login: `password` needs username and password, `header` needs name and\nvalue. An empty object is not \"no login\": only an explicit null removes one.",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "password",
+                                    "header"
+                                ]
+                            },
+                            "username": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\x00-\\x1F\\x7F:]+$",
+                                "maxLength": 255
+                            },
+                            "password": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\x00-\\x1F\\x7F]+$",
+                                "maxLength": 1024
+                            },
+                            "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                                "maxLength": 64
+                            },
+                            "value": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\x00-\\x1F\\x7F]+$",
+                                "maxLength": 4096
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
                     },
                     "parse_options": {
                         "type": "object",
@@ -6807,7 +6871,7 @@
             },
             "UpdateFeedRequest": {
                 "type": "object",
-                "description": "Only what is sent changes: an omitted URL keeps the stored one (legacy D16).",
+                "description": "Only what is sent changes: an omitted URL or login keeps the stored one (legacy D16).",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -6817,6 +6881,57 @@
                     "url": {
                         "type": "string",
                         "maxLength": 2048
+                    },
+                    "auth": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "The source's login: `password` needs username and password, `header` needs name and\nvalue. An empty object is not \"no login\": only an explicit null removes one.",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "password",
+                                    "header"
+                                ]
+                            },
+                            "username": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\x00-\\x1F\\x7F:]+$",
+                                "maxLength": 255
+                            },
+                            "password": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\x00-\\x1F\\x7F]+$",
+                                "maxLength": 1024
+                            },
+                            "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                                "maxLength": 64
+                            },
+                            "value": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^[^\\x00-\\x1F\\x7F]+$",
+                                "maxLength": 4096
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
                     },
                     "parse_options": {
                         "type": "object",

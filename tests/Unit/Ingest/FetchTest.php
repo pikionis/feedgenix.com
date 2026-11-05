@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Ingest\Fetch\AddressPolicy;
+use App\Domain\Ingest\Fetch\Credentials;
 use App\Domain\Ingest\Fetch\FetchFailed;
 use App\Domain\Ingest\Fetch\FetchFailure;
 use App\Domain\Ingest\Fetch\FetchResult;
@@ -201,7 +202,23 @@ describe('fetching', function (): void {
 
         expect($failure->reason)->toBe(FetchFailure::HttpStatus)
             ->and($failure->getMessage())->toContain($says);
-    })->with([[401, 'login'], [404, 'Nothing was found'], [410, 'Nothing was found'], [500, 'HTTP 500']]);
+    })->with([[404, 'Nothing was found'], [410, 'Nothing was found'], [500, 'HTTP 500']]);
+
+    it('asks for a login on a 401 when the feed has none', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('https://shop.example/f.csv', 401);
+        $failure = fetchFailure(fn (): FetchResult => fetcher($network)->fetch('https://shop.example/f.csv', download()));
+
+        expect($failure->reason)->toBe(FetchFailure::LoginNeeded)
+            ->and($failure->status)->toBe(401);
+    });
+
+    it('sends no login when the feed has none', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('https://shop.example/f.csv', 200, 'sku');
+
+        fetcher($network)->fetch('https://shop.example/f.csv', download());
+
+        expect($network->requests[0]['headers'])->not->toHaveKey('Authorization');
+    });
 
     it('reports a host that does not resolve', function (): void {
         expect(fetchFailure(fn (): FetchResult => fetcher(new FakeFetchNetwork)->fetch('https://nowhere.example/f', download()))->reason)->toBe(FetchFailure::DnsFailed);
@@ -217,5 +234,148 @@ describe('fetching', function (): void {
         app()->detectEnvironment(fn (): string => 'production');
 
         expect(fn (): FetchSettings => FetchSettings::fromConfig())->toThrow(LogicException::class);
+    });
+});
+
+describe('logins', function (): void {
+    it('sends a password as Basic authentication, in UTF-8', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('https://shop.example/f.csv', 200, 'sku');
+
+        fetcher($network)->fetch('https://shop.example/f.csv', download(), credentials: Credentials::password('müller', 'pä:ss'));
+
+        expect($network->requests[0]['headers']['Authorization'])->toBe('Basic '.base64_encode('müller:pä:ss'));
+    });
+
+    it('keeps the login on a redirect within the origin', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])
+            ->respond('https://shop.example/a', 302, '', ['Location' => '/b'])
+            ->respond('https://shop.example/b', 200, 'sku');
+
+        fetcher($network)->fetch('https://shop.example/a', download(), credentials: Credentials::header('X-Key', 'k'));
+
+        expect(array_column(array_column($network->requests, 'headers'), 'X-Key'))->toBe(['k', 'k']);
+    });
+
+    it('never carries a login across a redirect to another origin', function (string $location, string $url): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])
+            ->dns('cdn.example', ['93.184.215.15'])->dns('sub.shop.example', ['93.184.215.16'])
+            ->respond('https://shop.example/a', 302, '', ['Location' => $location])
+            ->respond($url, 200, 'sku');
+
+        fetcher($network)->fetch('https://shop.example/a', download(), credentials: Credentials::password('u', 'p'));
+
+        expect($network->requests)->toHaveCount(2)
+            ->and($network->requests[0]['headers'])->toHaveKey('Authorization')
+            ->and($network->requests[1]['headers'])->not->toHaveKey('Authorization');
+    })->with([
+        'another host' => ['https://cdn.example/f.csv', 'https://cdn.example/f.csv'],
+        'a subdomain' => ['https://sub.shop.example/f.csv', 'https://sub.shop.example/f.csv'],
+        'another port' => ['https://shop.example:8443/f.csv', 'https://shop.example:8443/f.csv'],
+        'a downgrade to http' => ['http://shop.example/f.csv', 'http://shop.example/f.csv'],
+        'a protocol-relative host' => ['//cdn.example/f.csv', 'https://cdn.example/f.csv'],
+    ]);
+
+    it('sends a header login no further than the origin either', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->dns('cdn.example', ['93.184.215.15'])
+            ->respond('https://shop.example/a', 302, '', ['Location' => 'https://cdn.example/f.csv'])
+            ->respond('https://cdn.example/f.csv', 200, 'sku');
+
+        fetcher($network)->fetch('https://shop.example/a', download(), credentials: Credentials::header('X-Key', 'k'));
+
+        expect($network->requests[1]['headers'])->not->toHaveKey('X-Key');
+    });
+
+    it('treats a 401 on the way past the origin as a plain failure, not as a wrong login', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->dns('cdn.example', ['93.184.215.15'])
+            ->respond('https://shop.example/a', 302, '', ['Location' => 'https://cdn.example/f.csv'])
+            ->respond('https://cdn.example/f.csv', 401);
+
+        $failure = fetchFailure(fn (): FetchResult => fetcher($network)->fetch('https://shop.example/a', download(), credentials: Credentials::password('u', 'p')));
+
+        expect($failure->reason)->toBe(FetchFailure::HttpStatus)
+            ->and($failure->getMessage())->toContain('another server');
+    });
+
+    it('fails closed when a login meets plain http, whatever put it there', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('http://shop.example/f.csv', 200, 'sku');
+
+        $failure = fetchFailure(fn (): FetchResult => fetcher($network)->fetch('http://shop.example/f.csv', download(), credentials: Credentials::password('u', 'p')));
+
+        expect($failure->reason)->toBe(FetchFailure::InvalidUrl)
+            ->and($failure->getMessage())->toContain('https')
+            ->and($network->requests)->toBe([]);
+    });
+
+    it('calls a 401 with a login a refused login', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('https://shop.example/f.csv', 401);
+
+        $failure = fetchFailure(fn (): FetchResult => fetcher($network)->fetch('https://shop.example/f.csv', download(), credentials: Credentials::password('u', 'p')));
+
+        expect($failure->reason)->toBe(FetchFailure::LoginRefused)
+            ->and($failure->status)->toBe(401)
+            ->and($failure->getMessage())->toContain('refused the login');
+    });
+
+    it('names the login as a possible cause of a 403', function (): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('https://shop.example/f.csv', 403);
+
+        $failure = fetchFailure(fn (): FetchResult => fetcher($network)->fetch('https://shop.example/f.csv', download(), credentials: Credentials::password('u', 'p')));
+
+        expect($failure->reason)->toBe(FetchFailure::RateLimited)
+            ->and($failure->getMessage())->toContain('login');
+    });
+});
+
+describe('the login itself', function (): void {
+    it('refuses what could break out of a header', function (callable $make): void {
+        expect($make)->toThrow(InvalidArgumentException::class);
+    })->with([
+        'line break in a username' => [fn (): Credentials => Credentials::password("a\nb", 'p')],
+        'line break ending a username' => [fn (): Credentials => Credentials::password("a\n", 'p')],
+        'colon in a username' => [fn (): Credentials => Credentials::password('a:b', 'p')],
+        'empty username' => [fn (): Credentials => Credentials::password('', 'p')],
+        'line break ending a password' => [fn (): Credentials => Credentials::password('a', "p\n")],
+        'invalid UTF-8 in a password' => [fn (): Credentials => Credentials::password('a', "p\xFF")],
+        'empty password' => [fn (): Credentials => Credentials::password('a', '')],
+        'injection in a header value' => [fn (): Credentials => Credentials::header('X-Key', "v\r\nHost: x")],
+        'line break ending a header value' => [fn (): Credentials => Credentials::header('X-Key', "v\n")],
+        'a bad header name' => [fn (): Credentials => Credentials::header('X Key', 'v')],
+        'a line break ending a header name' => [fn (): Credentials => Credentials::header("X-Key\n", 'v')],
+        'a reserved header' => [fn (): Credentials => Credentials::header('HOST', 'v')],
+        'a conditional header' => [fn (): Credentials => Credentials::header('if-range', 'v')],
+        'a proxy header' => [fn (): Credentials => Credentials::header('proxy-authorization', 'v')],
+        'a stored login of an unknown kind' => [fn (): Credentials => Credentials::fromArray(['type' => 'magic'])],
+        'a stored login cut short' => [fn (): Credentials => Credentials::fromArray(['type' => 'password', 'username' => 'a'])],
+    ]);
+
+    it('comes back from storage the same', function (Credentials $login): void {
+        $again = Credentials::fromArray($login->toArray());
+
+        expect($again->type)->toBe($login->type)->and($again->httpHeaders())->toBe($login->httpHeaders());
+    })->with([
+        'password' => [fn (): Credentials => Credentials::password('a', 'b')],
+        'header' => [fn (): Credentials => Credentials::header('X-Key', 'v')],
+    ]);
+
+    it('hides its secret from dumps and stack traces', function (): void {
+        $login = Credentials::password('someone', 'top-secret');
+
+        expect(print_r($login, true))->not->toContain('top-secret')->not->toContain('someone');
+
+        // On, this setting strips every argument from traces, which would hide a missing guard.
+        $ignoreArgs = ini_set('zend.exception_ignore_args', '0');
+
+        try {
+            Credentials::password('someone', "top-secret\n");
+            $this->fail('expected a refusal');
+        } catch (InvalidArgumentException $refused) {
+            $frames = print_r($refused->getTrace(), true);
+
+            expect($refused->getMessage())->not->toContain('top-secret')
+                ->and($refused->getTraceAsString())->not->toContain('top-secret')
+                ->and($frames)->toContain('SensitiveParameterValue')->not->toContain('top-secret')->not->toContain('someone');
+        } finally {
+            ini_set('zend.exception_ignore_args', (string) $ignoreArgs);
+        }
     });
 });

@@ -15,6 +15,8 @@ enum FetchFailure: string
     case TlsFailed = 'tls_failed';
     case HttpStatus = 'http_status';
     case RateLimited = 'rate_limited';
+    case LoginNeeded = 'login_needed';
+    case LoginRefused = 'login_refused';
     case TooLarge = 'too_large';
     case TooManyRedirects = 'too_many_redirects';
     case Truncated = 'truncated';

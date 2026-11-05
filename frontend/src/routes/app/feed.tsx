@@ -7,6 +7,7 @@ import { Notice } from '~/components/ui/notice'
 import { PageHeader } from '~/components/ui/page-header'
 import { Rows, Section } from '~/components/ui/section'
 import { DeleteFeedDialog } from '~/features/feeds/DeleteFeedDialog'
+import { EditSourceDialog } from '~/features/feeds/EditSourceDialog'
 import { feedErrorMessage } from '~/features/feeds/errors'
 import { ImportHistory } from '~/features/feeds/ImportHistory'
 import { ImportProfile } from '~/features/feeds/ImportProfile'
@@ -56,10 +57,12 @@ function FeedView({ feed }: { feed: Feed }) {
   const session = useSession()
   const role = session.data?.workspace?.role
   const canManage = role === 'owner' || role === 'admin'
-  const [dialog, setDialog] = useState<'upload' | 'delete' | null>(null)
+  const [dialog, setDialog] = useState<'upload' | 'delete' | 'source' | null>(null)
   const latest = feed.latest_import
   const running = isRunning(latest?.status)
   const latestFailed = latest !== null && latest.status === 'failed'
+  // A login that is missing or refused is fixed in the source settings: offer them where it is said.
+  const loginFailed = latest?.failure?.reason === 'login_needed' || latest?.failure?.reason === 'login_refused'
   const failedImport = useQuery({ ...importQuery(latest?.id ?? 0), enabled: latestFailed })
   const profile = useQuery({ ...importQuery(feed.profile_import_id ?? 0), enabled: feed.profile_import_id !== null })
 
@@ -69,7 +72,11 @@ function FeedView({ feed }: { feed: Feed }) {
         <PageHeader
           back={{ to: '/app/feeds', label: 'Feeds' }}
           title={feed.name}
-          subtitle={feed.source === 'url' ? `Fetched from ${feed.host ?? 'its URL'}` : 'Fed by the files you upload'}
+          subtitle={
+            feed.source === 'url'
+              ? `Fetched from ${feed.host ?? 'its URL'}${feed.auth === null ? '' : ' with a saved login'}`
+              : 'Fed by the files you upload'
+          }
           actions={
             <>
               {feed.source === 'url' ? (
@@ -77,6 +84,11 @@ function FeedView({ feed }: { feed: Feed }) {
               ) : (
                 <Button disabled={running || feed.plan_paused} onClick={() => setDialog('upload')}>
                   Upload a new file
+                </Button>
+              )}
+              {canManage && feed.source === 'url' && (
+                <Button variant="ghost" onClick={() => setDialog('source')}>
+                  Source
                 </Button>
               )}
               {canManage && (
@@ -130,6 +142,13 @@ function FeedView({ feed }: { feed: Feed }) {
                 <span className="text-sm text-faint">{formatWhen(latest.created_at)}</span>
               </div>
               <p role="alert">{latest.failure.message}</p>
+              {loginFailed && canManage && (
+                <div>
+                  <Button size="sm" variant="secondary" onClick={() => setDialog('source')}>
+                    {feed.auth === null ? 'Add the login' : 'Change the login'}
+                  </Button>
+                </div>
+              )}
               {latest.failure.retry_after_seconds !== null && (
                 <p className="text-sm text-muted-foreground">
                   The source asked us to wait: try again in {formatWait(latest.failure.retry_after_seconds)}.
@@ -174,6 +193,7 @@ function FeedView({ feed }: { feed: Feed }) {
 
       {dialog === 'upload' && <UploadFileDialog feed={feed} onClose={() => setDialog(null)} />}
       {dialog === 'delete' && <DeleteFeedDialog feed={feed} onClose={() => setDialog(null)} />}
+      {dialog === 'source' && <EditSourceDialog feed={feed} onClose={() => setDialog(null)} />}
     </div>
   )
 }

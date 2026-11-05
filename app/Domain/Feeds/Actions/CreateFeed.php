@@ -8,11 +8,13 @@ use App\Domain\Billing\Entitlements;
 use App\Domain\Billing\PlanLimitExceeded;
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Feeds\Models\FeedSource;
+use App\Domain\Ingest\Fetch\Credentials;
 use App\Domain\Ingest\Fetch\Target;
 use App\Domain\Ingest\Fetch\UrlGuard;
 use App\Domain\Ingest\ParseOptions;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Creates a feed within the plan's feed limit. Concurrent creations are serialised on the
@@ -20,12 +22,19 @@ use Illuminate\Support\Facades\DB;
  */
 final class CreateFeed
 {
-    /** @throws PlanLimitExceeded */
-    public function handle(Tenant $workspace, string $name, ?string $url, ParseOptions $options): Feed
+    /**
+     * @throws PlanLimitExceeded
+     * @throws ValidationException when the login may not be used on this address
+     */
+    public function handle(Tenant $workspace, string $name, ?string $url, ParseOptions $options, ?Credentials $login = null): Feed
     {
         $target = $url === null ? null : UrlGuard::check($url);
+        $refusal = $target instanceof Target ? $login?->refusalFor($target) : null;
+        if ($refusal !== null) {
+            throw ValidationException::withMessages(['auth' => $refusal]);
+        }
 
-        return DB::transaction(static function () use ($workspace, $name, $target, $options): Feed {
+        return DB::transaction(static function () use ($workspace, $name, $target, $options, $login): Feed {
             $locked = Tenant::query()->whereKey($workspace->id)->lockForUpdate()->firstOrFail();
             Entitlements::for($locked)->assertWithin('feeds');
 
@@ -36,7 +45,13 @@ final class CreateFeed
             ]);
 
             if ($target instanceof Target) {
-                FeedSource::query()->create(['feed_id' => $feed->id, 'url' => $target->url, 'host' => $target->host]);
+                FeedSource::query()->create([
+                    'feed_id' => $feed->id,
+                    'url' => $target->url,
+                    'host' => $target->host,
+                    'auth_type' => $login?->type,
+                    'credentials' => $login?->toArray(),
+                ]);
             }
 
             return $feed;

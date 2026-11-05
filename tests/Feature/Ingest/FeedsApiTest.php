@@ -167,6 +167,8 @@ it('refuses a URL on an upload feed and bad reading options', function (): void 
     $feedId = (int) createFeed(owner($tenant), ['name' => 'Uploads'])->json('feed.id');
 
     $this->actingAs(owner($tenant))->patchJson("/api/v1/feeds/{$feedId}", ['url' => 'https://shop.example/f.csv'])->assertUnprocessable()->assertJsonValidationErrors('url');
+    $this->actingAs(owner($tenant))->patchJson("/api/v1/feeds/{$feedId}", ['name' => 'Renamed', 'url' => 'https://shop.example/f.csv'])->assertUnprocessable();
+    $this->actingAs(owner($tenant))->getJson("/api/v1/feeds/{$feedId}")->assertJsonPath('feed.name', 'Uploads');
     $this->actingAs(owner($tenant))->patchJson("/api/v1/feeds/{$feedId}", ['parse_options' => ['encoding' => 'EBCDIC']])->assertUnprocessable()->assertJsonValidationErrors('parse_options.encoding');
     $this->actingAs(owner($tenant))->patchJson("/api/v1/feeds/{$feedId}", ['parse_options' => ['delimiter' => ':']])->assertUnprocessable()->assertJsonValidationErrors('parse_options.delimiter');
     $this->actingAs(owner($tenant))->patchJson("/api/v1/feeds/{$feedId}", ['parse_options' => ['surprise' => 1]])->assertUnprocessable();
