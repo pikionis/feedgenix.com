@@ -149,6 +149,13 @@ function FeedView({ feed }: { feed: Feed }) {
                   </Button>
                 </div>
               )}
+              {latest.failure.reason === 'host_key_changed' && canManage && (
+                <div>
+                  <Button size="sm" variant="secondary" onClick={() => setDialog('source')}>
+                    Review the server key
+                  </Button>
+                </div>
+              )}
               {latest.failure.retry_after_seconds !== null && (
                 <p className="text-sm text-muted-foreground">
                   The source asked us to wait: try again in {formatWait(latest.failure.retry_after_seconds)}.

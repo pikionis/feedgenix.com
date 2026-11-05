@@ -17,7 +17,10 @@ import {
   addressIssue,
   ChoiceOption,
   EMPTY_LOGIN,
+  HostKeyField,
+  hostKeyIssue,
   isFeedAddress,
+  isSftp,
   LoginFields,
   loginBody,
   loginIssues,
@@ -33,7 +36,8 @@ const schema = z
     name: z.string().trim().min(1, { error: 'Name the feed.' }).max(120, { error: 'Use at most 120 characters.' }),
     source: z.enum(['url', 'upload']),
     url: z.string().trim(),
-    login: z.enum(['none', 'password', 'header']),
+    login: z.enum(['none', 'password', 'header', 'key']),
+    hostKey: z.string().trim(),
     ...loginValues,
   })
   .superRefine((values, context) => {
@@ -41,6 +45,11 @@ const schema = z
     if (!isFeedAddress(values.url)) {
       context.addIssue({ code: 'custom', path: ['url'], message: NOT_AN_ADDRESS })
     }
+    if (values.login === 'none' && isSftp(values.url)) {
+      context.addIssue({ code: 'custom', path: ['url'], message: 'An sftp:// address needs a login.' })
+    }
+    const fingerprint = isSftp(values.url) ? hostKeyIssue(values.hostKey) : undefined
+    if (fingerprint !== undefined) context.addIssue({ code: 'custom', path: ['hostKey'], message: fingerprint })
     if (values.login !== 'none') {
       const issue = addressIssue(values.login, values.url)
       if (issue !== undefined && isFeedAddress(values.url)) {
@@ -52,7 +61,14 @@ const schema = z
     }
   })
 
-const DEFAULTS: z.input<typeof schema> = { name: '', source: 'url', url: '', login: 'none', ...EMPTY_LOGIN }
+const DEFAULTS: z.input<typeof schema> = {
+  name: '',
+  source: 'url',
+  url: '',
+  login: 'none',
+  hostKey: '',
+  ...EMPTY_LOGIN,
+}
 
 /**
  * Add a feed: a URL is fetched and read at once; a file is uploaded in chunks, then read. Either
@@ -99,6 +115,7 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
                 name: values.name,
                 url: values.url,
                 ...(values.login === 'none' ? {} : { auth: loginBody(values.login, values) }),
+                ...(isSftp(values.url) && values.hostKey !== '' ? { host_key: values.hostKey } : {}),
               }
             : file === null
               ? { name: values.name }
@@ -169,7 +186,7 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
           <>
             <Field
               label="Feed URL"
-              hint="An https:// or ftp:// address. Fetched now and whenever you ask. It stays private: only its host is shown."
+              hint="An https://, ftp:// or sftp:// address. Fetched now and whenever you ask. It stays private: only its host is shown."
               error={errors.url?.message}
             >
               {(control) => (
@@ -186,7 +203,7 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
 
             <fieldset className="flex flex-col gap-2" disabled={busy}>
               <legend className="mb-2 text-sm font-medium">Does this address need a login?</legend>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <ChoiceOption value="none" current={login} register={form.register('login')}>
                   No
                 </ChoiceOption>
@@ -195,6 +212,9 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
                 </ChoiceOption>
                 <ChoiceOption value="header" current={login} register={form.register('login')}>
                   Header
+                </ChoiceOption>
+                <ChoiceOption value="key" current={login} register={form.register('login')}>
+                  Private key
                 </ChoiceOption>
               </div>
             </fieldset>
@@ -208,10 +228,19 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
                   password: errors.password?.message,
                   headerName: errors.headerName?.message,
                   headerValue: errors.headerValue?.message,
+                  privateKey: errors.privateKey?.message,
+                  passphrase: errors.passphrase?.message,
                 }}
               />
             )}
             {login === 'password' && /^ftp:/i.test(url.trim()) && <PlainFtpWarning />}
+            {isSftp(url) && (
+              <HostKeyField
+                hint="From your host. Left empty, the key the server shows on the first fetch is trusted, and any other is refused after that."
+                error={errors.hostKey?.message}
+                register={form.register('hostKey')}
+              />
+            )}
           </>
         ) : (
           <FileField

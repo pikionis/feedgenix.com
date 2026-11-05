@@ -246,9 +246,10 @@ export interface paths {
     options?: never
     head?: never
     /**
-     * Rename a feed, change its URL, its login or its reading options (owner or admin). What is not
-     *     sent is kept: an omitted URL or login never clears the stored one, and `auth: null` removes the
-     *     login. A new URL on another origin also drops the stored login, unless a new one comes with it
+     * Rename a feed, change its URL, its login, its trusted server key or its reading options (owner
+     *     or admin). What is not sent is kept: an omitted URL or login never clears the stored one, and
+     *     `auth: null` removes the login. A new URL on another origin also drops the stored login and
+     *     server key, unless new ones come with it
      */
     patch: operations['feeds.update']
     trace?: never
@@ -1123,7 +1124,9 @@ export interface components {
        * @description The kind of login saved for the URL; its values are never returned.
        * @enum {string|null}
        */
-      auth: 'password' | 'header' | null
+      auth: 'password' | 'header' | 'key' | null
+      /** @description The SFTP server's key fingerprint, which it must show on every fetch; null until the first file arrives. */
+      host_key: string | null
       /** @enum {string} */
       status: 'active' | 'paused'
       parse_options: {
@@ -1515,16 +1518,24 @@ export interface components {
       upload_size?: number | null
       /**
        * @description The source's login: `password` needs username and password, `header` needs name and
-       *     value. An empty object is not "no login": only an explicit null removes one.
+       *     value, `key` needs username and private_key (and passphrase, if it has one). An empty
+       *     object is not "no login": only an explicit null removes one.
        */
       auth?: {
         /** @enum {string} */
-        type: 'password' | 'header'
+        type: 'password' | 'header' | 'key'
         username?: string | null
         password?: string | null
         name?: string | null
         value?: string | null
+        private_key?: string | null
+        passphrase?: string | null
       } | null
+      /**
+       * @description The SHA-256 fingerprint the SFTP server must show, as `ssh-keygen -l` prints it. Null
+       *     trusts the key it shows on the next fetch.
+       */
+      host_key?: string | null
       parse_options?: {
         /** @enum {string|null} */
         encoding:
@@ -1628,23 +1639,31 @@ export interface components {
     }
     /**
      * UpdateFeedRequest
-     * @description Only what is sent changes: an omitted URL or login keeps the stored one (legacy D16).
+     * @description Only what is sent changes: an omitted URL, login or server key keeps the stored one (legacy D16).
      */
     UpdateFeedRequest: {
       name?: string
       url?: string
       /**
        * @description The source's login: `password` needs username and password, `header` needs name and
-       *     value. An empty object is not "no login": only an explicit null removes one.
+       *     value, `key` needs username and private_key (and passphrase, if it has one). An empty
+       *     object is not "no login": only an explicit null removes one.
        */
       auth?: {
         /** @enum {string} */
-        type: 'password' | 'header'
+        type: 'password' | 'header' | 'key'
         username?: string | null
         password?: string | null
         name?: string | null
         value?: string | null
+        private_key?: string | null
+        passphrase?: string | null
       } | null
+      /**
+       * @description The SHA-256 fingerprint the SFTP server must show, as `ssh-keygen -l` prints it. Null
+       *     trusts the key it shows on the next fetch.
+       */
+      host_key?: string | null
       parse_options?: {
         /** @enum {string|null} */
         encoding:

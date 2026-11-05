@@ -93,6 +93,7 @@ function realFtp(int $maxBytes = 1_000_000): FileFetcher
     return new FileFetcher(
         new AddressPin(new DnsResolver, true),
         new CurlFtpServer,
+        new CurlFtpServer,
         new FetchSettings(maxBytes: $maxBytes, connectTimeout: 3, timeout: 15),
     );
 }

@@ -115,7 +115,7 @@ function network(): FakeFetchNetwork
     $settings = new FetchSettings(maxBytes: (int) config('ingest.limits.max_bytes'));
     app()->instance(Fetcher::class, new SourceFetcher(
         new HttpFetcher($network, $network, $settings),
-        new FileFetcher(new AddressPin($network, false), $network, $settings),
+        new FileFetcher(new AddressPin($network, false), $network, $network, $settings),
     ));
 
     return $network;

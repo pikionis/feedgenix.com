@@ -945,7 +945,7 @@
             },
             "patch": {
                 "operationId": "feeds.update",
-                "summary": "Rename a feed, change its URL, its login or its reading options (owner or admin). What is not\nsent is kept: an omitted URL or login never clears the stored one, and `auth: null` removes the\nlogin. A new URL on another origin also drops the stored login, unless a new one comes with it",
+                "summary": "Rename a feed, change its URL, its login, its trusted server key or its reading options (owner\nor admin). What is not sent is kept: an omitted URL or login never clears the stored one, and\n`auth: null` removes the login. A new URL on another origin also drops the stored login and\nserver key, unless new ones come with it",
                 "tags": [
                     "Feed"
                 ],
@@ -4867,8 +4867,16 @@
                         "enum": [
                             "password",
                             "header",
+                            "key",
                             null
                         ]
+                    },
+                    "host_key": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The SFTP server's key fingerprint, which it must show on every fetch; null until the first file arrives."
                     },
                     "status": {
                         "type": "string",
@@ -5126,6 +5134,7 @@
                     "source",
                     "host",
                     "auth",
+                    "host_key",
                     "status",
                     "parse_options",
                     "latest_import",
@@ -6474,13 +6483,14 @@
                             "object",
                             "null"
                         ],
-                        "description": "The source's login: `password` needs username and password, `header` needs name and\nvalue. An empty object is not \"no login\": only an explicit null removes one.",
+                        "description": "The source's login: `password` needs username and password, `header` needs name and\nvalue, `key` needs username and private_key (and passphrase, if it has one). An empty\nobject is not \"no login\": only an explicit null removes one.",
                         "properties": {
                             "type": {
                                 "type": "string",
                                 "enum": [
                                     "password",
-                                    "header"
+                                    "header",
+                                    "key"
                                 ]
                             },
                             "username": {
@@ -6514,11 +6524,33 @@
                                 ],
                                 "pattern": "^[^\\x00-\\x1F\\x7F]+$",
                                 "maxLength": 4096
+                            },
+                            "private_key": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 16384
+                            },
+                            "passphrase": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 1024
                             }
                         },
                         "required": [
                             "type"
                         ]
+                    },
+                    "host_key": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The SHA-256 fingerprint the SFTP server must show, as `ssh-keygen -l` prints it. Null\ntrusts the key it shows on the next fetch.",
+                        "pattern": "^SHA256:[A-Za-z0-9+\\/]{43}$"
                     },
                     "parse_options": {
                         "type": "object",
@@ -6871,7 +6903,7 @@
             },
             "UpdateFeedRequest": {
                 "type": "object",
-                "description": "Only what is sent changes: an omitted URL or login keeps the stored one (legacy D16).",
+                "description": "Only what is sent changes: an omitted URL, login or server key keeps the stored one (legacy D16).",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -6887,13 +6919,14 @@
                             "object",
                             "null"
                         ],
-                        "description": "The source's login: `password` needs username and password, `header` needs name and\nvalue. An empty object is not \"no login\": only an explicit null removes one.",
+                        "description": "The source's login: `password` needs username and password, `header` needs name and\nvalue, `key` needs username and private_key (and passphrase, if it has one). An empty\nobject is not \"no login\": only an explicit null removes one.",
                         "properties": {
                             "type": {
                                 "type": "string",
                                 "enum": [
                                     "password",
-                                    "header"
+                                    "header",
+                                    "key"
                                 ]
                             },
                             "username": {
@@ -6927,11 +6960,33 @@
                                 ],
                                 "pattern": "^[^\\x00-\\x1F\\x7F]+$",
                                 "maxLength": 4096
+                            },
+                            "private_key": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 16384
+                            },
+                            "passphrase": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 1024
                             }
                         },
                         "required": [
                             "type"
                         ]
+                    },
+                    "host_key": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The SHA-256 fingerprint the SFTP server must show, as `ssh-keygen -l` prints it. Null\ntrusts the key it shows on the next fetch.",
+                        "pattern": "^SHA256:[A-Za-z0-9+\\/]{43}$"
                     },
                     "parse_options": {
                         "type": "object",

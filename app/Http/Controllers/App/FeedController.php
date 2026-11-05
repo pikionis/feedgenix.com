@@ -13,7 +13,6 @@ use App\Domain\Feeds\Actions\DeleteFeed;
 use App\Domain\Feeds\Models\Feed;
 use App\Domain\Ingest\Actions\QueueImport;
 use App\Domain\Ingest\FeedSizeLimit;
-use App\Domain\Ingest\Fetch\UrlGuard;
 use App\Domain\Ingest\ParseOptions;
 use App\Http\Controllers\App\Concerns\ActsInWorkspace;
 use App\Http\Requests\App\StoreFeedRequest;
@@ -54,7 +53,7 @@ final class FeedController
             FeedSizeLimit::for(Entitlements::for($this->workspace()))->assertUploadFits($uploadSize, 'upload_size');
         }
 
-        $feed = $create->handle($this->workspace(), $request->name(), $request->url(), $request->parseOptions(), $request->login());
+        $feed = $create->handle($this->workspace(), $request->name(), $request->url(), $request->parseOptions(), $request->login(), $request->hostKey());
         if ($feed->source === 'url') {
             $queue->fetch($feed);
         }
@@ -69,9 +68,10 @@ final class FeedController
     }
 
     /**
-     * Rename a feed, change its URL, its login or its reading options (owner or admin). What is not
-     * sent is kept: an omitted URL or login never clears the stored one, and `auth: null` removes the
-     * login. A new URL on another origin also drops the stored login, unless a new one comes with it.
+     * Rename a feed, change its URL, its login, its trusted server key or its reading options (owner
+     * or admin). What is not sent is kept: an omitted URL or login never clears the stored one, and
+     * `auth: null` removes the login. A new URL on another origin also drops the stored login and
+     * server key, unless new ones come with it.
      */
     public function update(UpdateFeedRequest $request, Feed $feed, ChangeFeedSource $change): FeedResource
     {
@@ -86,9 +86,8 @@ final class FeedController
             $feed->fill(['parse_options' => $options->toArray()]);
         }
 
-        if ($request->has('url') || $request->has('auth')) {
-            $target = $request->has('url') ? UrlGuard::check((string) $request->validated('url')) : null;
-            $change->handle($feed, $target, $request->has('auth'), $request->login());
+        if ($request->changesSource()) {
+            $change->handle($feed, $request->sourceChange());
         }
 
         $feed->save();

@@ -20,7 +20,7 @@ final class CurlFtpServer implements FileServer
 
     private const int CURLE_REMOTE_FILE_NOT_FOUND = 78;
 
-    public function info(Target $target, string $address, ?Credentials $credentials, FetchSettings $settings): FileInfo
+    public function info(Target $target, string $address, ?Credentials $credentials, ?string $hostKey, FetchSettings $settings): FileInfo
     {
         $handle = $this->handle($target, $address, $credentials, $settings);
         curl_setopt_array($handle, [CURLOPT_NOBODY => true, CURLOPT_FILETIME => true]);
@@ -37,7 +37,7 @@ final class CurlFtpServer implements FileServer
         return new FileInfo($size >= 0 ? $size : null, $known ? $modifiedAt : null);
     }
 
-    public function download(Target $target, string $address, ?Credentials $credentials, $sink, int $maxBytes, FetchSettings $settings): int
+    public function download(Target $target, string $address, ?Credentials $credentials, ?string $hostKey, $sink, int $maxBytes, FetchSettings $settings): int
     {
         $received = 0;
         $tooLarge = false;

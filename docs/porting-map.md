@@ -532,3 +532,13 @@ the scan, so a file it could not read had no record of its own.
 - **New:** an unchanged file (same size and time) is not downloaded again; `not_found` as a failure of its own.
 - **Dropped:** `ftp_*`; curl does the transfer, as on the web.
 - **Proof:** `tests/Unit/Ingest/{FileFetchTest,FtpServerTest}.php` (the real curl client against a fixture FTP server on `127.0.0.1`), the addresses in `FetchTest.php`, FTP feeds in `SourceLoginTest.php`; 24 of 25 guard mutants caught. The survivor is equivalent: curl's own `CURLOPT_MAXFILESIZE_LARGE` also stops a download past the cap, before the write callback does.
+
+### M8 · `FeedDownloadService::downloadSftp` → `Domain/Ingest/Fetch/{SftpServer,SftpSession,SftpConnector,PhpseclibSftpConnector,PhpseclibSftpSession}` (ADR 0032)
+- **Kept:** a feed fetched over SFTP with a username and password, through phpseclib.
+- **Fixed:**
+  - The server's key was never checked, so anyone in between could collect the password; now it is proven and compared before anything is sent, trusted on first use or pinned up front, and a changed key stops the fetch.
+  - `$sftp->get($path)` held the whole file in memory; now it streams to disk, up to the plan's limit.
+  - No address check, and the host name resolved by the library; now a socket opened to the address that was checked.
+  - The library's messages reached the customer; now they stop at the seam.
+- **New:** a private key as a login, read when it is saved; the server's fingerprint on the feed page; a path relative to the home with `/~/`.
+- **Proof:** `tests/Unit/Ingest/SftpServerTest.php` (the order of things against a scripted session; the real client against a real OpenSSH server on the CI runner), SFTP in `tests/Feature/Ingest/SourceLoginTest.php`, the forms; 32 of 33 guard mutants caught. The survivor is equivalent: a fetch that succeeded on a pinned key can only report that same key.

@@ -36,3 +36,4 @@ record supersedes them.
 | [0029](0029-the-beta-answers-at-feedgenix-com.md) | The private beta answers at feedgenix.com; the other names redirect (refines 0009, 0011) |
 | [0030](0030-logins-for-feed-sources.md) | Logins for feed sources: encrypted, never returned, never sent elsewhere (refines 0013) |
 | [0031](0031-fetching-from-file-servers.md) | Fetching from file servers: FTP and FTPS under the web's rules (refines 0013, 0030) |
+| [0032](0032-sftp-and-the-server-key.md) | SFTP: nothing is sent until the server proves it holds the key (refines 0030, 0031) |

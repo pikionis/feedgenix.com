@@ -6,6 +6,8 @@ namespace App\Domain\Ingest\Fetch;
 
 use InvalidArgumentException;
 use LogicException;
+use phpseclib4\Crypt\PublicKeyLoader;
+use phpseclib4\Exception\BaseException;
 use SensitiveParameter;
 
 /**
@@ -18,6 +20,8 @@ final readonly class Credentials
     public const string TYPE_PASSWORD = 'password';
 
     public const string TYPE_HEADER = 'header';
+
+    public const string TYPE_KEY = 'key';
 
     /** No control characters (a line break would inject a header), and no colon in a username (RFC 7617). */
     public const string USERNAME_PATTERN = '/\A[^\x00-\x1F\x7F:]+\z/u';
@@ -59,6 +63,30 @@ final readonly class Credentials
         return new self(self::TYPE_HEADER, ['name' => $name, 'value' => $value]);
     }
 
+    /** An SSH private key that must open here and now: an unreadable one is refused when saved. */
+    public static function key(
+        #[SensitiveParameter]
+        string $username,
+        #[SensitiveParameter]
+        string $privateKey,
+        #[SensitiveParameter]
+        ?string $passphrase = null,
+    ): self {
+        if (preg_match(self::USERNAME_PATTERN, $username) !== 1) {
+            throw new InvalidArgumentException('This username cannot be sent.');
+        }
+
+        try {
+            PublicKeyLoader::loadPrivateKey($privateKey, $passphrase);
+        } catch (BaseException) {
+            throw new InvalidArgumentException('This private key cannot be read. Paste the whole key, with its passphrase if it has one.');
+        }
+
+        $values = ['username' => $username, 'private_key' => $privateKey];
+
+        return new self(self::TYPE_KEY, $passphrase === null ? $values : [...$values, 'passphrase' => $passphrase]);
+    }
+
     /**
      * Headers that shape the request itself rather than prove who asks: the fetcher and curl set
      * these, and overriding them could smuggle a request or undo the conditional download.
@@ -73,7 +101,7 @@ final readonly class Credentials
     }
 
     /**
-     * What came out of storage.
+     * What came out of storage, or a validated request.
      *
      * @param  array<array-key, mixed>  $stored
      */
@@ -88,6 +116,7 @@ final readonly class Credentials
         return match ($stored['type'] ?? null) {
             self::TYPE_PASSWORD => self::password($text('username'), $text('password')),
             self::TYPE_HEADER => self::header($text('name'), $text('value')),
+            self::TYPE_KEY => self::key($text('username'), $text('private_key'), is_string($stored['passphrase'] ?? null) ? $stored['passphrase'] : null),
             default => throw new InvalidArgumentException('This stored login is of an unknown kind.'),
         };
     }
@@ -107,6 +136,7 @@ final readonly class Credentials
         return match (true) {
             $target->scheme === 'http' => 'A login is only ever sent over https. Use an https:// address.',
             $this->type === self::TYPE_HEADER && ! $target->isWeb() => 'A header only works on an https:// address. Use a username and password here.',
+            $this->type === self::TYPE_KEY && $target->scheme !== 'sftp' => 'A private key only works on an sftp:// address.',
             default => null,
         };
     }
@@ -127,12 +157,28 @@ final readonly class Credentials
         return [$username, $password];
     }
 
+    /**
+     * What an SSH server is shown; only for a private key.
+     *
+     * @return array{0: string, 1: string, 2: ?string} the username, the key and its passphrase
+     */
+    public function usernameAndKey(): array
+    {
+        if ($this->type !== self::TYPE_KEY) {
+            throw new LogicException('This login has no private key.');
+        }
+
+        return [$this->values['username'], $this->values['private_key'], $this->values['passphrase'] ?? null];
+    }
+
     /** @return array<string, string> the request headers that carry this login */
     public function httpHeaders(): array
     {
-        return $this->type === self::TYPE_PASSWORD
-            ? ['Authorization' => 'Basic '.base64_encode($this->values['username'].':'.$this->values['password'])]
-            : [$this->values['name'] => $this->values['value']];
+        return match ($this->type) {
+            self::TYPE_PASSWORD => ['Authorization' => 'Basic '.base64_encode($this->values['username'].':'.$this->values['password'])],
+            self::TYPE_HEADER => [$this->values['name'] => $this->values['value']],
+            default => throw new LogicException('This login cannot go in a request header.'),
+        };
     }
 
     /** @return array{type: string} */

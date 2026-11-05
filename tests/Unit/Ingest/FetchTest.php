@@ -11,6 +11,7 @@ use App\Domain\Ingest\Fetch\FetchSettings;
 use App\Domain\Ingest\Fetch\HttpFetcher;
 use App\Domain\Ingest\Fetch\Target;
 use App\Domain\Ingest\Fetch\UrlGuard;
+use phpseclib4\Crypt\EC;
 use Tests\Support\FakeFetchNetwork;
 
 function fetcher(FakeFetchNetwork $network, array $settings = []): HttpFetcher
@@ -89,6 +90,9 @@ describe('URLs', function (): void {
         ['ftps://files.example.com/feed.csv', 'ftps', 21],
         ['ftps://files.example.com:990/feed.csv', 'ftps', 990],
         ['ftp://files.example.com/a%20file.csv', 'ftp', 21],
+        ['sftp://files.example.com/out/feed.csv', 'sftp', 22],
+        ['sftp://files.example.com:2222/feed.csv', 'sftp', 2222],
+        ['sftp://files.example.com/~/feed.csv', 'sftp', 22],
     ]);
 
     it('refuses FTP addresses that are not one file, or that smuggle something in', function (string $url, string $says): void {
@@ -112,6 +116,10 @@ describe('URLs', function (): void {
         'the mail port' => ['ftps://files.example.com:25/f.csv', 'Port 25'],
         'the implicit TLS port without TLS' => ['ftp://files.example.com:990/f.csv', 'Port 990'],
         'the web port' => ['ftp://files.example.com:80/f.csv', 'Port 80'],
+        'a folder over sftp' => ['sftp://files.example.com/out/', 'not a folder'],
+        'a command over sftp' => ['sftp://files.example.com/f%0a.csv', 'cannot be used'],
+        'the FTP port over sftp' => ['sftp://files.example.com:21/f.csv', 'Port 21'],
+        'a login in an sftp address' => ['sftp://user:pass@files.example.com/f.csv', 'login'],
     ]);
 
     it('keeps the web to its own ports', function (string $url): void {
@@ -267,7 +275,7 @@ describe('fetching', function (): void {
         expect($failure->reason)->toBe(FetchFailure::InvalidUrl)
             ->and($network->requests)->toHaveCount(1)
             ->and($network->fileRequests)->toBe([]);
-    })->with(['ftp://files.example/f.csv', 'ftps://files.example/f.csv']);
+    })->with(['ftp://files.example/f.csv', 'ftps://files.example/f.csv', 'sftp://files.example/f.csv']);
 
     it('sends no login when the feed has none', function (): void {
         $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('https://shop.example/f.csv', 200, 'sku');
@@ -401,6 +409,7 @@ describe('the login itself', function (): void {
         'a reserved header' => [fn (): Credentials => Credentials::header('HOST', 'v')],
         'a conditional header' => [fn (): Credentials => Credentials::header('if-range', 'v')],
         'a proxy header' => [fn (): Credentials => Credentials::header('proxy-authorization', 'v')],
+        'a line break ending a key’s username' => [fn (): Credentials => Credentials::key("a\n", EC::createKey('Ed25519')->toString('OpenSSH'))],
         'a stored login of an unknown kind' => [fn (): Credentials => Credentials::fromArray(['type' => 'magic'])],
         'a stored login cut short' => [fn (): Credentials => Credentials::fromArray(['type' => 'password', 'username' => 'a'])],
     ]);
@@ -413,6 +422,30 @@ describe('the login itself', function (): void {
         'password' => [fn (): Credentials => Credentials::password('a', 'b')],
         'header' => [fn (): Credentials => Credentials::header('X-Key', 'v')],
     ]);
+
+    it('brings a private key back from storage, with or without a passphrase', function (?string $passphrase): void {
+        $key = EC::createKey('Ed25519');
+        $text = ($passphrase === null ? $key : $key->withPassword($passphrase))->toString('OpenSSH');
+
+        $again = Credentials::fromArray(Credentials::key('someone', $text, $passphrase)->toArray());
+
+        expect($again->type)->toBe(Credentials::TYPE_KEY)
+            ->and($again->usernameAndKey())->toBe(['someone', $text, $passphrase]);
+    })->with([null, 'a passphrase']);
+
+    it('hides a private key from dumps', function (): void {
+        $text = EC::createKey('Ed25519')->toString('OpenSSH');
+
+        expect(print_r(Credentials::key('someone', $text), true))->not->toContain('OPENSSH')->not->toContain('someone');
+    });
+
+    it('never puts a private key in a request header', function (): void {
+        $login = Credentials::key('someone', EC::createKey('Ed25519')->toString('OpenSSH'));
+
+        expect(fn (): array => $login->httpHeaders())->toThrow(LogicException::class)
+            ->and(fn (): array => $login->usernameAndPassword())->toThrow(LogicException::class)
+            ->and(fn (): array => Credentials::password('a', 'b')->usernameAndKey())->toThrow(LogicException::class);
+    });
 
     it('hides its secret from dumps and stack traces', function (): void {
         $login = Credentials::password('someone', 'top-secret');

@@ -23,6 +23,7 @@
         "laravel/tinker": "^3.0",
         "league/csv": "^9.28",
         "openspout/openspout": "^5.3",
+        "phpseclib/phpseclib": "^4.0",
         "pragmarx/google2fa": "^9.1"
     },
     "require-dev": {

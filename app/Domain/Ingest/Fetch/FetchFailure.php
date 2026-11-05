@@ -18,6 +18,7 @@ enum FetchFailure: string
     case RateLimited = 'rate_limited';
     case LoginNeeded = 'login_needed';
     case LoginRefused = 'login_refused';
+    case HostKeyChanged = 'host_key_changed';
     case TooLarge = 'too_large';
     case TooManyRedirects = 'too_many_redirects';
     case Truncated = 'truncated';

@@ -12,29 +12,76 @@ export const loginValues = {
   password: z.string(),
   headerName: z.string(),
   headerValue: z.string(),
+  privateKey: z.string(),
+  passphrase: z.string(),
 }
 
-export type LoginKind = 'password' | 'header'
-export type LoginValues = { username: string; password: string; headerName: string; headerValue: string }
+export type LoginKind = 'password' | 'header' | 'key'
+export type LoginValues = {
+  username: string
+  password: string
+  headerName: string
+  headerValue: string
+  privateKey: string
+  passphrase: string
+}
 
-export const EMPTY_LOGIN: LoginValues = { username: '', password: '', headerName: '', headerValue: '' }
+export const EMPTY_LOGIN: LoginValues = {
+  username: '',
+  password: '',
+  headerName: '',
+  headerValue: '',
+  privateKey: '',
+  passphrase: '',
+}
 
-const ADDRESS = /^(?:https?|ftps?):\/\/\S+$/i
+const ADDRESS = /^(?:https?|ftps?|sftp):\/\/\S+$/i
 
-export const NOT_AN_ADDRESS = 'Enter the full address, starting with https:// or ftp://.'
+export const NOT_AN_ADDRESS = 'Enter the full address, starting with https://, ftp:// or sftp://.'
 
 export function isFeedAddress(url: string): boolean {
   return ADDRESS.test(url)
 }
 
+export function isSftp(url: string): boolean {
+  return /^sftp:/i.test(url.trim())
+}
+
 /** Why this kind of login cannot be used on this address. The server checks it again. */
 export function addressIssue(kind: LoginKind, url: string): string | undefined {
   if (/^http:/i.test(url)) return 'A login is only ever sent over https. Use an https:// address.'
-  if (kind === 'header' && /^ftps?:/i.test(url)) {
+  if (kind === 'header' && /^(?:ftps?|sftp):/i.test(url)) {
     return 'A header only works on an https:// address. Use a username and password here.'
   }
+  if (kind === 'key' && url !== '' && !isSftp(url)) return 'A private key only works on an sftp:// address.'
 
   return undefined
+}
+
+const FINGERPRINT = /^SHA256:[A-Za-z0-9+/]{43}$/
+
+/** The server key's fingerprint is optional, but must be one when it is given. */
+export function hostKeyIssue(value: string): string | undefined {
+  return value === '' || FINGERPRINT.test(value)
+    ? undefined
+    : 'Paste the fingerprint as ssh-keygen -l prints it: SHA256:…'
+}
+
+/** The fingerprint an SFTP server must show. Empty, it is learned on the first fetch. */
+export function HostKeyField({
+  error,
+  hint,
+  register,
+}: {
+  error: string | undefined
+  hint: string
+  register: UseFormRegisterReturn
+}) {
+  return (
+    <Field label="Server key fingerprint (optional)" hint={hint} error={error}>
+      {(control) => <Input placeholder="SHA256:…" autoComplete="off" spellCheck={false} {...control} {...register} />}
+    </Field>
+  )
 }
 
 /** A plain FTP address with a password: allowed, because many hosts offer nothing else, but said out loud. */
@@ -49,22 +96,35 @@ export function PlainFtpWarning() {
 /** What is missing or cannot be sent, field by field. The server checks all of it again. */
 export function loginIssues(kind: LoginKind, values: LoginValues): [keyof LoginValues, string][] {
   const issues: [keyof LoginValues, string][] = []
-  if (kind === 'password') {
-    if (values.username === '') issues.push(['username', 'Enter the username.'])
-    if (values.username.includes(':')) issues.push(['username', 'A username cannot contain a colon.'])
-    if (values.password === '') issues.push(['password', 'Enter the password.'])
-  } else {
+  if (kind === 'header') {
     if (values.headerName === '') issues.push(['headerName', 'Enter the name of the header.'])
     if (values.headerValue === '') issues.push(['headerValue', 'Enter the value of the header.'])
+
+    return issues
   }
+
+  if (values.username === '') issues.push(['username', 'Enter the username.'])
+  if (values.username.includes(':')) issues.push(['username', 'A username cannot contain a colon.'])
+  if (kind === 'password' && values.password === '') issues.push(['password', 'Enter the password.'])
+  if (kind === 'key' && values.privateKey === '') issues.push(['privateKey', 'Paste the private key.'])
 
   return issues
 }
 
 export function loginBody(kind: LoginKind, values: LoginValues) {
-  return kind === 'password'
-    ? { type: kind, username: values.username, password: values.password }
-    : { type: kind, name: values.headerName, value: values.headerValue }
+  switch (kind) {
+    case 'password':
+      return { type: kind, username: values.username, password: values.password }
+    case 'header':
+      return { type: kind, name: values.headerName, value: values.headerValue }
+    case 'key':
+      return {
+        type: kind,
+        username: values.username,
+        private_key: values.privateKey,
+        ...(values.passphrase === '' ? {} : { passphrase: values.passphrase }),
+      }
+  }
 }
 
 /**
@@ -88,6 +148,35 @@ export function LoginFields({
         </Field>
         <Field label="Header value" error={errors.headerValue}>
           {(control) => <Input type="password" autoComplete="new-password" {...control} {...register('headerValue')} />}
+        </Field>
+      </div>
+    )
+  }
+
+  if (kind === 'key') {
+    return (
+      <div className="flex flex-col gap-3">
+        <Field label="Username" error={errors.username}>
+          {(control) => <Input autoComplete="off" {...control} {...register('username')} />}
+        </Field>
+        <Field
+          label="Private key"
+          hint="OpenSSH or PEM. Paste the whole key. It is stored encrypted and never shown again."
+          error={errors.privateKey}
+        >
+          {(control) => (
+            <textarea
+              rows={5}
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full rounded-md border-[0.5px] border-hairline bg-background px-3 py-2 font-mono text-xs"
+              {...control}
+              {...register('privateKey')}
+            />
+          )}
+        </Field>
+        <Field label="Passphrase (if the key has one)" error={errors.passphrase}>
+          {(control) => <Input type="password" autoComplete="new-password" {...control} {...register('passphrase')} />}
         </Field>
       </div>
     )

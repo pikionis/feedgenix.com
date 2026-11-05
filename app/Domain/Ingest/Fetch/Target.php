@@ -24,6 +24,14 @@ final readonly class Target
         return $this->scheme === 'http' || $this->scheme === 'https';
     }
 
+    /** The file on a file server: decoded, and relative to the login's home when it starts with /~/. */
+    public function filePath(): string
+    {
+        $path = rawurldecode((string) parse_url($this->url, PHP_URL_PATH));
+
+        return str_starts_with($path, '/~/') ? substr($path, 3) : $path;
+    }
+
     /** Scheme, host and port: what a login belongs to. */
     public function origin(): string
     {

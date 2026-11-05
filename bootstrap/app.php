@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
 
         // A feed source's login reaches its server exactly as typed, spaces included (ADR 0030).
-        $middleware->trimStrings(except: ['auth.username', 'auth.password', 'auth.value']);
+        $middleware->trimStrings(except: ['auth.username', 'auth.password', 'auth.value', 'auth.private_key', 'auth.passphrase']);
 
         $middleware->alias([
             'tenant' => ResolveTenant::class,

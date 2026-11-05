@@ -318,6 +318,100 @@ describe('the source', () => {
     expect(await screen.findByRole('button', { name: 'Add the login' })).toBeInTheDocument()
   })
 
+  const TRUSTED = `SHA256:${'K'.repeat(43)}`
+
+  it('shows the trusted server key, and sends nothing about it unless it changed', async () => {
+    serveFeed(feed({ auth: 'password', host_key: TRUSTED }))
+    acceptPatch()
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    expect(await screen.findByLabelText('Server key fingerprint (optional)')).toHaveValue(TRUSTED)
+
+    await user.type(screen.getByLabelText('New feed URL'), 'sftp://files.example/new.csv')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(patched).toEqual([{ url: 'sftp://files.example/new.csv' }]))
+  })
+
+  it('trusts the next key only when the fingerprint was emptied', async () => {
+    serveFeed(feed({ auth: 'password', host_key: TRUSTED }))
+    acceptPatch()
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    await user.clear(await screen.findByLabelText('Server key fingerprint (optional)'))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(patched).toEqual([{ host_key: null }]))
+  })
+
+  it('takes a new fingerprint, and refuses what is not one', async () => {
+    const replacement = `SHA256:${'Z'.repeat(43)}`
+    serveFeed(feed({ auth: 'password', host_key: TRUSTED }))
+    acceptPatch()
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    const field = await screen.findByLabelText('Server key fingerprint (optional)')
+    await user.clear(field)
+    await user.type(field, 'not a fingerprint')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText(/Paste the fingerprint as ssh-keygen -l prints it/)).toBeInTheDocument()
+    expect(patched).toEqual([])
+
+    await user.clear(field)
+    await user.type(field, replacement)
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(patched).toEqual([{ host_key: replacement }]))
+  })
+
+  it('offers no fingerprint on a web feed', async () => {
+    serveFeed(feed())
+    renderFeed()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Source' }))
+    expect(await screen.findByLabelText('New feed URL')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Server key fingerprint (optional)')).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('New feed URL'), 'sftp://files.example/feed.csv')
+    expect(await screen.findByLabelText('Server key fingerprint (optional)')).toBeInTheDocument()
+  })
+
+  it('offers to review the key where a changed one is reported, and not to change the login', async () => {
+    serveFeed(
+      feed({
+        auth: 'password',
+        host_key: TRUSTED,
+        latest_import: importSummary({
+          id: 101,
+          status: 'failed',
+          failure: {
+            reason: 'host_key_changed',
+            message: 'The server’s key changed: it now shows SHA256:new, and FeedGenix trusted SHA256:old.',
+            retry_after_seconds: null,
+          },
+        }),
+      }),
+    )
+    server.use(
+      http.get(apiUrl('/v1/imports/101'), () =>
+        HttpResponse.json({ import: feedImport({ id: 101, can_reread: false }) }),
+      ),
+    )
+    renderFeed()
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Review the server key' }))
+
+    expect(await screen.findByLabelText('Server key fingerprint (optional)')).toHaveValue(TRUSTED)
+    expect(screen.queryByRole('button', { name: 'Change the login' })).not.toBeInTheDocument()
+  })
+
   it('offers no login where the failure has nothing to do with one', async () => {
     serveFeed(feed({ latest_import: FAILED }))
     server.use(

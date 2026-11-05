@@ -190,7 +190,9 @@ it('checks the address before sending anything', async () => {
   const user = await fill('Main shop', 'shop.example/feed.xml')
   await user.click(screen.getByRole('button', { name: 'Add feed' }))
 
-  expect(await screen.findByText('Enter the full address, starting with https:// or ftp://.')).toBeInTheDocument()
+  expect(
+    await screen.findByText('Enter the full address, starting with https://, ftp:// or sftp://.'),
+  ).toBeInTheDocument()
   expect(created).toEqual([])
 })
 
@@ -231,6 +233,85 @@ it('does not warn on ftps, and takes an address without a login', async () => {
 
   expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
   expect(created).toEqual([{ name: 'FTPS shop', url: 'ftps://files.example/feed.csv' }])
+})
+
+const FINGERPRINT = `SHA256:${'K'.repeat(43)}`
+
+it('adds a feed from an SFTP server with a private key and the server’s fingerprint', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('SFTP shop', 'sftp://files.example/feed.csv')
+  await user.click(screen.getByRole('radio', { name: 'Private key' }))
+  await user.type(screen.getByLabelText('Username'), 'someone')
+  await user.type(screen.getByLabelText('Private key', { selector: 'textarea' }), 'the key')
+  await user.type(screen.getByLabelText('Passphrase (if the key has one)'), ' the phrase ')
+  await user.type(screen.getByLabelText('Server key fingerprint (optional)'), FINGERPRINT)
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
+  expect(created).toEqual([
+    {
+      name: 'SFTP shop',
+      url: 'sftp://files.example/feed.csv',
+      auth: { type: 'key', username: 'someone', private_key: 'the key', passphrase: ' the phrase ' },
+      host_key: FINGERPRINT,
+    },
+  ])
+})
+
+it('adds a feed from an SFTP server with a password, leaving out what was left empty', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('SFTP shop', 'sftp://files.example/feed.csv')
+  await user.click(screen.getByRole('radio', { name: 'Password' }))
+  await user.type(screen.getByLabelText('Username'), 'someone')
+  await user.type(screen.getByLabelText('Password', { selector: 'input[type=password]' }), 'secret')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
+  expect(created).toEqual([
+    {
+      name: 'SFTP shop',
+      url: 'sftp://files.example/feed.csv',
+      auth: { type: 'password', username: 'someone', password: 'secret' },
+    },
+  ])
+})
+
+it('asks for a login on an SFTP address, for the key, and for a real fingerprint', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('SFTP shop', 'sftp://files.example/feed.csv')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+  expect(await screen.findByText('An sftp:// address needs a login.')).toBeInTheDocument()
+
+  await user.click(screen.getByRole('radio', { name: 'Private key' }))
+  await user.type(screen.getByLabelText('Server key fingerprint (optional)'), 'MD5:ab:cd')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Paste the private key.')).toBeInTheDocument()
+  expect(screen.getByText('Enter the username.')).toBeInTheDocument()
+  expect(screen.getByText(/Paste the fingerprint as ssh-keygen -l prints it/)).toBeInTheDocument()
+  expect(created).toEqual([])
+})
+
+it('offers the fingerprint only for an SFTP address, and refuses a private key elsewhere', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('Web shop', 'https://shop.example/feed.xml')
+  expect(screen.queryByLabelText('Server key fingerprint (optional)')).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('radio', { name: 'Private key' }))
+  await user.type(screen.getByLabelText('Username'), 'someone')
+  await user.type(screen.getByLabelText('Private key', { selector: 'textarea' }), 'the key')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('A private key only works on an sftp:// address.')).toBeInTheDocument()
+  expect(created).toEqual([])
 })
 
 it('refuses a header login on an FTP address before sending anything', async () => {

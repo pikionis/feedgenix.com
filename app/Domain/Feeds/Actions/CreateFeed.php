@@ -26,15 +26,14 @@ final class CreateFeed
      * @throws PlanLimitExceeded
      * @throws ValidationException when the login may not be used on this address
      */
-    public function handle(Tenant $workspace, string $name, ?string $url, ParseOptions $options, ?Credentials $login = null): Feed
+    public function handle(Tenant $workspace, string $name, ?string $url, ParseOptions $options, ?Credentials $login = null, ?string $hostKey = null): Feed
     {
         $target = $url === null ? null : UrlGuard::check($url);
-        $refusal = $target instanceof Target ? $login?->refusalFor($target) : null;
-        if ($refusal !== null) {
-            throw ValidationException::withMessages(['auth' => $refusal]);
+        if ($target instanceof Target) {
+            ChangeFeedSource::assertAllowed($target, $login, $hostKey);
         }
 
-        return DB::transaction(static function () use ($workspace, $name, $target, $options, $login): Feed {
+        return DB::transaction(static function () use ($workspace, $name, $target, $options, $login, $hostKey): Feed {
             $locked = Tenant::query()->whereKey($workspace->id)->lockForUpdate()->firstOrFail();
             Entitlements::for($locked)->assertWithin('feeds');
 
@@ -51,6 +50,7 @@ final class CreateFeed
                     'host' => $target->host,
                     'auth_type' => $login?->type,
                     'credentials' => $login?->toArray(),
+                    'host_key' => $hostKey,
                 ]);
             }
 

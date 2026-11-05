@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Domain\Feeds\Models\FeedSource;
+use App\Domain\Ingest\Fetch\FetchFailure;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use phpseclib4\Crypt\EC;
 use Tests\Support\FakeFetchNetwork;
 
 beforeEach(function (): void {
@@ -363,6 +365,168 @@ it('keeps the login when the file changes on the same FTP server', function (): 
     $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['url' => 'ftp://files.example/b.csv'])->assertOk()->assertJsonPath('feed.auth', 'password');
 
     expect(storedSource($tenant)->etag)->toBeNull();
+});
+
+describe('SFTP', function (): void {
+    /** The fingerprint of a server, in the form the API takes. */
+    $trusted = 'SHA256:'.str_repeat('K', 43);
+    $other = 'SHA256:'.str_repeat('Z', 43);
+
+    it('reads a feed, and from then on insists on the key it met', function () use ($trusted, $other): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->file('sftp://files.example/feed.csv', LOGIN_CSV, hostKey: $trusted);
+
+        $id = (int) createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => passwordLogin()])
+            ->assertCreated()
+            ->assertJsonPath('feed.latest_import.status', 'profiled')
+            ->assertJsonPath('feed.host_key', $trusted)
+            ->json('feed.id');
+
+        expect(storedSource($tenant)->host_key)->toBe($trusted)
+            ->and($network->fileRequests[0]['host_key'])->toBeNull()
+            ->and($network->fileRequests[1]['host_key'])->toBe($trusted);
+
+        // The server now shows another key: refused, and the trusted one stays.
+        $network->file('sftp://files.example/feed.csv', LOGIN_CSV.'A-2;Nail'."\n", hostKey: $other);
+        $this->actingAs($owner)->postJson("/api/v1/feeds/{$id}/fetch")
+            ->assertStatus(202)
+            ->assertJsonPath('import.status', 'failed')
+            ->assertJsonPath('import.failure.reason', 'host_key_changed');
+
+        expect(storedSource($tenant)->host_key)->toBe($trusted)
+            ->and(end($network->fileRequests)['host_key'])->toBe($trusted);
+    });
+
+    it('does not trust a key on a fetch that brought no file', function (): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->failFile('sftp://files.example/feed.csv', FetchFailure::LoginRefused);
+
+        createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => passwordLogin()])
+            ->assertCreated()
+            ->assertJsonPath('feed.latest_import.failure.reason', 'login_refused')
+            ->assertJsonPath('feed.host_key', null);
+
+        expect(storedSource($tenant)->host_key)->toBeNull();
+    });
+
+    it('takes a fingerprint given up front, and holds the first fetch to it', function () use ($trusted, $other): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->file('sftp://files.example/feed.csv', LOGIN_CSV, hostKey: $other);
+
+        createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => passwordLogin(), 'host_key' => $trusted])
+            ->assertCreated()
+            ->assertJsonPath('feed.latest_import.failure.reason', 'host_key_changed')
+            ->assertJsonPath('feed.host_key', $trusted);
+
+        expect($network->fileRequests[0]['host_key'])->toBe($trusted)
+            ->and(storedSource($tenant)->host_key)->toBe($trusted);
+    });
+
+    it('trusts the next key once the owner says so, and keeps it otherwise', function () use ($trusted, $other): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->file('sftp://files.example/feed.csv', LOGIN_CSV, hostKey: $trusted);
+        $id = (int) createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => passwordLogin()])->json('feed.id');
+
+        $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['name' => 'Renamed'])->assertOk()->assertJsonPath('feed.host_key', $trusted);
+        $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['auth' => passwordLogin('new', 'new-pass')])->assertOk()->assertJsonPath('feed.host_key', $trusted);
+        $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['url' => 'sftp://files.example/other.csv'])->assertOk()->assertJsonPath('feed.host_key', $trusted);
+
+        $network->file('sftp://files.example/other.csv', LOGIN_CSV."A-2;Nail\n", hostKey: $other);
+        $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['host_key' => null])->assertOk()->assertJsonPath('feed.host_key', null);
+        $this->actingAs($owner)->postJson("/api/v1/feeds/{$id}/fetch")->assertStatus(202)->assertJsonPath('import.status', 'profiled');
+
+        expect(storedSource($tenant)->host_key)->toBe($other);
+    });
+
+    it('never lets a trusted key follow the address to another server', function (string $url) use ($trusted): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->file('sftp://files.example/feed.csv', LOGIN_CSV, hostKey: $trusted);
+        $id = (int) createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => passwordLogin()])->json('feed.id');
+
+        $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['url' => $url])->assertOk()
+            ->assertJsonPath('feed.host_key', null)
+            ->assertJsonPath('feed.auth', null);
+
+        expect(storedSource($tenant)->host_key)->toBeNull();
+    })->with(['sftp://evil.example/feed.csv', 'sftp://files.example:2222/feed.csv', 'ftp://files.example/feed.csv']);
+
+    it('takes a new address with its fingerprint together', function () use ($trusted, $other): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->file('sftp://files.example/feed.csv', LOGIN_CSV, hostKey: $trusted);
+        $id = (int) createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => passwordLogin()])->json('feed.id');
+
+        $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['url' => 'sftp://shop.example/feed.csv', 'host_key' => $other, 'auth' => passwordLogin()])
+            ->assertOk()->assertJsonPath('feed.host_key', $other);
+
+        expect(storedSource($tenant)->host_key)->toBe($other);
+    });
+
+    it('refuses a fingerprint that is not one, or on an address that has none', function (array $body, string $field) use ($trusted): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->file('sftp://files.example/feed.csv', LOGIN_CSV, hostKey: $trusted);
+        createFeed($owner, ['name' => 'Web', 'url' => LOGIN_URL])->assertCreated();
+        $sftp = (int) createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => passwordLogin()])->json('feed.id');
+        $web = tenancy()->run($tenant->id, fn (): int => FeedSource::query()->where('host', 'shop.example')->firstOrFail()->feed_id);
+
+        $id = ($body['on'] ?? 'sftp') === 'web' ? $web : $sftp;
+        unset($body['on']);
+
+        $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", $body)->assertUnprocessable()->assertJsonValidationErrors($field);
+    })->with([
+        'a short one' => [['host_key' => 'SHA256:abc'], 'host_key'],
+        'MD5' => [['host_key' => 'MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'], 'host_key'],
+        'a line break inside' => [['host_key' => 'SHA256:'.str_repeat('K', 20)."\n".str_repeat('K', 22)], 'host_key'],
+        'on a web address' => [['on' => 'web', 'host_key' => 'SHA256:'.str_repeat('K', 43)], 'host_key'],
+    ]);
+
+    it('refuses a fingerprint when creating a feed on an address that has none', function () use ($trusted): void {
+        [$tenant, $owner] = shopWithLogin();
+
+        createFeed($owner, ['name' => 'Web', 'url' => LOGIN_URL, 'host_key' => $trusted])->assertUnprocessable()->assertJsonValidationErrors('host_key');
+
+        expect(tenancy()->run($tenant->id, fn (): int => FeedSource::query()->count()))->toBe(0);
+    });
+
+    it('logs in with a private key, stored encrypted, exactly as pasted', function (): void {
+        [$tenant, $owner, $network] = shopWithLogin();
+        $network->dns('files.example', ['93.184.215.77'])->file('sftp://files.example/feed.csv', LOGIN_CSV);
+        $key = EC::createKey('Ed25519')->withPassword('key passphrase ')->toString('OpenSSH');
+
+        $response = createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => ['type' => 'key', 'username' => 'shop', 'private_key' => $key, 'passphrase' => 'key passphrase ']])
+            ->assertCreated()
+            ->assertJsonPath('feed.auth', 'key');
+
+        expect((string) $response->getContent())->not->toContain('OPENSSH')->not->toContain('key passphrase')
+            ->and((string) DB::table('feed_sources')->value('credentials'))->not->toContain('OPENSSH')
+            ->and($network->fileRequests[0]['login']?->usernameAndKey())->toBe(['shop', $key, 'key passphrase '])
+            ->and(storedSource($tenant)->auth_type)->toBe('key');
+    });
+
+    it('refuses a private key it cannot read, or a wrong passphrase, when saving', function (array $auth, string $field): void {
+        [$tenant, $owner] = shopWithLogin();
+
+        createFeed($owner, ['name' => 'SFTP', 'url' => 'sftp://files.example/feed.csv', 'auth' => $auth])
+            ->assertUnprocessable()->assertJsonValidationErrors($field);
+
+        expect(tenancy()->run($tenant->id, fn (): int => FeedSource::query()->count()))->toBe(0);
+    })->with([
+        'not a key' => [fn (): array => ['type' => 'key', 'username' => 'shop', 'private_key' => 'this is not a key'], 'auth.private_key'],
+        'a public key' => [fn (): array => ['type' => 'key', 'username' => 'shop', 'private_key' => EC::createKey('Ed25519')->getPublicKey()->toString('OpenSSH')], 'auth.private_key'],
+        'the wrong passphrase' => [fn (): array => ['type' => 'key', 'username' => 'shop', 'private_key' => EC::createKey('Ed25519')->withPassword('right')->toString('OpenSSH'), 'passphrase' => 'wrong'], 'auth.private_key'],
+        'no passphrase on a locked key' => [fn (): array => ['type' => 'key', 'username' => 'shop', 'private_key' => EC::createKey('Ed25519')->withPassword('right')->toString('OpenSSH')], 'auth.private_key'],
+        'no username' => [fn (): array => ['type' => 'key', 'private_key' => EC::createKey('Ed25519')->toString('OpenSSH')], 'auth.username'],
+        'no key' => [fn (): array => ['type' => 'key', 'username' => 'shop'], 'auth.private_key'],
+    ]);
+
+    it('takes a private key on an sftp address only, and a header nowhere near one', function (string $url, array $auth): void {
+        [, $owner] = shopWithLogin();
+
+        createFeed($owner, ['name' => 'X', 'url' => $url, 'auth' => $auth])->assertUnprocessable()->assertJsonValidationErrors('auth');
+    })->with([
+        'a key over https' => ['https://shop.example/feed.csv', fn (): array => ['type' => 'key', 'username' => 'shop', 'private_key' => EC::createKey('Ed25519')->toString('OpenSSH')]],
+        'a key over ftp' => ['ftp://shop.example/feed.csv', fn (): array => ['type' => 'key', 'username' => 'shop', 'private_key' => EC::createKey('Ed25519')->toString('OpenSSH')]],
+        'a header over sftp' => ['sftp://shop.example/feed.csv', fn (): array => ['type' => 'header', 'name' => 'X-Key', 'value' => 'v']],
+    ]);
 });
 
 it('has a database rule: no login without its kind, no kind without its login', function (): void {

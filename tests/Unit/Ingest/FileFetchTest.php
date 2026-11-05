@@ -16,7 +16,7 @@ use Tests\Support\FakeFetchNetwork;
 
 function fileFetcher(FakeFetchNetwork $network, int $maxBytes = 10_000): FileFetcher
 {
-    return new FileFetcher(new AddressPin($network, false), $network, new FetchSettings(maxBytes: $maxBytes));
+    return new FileFetcher(new AddressPin($network, false), $network, $network, new FetchSettings(maxBytes: $maxBytes));
 }
 
 function fileFailure(callable $fetch): FetchFailed
@@ -154,6 +154,41 @@ it('passes on what the server says, and stops', function (FetchFailure $reason):
     expect(fileFailure(fn (): FetchResult => fileFetcher($network)->fetch(FTP_URL, fileDestination()))->reason)->toBe($reason)
         ->and(array_column($network->fileRequests, 'call'))->toBe(['info']);
 })->with([FetchFailure::LoginRefused, FetchFailure::NotFound, FetchFailure::TlsFailed, FetchFailure::ConnectFailed]);
+
+it('keeps FTP and SFTP apart, and holds the second connection to the key of the first', function (): void {
+    $key = 'SHA256:'.str_repeat('K', 43);
+    $ftp = filesExample()->file(FTP_URL, 'from ftp');
+    $sftp = filesExample()->file('sftp://files.example/feed.csv', 'from sftp', hostKey: $key);
+    $fetcher = new FileFetcher(new AddressPin($sftp, false), $ftp, $sftp, new FetchSettings(maxBytes: 10_000));
+
+    $destination = fileDestination();
+    $result = $fetcher->fetch('sftp://files.example/feed.csv', $destination, credentials: Credentials::password('a', 'b'));
+
+    expect(file_get_contents($destination))->toBe('from sftp')
+        ->and($result->hostKey)->toBe($key)
+        ->and(array_column($sftp->fileRequests, 'host_key'))->toBe([null, $key])
+        ->and($ftp->fileRequests)->toBe([]);
+
+    $fetcher->fetch(FTP_URL, fileDestination());
+    expect($ftp->fileRequests)->toHaveCount(2)
+        ->and($sftp->fileRequests)->toHaveCount(2);
+});
+
+it('passes on the server’s key when the file has not changed', function (): void {
+    $key = 'SHA256:'.str_repeat('K', 43);
+    $network = filesExample()->file('sftp://files.example/feed.csv', 'sku', modifiedAt: 1_790_000_000, hostKey: $key);
+
+    $result = fileFetcher($network)->fetch('sftp://files.example/feed.csv', fileDestination(), etag: '3:1790000000', credentials: Credentials::password('a', 'b'));
+
+    expect($result->notModified)->toBeTrue()->and($result->hostKey)->toBe($key);
+});
+
+it('refuses a key to any server when the key it was given does not match', function (): void {
+    $network = filesExample()->file('sftp://files.example/feed.csv', 'sku', hostKey: 'SHA256:'.str_repeat('Z', 43));
+
+    expect(fileFailure(fn (): FetchResult => fileFetcher($network)->fetch('sftp://files.example/feed.csv', fileDestination(), credentials: Credentials::password('a', 'b'), hostKey: 'SHA256:'.str_repeat('K', 43)))->reason)->toBe(FetchFailure::HostKeyChanged)
+        ->and(array_column($network->fileRequests, 'call'))->toBe(['info']);
+});
 
 it('is what the app fetches with', function (): void {
     expect(resolve(Fetcher::class))->toBeInstanceOf(SourceFetcher::class);

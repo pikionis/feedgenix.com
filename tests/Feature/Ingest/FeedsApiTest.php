@@ -70,7 +70,7 @@ it('refuses URLs the SSRF guard does not allow, with the reason', function (stri
 
     expect(tenancy()->run($tenant->id, fn (): int => Feed::query()->count()))->toBe(0);
 })->with([
-    ['gopher://shop.example/feed.csv', 'Only http, https, ftp and ftps'],
+    ['gopher://shop.example/feed.csv', 'Only http, https, ftp, ftps and sftp'],
     ['https://user:pass@shop.example/feed.csv', 'username and password'],
     ['http://2130706433/', 'standard IP address'],
     ['http://shop.example:22/', 'Port 22'],

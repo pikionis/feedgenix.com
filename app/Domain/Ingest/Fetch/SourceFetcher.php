@@ -17,10 +17,10 @@ final readonly class SourceFetcher implements Fetcher
         return new self(HttpFetcher::make(), FileFetcher::make());
     }
 
-    public function fetch(string $url, string $destination, ?string $etag = null, ?string $lastModified = null, ?int $maxBytes = null, ?Credentials $credentials = null): FetchResult
+    public function fetch(string $url, string $destination, ?string $etag = null, ?string $lastModified = null, ?int $maxBytes = null, ?Credentials $credentials = null, ?string $hostKey = null): FetchResult
     {
         $fetcher = UrlGuard::check($url)->isWeb() ? $this->web : $this->files;
 
-        return $fetcher->fetch($url, $destination, $etag, $lastModified, $maxBytes, $credentials);
+        return $fetcher->fetch($url, $destination, $etag, $lastModified, $maxBytes, $credentials, $hostKey);
     }
 }

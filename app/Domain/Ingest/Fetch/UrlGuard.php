@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Ingest\Fetch;
 
 /**
- * What a feed address may look like before anything is resolved: http, https, ftp or ftps, a real
- * host name or a standard IP address, no credentials inside the address, and a port of that service
- * or from 1024 up, so FeedGenix cannot be used to probe mail or admin ports. An ftp address is the
- * path of one file, and cannot smuggle a command or a transfer mode into it.
+ * What a feed address may look like before anything is resolved: http, https, ftp, ftps or sftp, a
+ * real host name or a standard IP address, no credentials inside the address, and a port of that
+ * service or from 1024 up, so FeedGenix cannot be used to probe mail or admin ports. The address of a
+ * file server is the path of one file, and cannot smuggle a command or a transfer mode into it.
  */
 final class UrlGuard
 {
@@ -21,6 +21,7 @@ final class UrlGuard
         'ftp' => ['default' => 21],
         // Explicit TLS on the FTP port is what servers usually offer; 990 is implicit TLS.
         'ftps' => ['default' => 21, 'also' => [990]],
+        'sftp' => ['default' => 22],
     ];
 
     public static function check(string $url): Target
@@ -37,7 +38,7 @@ final class UrlGuard
 
         $scheme = strtolower($parts['scheme']);
         if (! isset(self::PORTS[$scheme])) {
-            throw self::invalid("Only http, https, ftp and ftps addresses can be fetched (not {$scheme}://).");
+            throw self::invalid("Only http, https, ftp, ftps and sftp addresses can be fetched (not {$scheme}://).");
         }
 
         if (isset($parts['user']) || isset($parts['pass'])) {
@@ -89,7 +90,7 @@ final class UrlGuard
     {
         $path = (string) ($parts['path'] ?? '');
         if ($path === '' || str_ends_with($path, '/')) {
-            throw self::invalid('Give the path of the file, not a folder: ftp://host/folder/feed.csv.');
+            throw self::invalid('Give the path of the file, not a folder: sftp://host/folder/feed.csv.');
         }
 
         if (isset($parts['query']) || isset($parts['fragment'])) {

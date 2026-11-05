@@ -14,28 +14,39 @@ import {
   addressIssue,
   ChoiceOption,
   EMPTY_LOGIN,
+  HostKeyField,
+  hostKeyIssue,
   isFeedAddress,
+  isSftp,
   LoginFields,
   loginBody,
   loginIssues,
   loginValues,
   NOT_AN_ADDRESS,
   PlainFtpWarning,
+  type LoginKind,
 } from './LoginFields'
 import { feedQuery, feedsQuery } from './queries'
+
+function isNewLogin(login: string): login is LoginKind {
+  return login === 'password' || login === 'header' || login === 'key'
+}
 
 const schema = z
   .object({
     url: z.string().trim(),
     // `keep` sends nothing, so a stored login can never be wiped by accident (legacy D16).
-    login: z.enum(['keep', 'remove', 'password', 'header']),
+    login: z.enum(['keep', 'remove', 'password', 'header', 'key']),
+    hostKey: z.string().trim(),
     ...loginValues,
   })
   .superRefine((values, context) => {
     if (values.url !== '' && !isFeedAddress(values.url)) {
       context.addIssue({ code: 'custom', path: ['url'], message: NOT_AN_ADDRESS })
     }
-    if (values.login === 'password' || values.login === 'header') {
+    const fingerprint = hostKeyIssue(values.hostKey)
+    if (fingerprint !== undefined) context.addIssue({ code: 'custom', path: ['hostKey'], message: fingerprint })
+    if (isNewLogin(values.login)) {
       const issue = addressIssue(values.login, values.url)
       if (issue !== undefined && isFeedAddress(values.url)) {
         context.addIssue({ code: 'custom', path: ['url'], message: issue })
@@ -54,7 +65,12 @@ export function EditSourceDialog({ feed, onClose }: { feed: Feed; onClose: () =>
   const client = useQueryClient()
   const form = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { url: '', login: 'keep', ...EMPTY_LOGIN } satisfies z.input<typeof schema>,
+    defaultValues: {
+      url: '',
+      login: 'keep',
+      hostKey: feed.host_key ?? '',
+      ...EMPTY_LOGIN,
+    } satisfies z.input<typeof schema>,
   })
   const { errors, isSubmitting } = form.formState
   const login = useWatch({ control: form.control, name: 'login' })
@@ -69,6 +85,7 @@ export function EditSourceDialog({ feed, onClose }: { feed: Feed; onClose: () =>
         : values.login === 'keep'
           ? {}
           : { auth: loginBody(values.login, values) }),
+      ...(values.hostKey === (feed.host_key ?? '') ? {} : { host_key: values.hostKey === '' ? null : values.hostKey }),
     }
     if (Object.keys(body).length === 0) return onClose()
 
@@ -131,6 +148,9 @@ export function EditSourceDialog({ feed, onClose }: { feed: Feed; onClose: () =>
             <ChoiceOption value="header" current={login} register={form.register('login')}>
               {saved ? 'New header' : 'Header'}
             </ChoiceOption>
+            <ChoiceOption value="key" current={login} register={form.register('login')}>
+              {saved ? 'New private key' : 'Private key'}
+            </ChoiceOption>
           </div>
           {saved && (
             <p className="text-sm text-faint">
@@ -140,7 +160,7 @@ export function EditSourceDialog({ feed, onClose }: { feed: Feed; onClose: () =>
           )}
         </fieldset>
 
-        {(login === 'password' || login === 'header') && (
+        {isNewLogin(login) && (
           <LoginFields
             kind={login}
             register={(field) => form.register(field)}
@@ -149,10 +169,19 @@ export function EditSourceDialog({ feed, onClose }: { feed: Feed; onClose: () =>
               password: errors.password?.message,
               headerName: errors.headerName?.message,
               headerValue: errors.headerValue?.message,
+              privateKey: errors.privateKey?.message,
+              passphrase: errors.passphrase?.message,
             }}
           />
         )}
         {login === 'password' && /^ftp:/i.test(url.trim()) && <PlainFtpWarning />}
+        {(feed.host_key !== null || isSftp(url)) && (
+          <HostKeyField
+            hint="The server must show this key on every fetch, or nothing is sent to it. Empty it to trust the key it shows next: do that only if your host rebuilt or moved the server."
+            error={errors.hostKey?.message}
+            register={form.register('hostKey')}
+          />
+        )}
 
         {errors.root?.server !== undefined && <Notice tone="error">{errors.root.server.message}</Notice>}
 

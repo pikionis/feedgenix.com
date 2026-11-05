@@ -42,9 +42,11 @@ final class FeedResource extends JsonResource
             /**
              * The kind of login saved for the URL; its values are never returned.
              *
-             * @var 'password'|'header'|null
+             * @var 'password'|'header'|'key'|null
              */
             'auth' => $feed->feedSource?->auth_type,
+            /** The SFTP server's key fingerprint, which it must show on every fetch; null until the first file arrives. */
+            'host_key' => $feed->feedSource?->host_key,
             /** @var 'active'|'paused' */
             'status' => $feed->status,
             'parse_options' => [

@@ -22,10 +22,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $host
  * @property string|null $auth_type
  * @property array<array-key, mixed>|null $credentials
+ * @property string|null $host_key
  * @property string|null $etag
  * @property string|null $last_modified
  */
-#[Fillable(['feed_id', 'url', 'host', 'auth_type', 'credentials', 'etag', 'last_modified'])]
+#[Fillable(['feed_id', 'url', 'host', 'auth_type', 'credentials', 'host_key', 'etag', 'last_modified'])]
 #[Hidden(['url', 'credentials'])]
 class FeedSource extends Model
 {
@@ -35,6 +36,7 @@ class FeedSource extends Model
     protected $attributes = [
         'auth_type' => null,
         'credentials' => null,
+        'host_key' => null,
         'etag' => null,
         'last_modified' => null,
     ];

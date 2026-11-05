@@ -13,5 +13,6 @@ final readonly class FetchResult
         public ?string $contentType = null,
         public ?string $etag = null,
         public ?string $lastModified = null,
+        public ?string $hostKey = null,
     ) {}
 }

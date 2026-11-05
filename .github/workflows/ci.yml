@@ -80,6 +80,10 @@ jobs:
       - name: Migrations up, down, up
         run: php artisan migrate --force && php artisan migrate:rollback --force && php artisan migrate --force
 
+      # The SFTP connector is proven against a real server, on 127.0.0.1 only.
+      - name: SFTP server for the connector tests
+        run: bash tests/Support/fixtures/start-sftp.sh
+
       - run: composer test
 
       - run: composer audit

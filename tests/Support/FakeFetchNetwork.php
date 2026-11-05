@@ -25,7 +25,7 @@ final class FakeFetchNetwork implements FileServer, Resolver, Transport
     /** @var array<string, array{bytes: string, info: FileInfo}|FetchFailed> url => what a file server holds */
     private array $files = [];
 
-    /** @var list<array{call: string, url: string, address: string, login: ?Credentials}> */
+    /** @var list<array{call: string, url: string, address: string, login: ?Credentials, host_key: ?string}> */
     public array $fileRequests = [];
 
     /** @var array<string, list<list<string>>> host => answers, one per lookup (the last one repeats) */
@@ -72,9 +72,9 @@ final class FakeFetchNetwork implements FileServer, Resolver, Transport
     }
 
     /** A file on a file server. By default it announces its real size and a fixed time. */
-    public function file(string $url, string $bytes, ?int $size = -1, ?int $modifiedAt = 1_790_000_000): self
+    public function file(string $url, string $bytes, ?int $size = -1, ?int $modifiedAt = 1_790_000_000, ?string $hostKey = null): self
     {
-        $this->files[$url] = ['bytes' => $bytes, 'info' => new FileInfo($size === -1 ? strlen($bytes) : $size, $modifiedAt)];
+        $this->files[$url] = ['bytes' => $bytes, 'info' => new FileInfo($size === -1 ? strlen($bytes) : $size, $modifiedAt, $hostKey)];
 
         return $this;
     }
@@ -86,14 +86,14 @@ final class FakeFetchNetwork implements FileServer, Resolver, Transport
         return $this;
     }
 
-    public function info(Target $target, string $address, ?Credentials $credentials, FetchSettings $settings): FileInfo
+    public function info(Target $target, string $address, ?Credentials $credentials, ?string $hostKey, FetchSettings $settings): FileInfo
     {
-        return $this->scriptedFile('info', $target, $address, $credentials)['info'];
+        return $this->scriptedFile('info', $target, $address, $credentials, $hostKey)['info'];
     }
 
-    public function download(Target $target, string $address, ?Credentials $credentials, $sink, int $maxBytes, FetchSettings $settings): int
+    public function download(Target $target, string $address, ?Credentials $credentials, ?string $hostKey, $sink, int $maxBytes, FetchSettings $settings): int
     {
-        $bytes = $this->scriptedFile('download', $target, $address, $credentials)['bytes'];
+        $bytes = $this->scriptedFile('download', $target, $address, $credentials, $hostKey)['bytes'];
         if (strlen($bytes) > $maxBytes) {
             throw FetchFailed::because(FetchFailure::TooLarge, 'too large');
         }
@@ -102,12 +102,17 @@ final class FakeFetchNetwork implements FileServer, Resolver, Transport
     }
 
     /** @return array{bytes: string, info: FileInfo} */
-    private function scriptedFile(string $call, Target $target, string $address, ?Credentials $credentials): array
+    private function scriptedFile(string $call, Target $target, string $address, ?Credentials $credentials, ?string $hostKey): array
     {
-        $this->fileRequests[] = ['call' => $call, 'url' => $target->url, 'address' => $address, 'login' => $credentials];
+        $this->fileRequests[] = ['call' => $call, 'url' => $target->url, 'address' => $address, 'login' => $credentials, 'host_key' => $hostKey];
         $file = $this->files[$target->url] ?? throw new RuntimeException("No scripted file at {$target->url}");
         if ($file instanceof FetchFailed) {
             throw $file;
+        }
+
+        // What every server that proves who it is must do (SftpServer).
+        if ($hostKey !== null && $file['info']->hostKey !== null && $hostKey !== $file['info']->hostKey) {
+            throw FetchFailed::because(FetchFailure::HostKeyChanged, 'simulated host key change');
         }
 
         return $file;

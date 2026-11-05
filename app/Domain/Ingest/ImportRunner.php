@@ -141,7 +141,13 @@ final readonly class ImportRunner
             $conditional ? $source->last_modified : null,
             $size->bytes,
             $source->login(),
+            $source->host_key,
         );
+
+        // A file arrived from this server: from now on it must show this key (ADR 0032).
+        if ($result->hostKey !== null && $source->host_key === null) {
+            $source->forceFill(['host_key' => $result->hostKey])->save();
+        }
 
         $validators = ['etag' => $result->etag, 'last_modified' => $result->lastModified];
         if ($result->notModified) {
