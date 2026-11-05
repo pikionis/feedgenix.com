@@ -10,7 +10,18 @@ import { api } from '~/lib/api/client'
 import type { Feed } from '~/lib/api/types'
 import { applyServerErrors, zodResolver } from '~/lib/forms'
 import { feedErrorMessage } from './errors'
-import { ChoiceOption, EMPTY_LOGIN, HTTPS_ONLY, LoginFields, loginBody, loginIssues, loginValues } from './LoginFields'
+import {
+  addressIssue,
+  ChoiceOption,
+  EMPTY_LOGIN,
+  isFeedAddress,
+  LoginFields,
+  loginBody,
+  loginIssues,
+  loginValues,
+  NOT_AN_ADDRESS,
+  PlainFtpWarning,
+} from './LoginFields'
 import { feedQuery, feedsQuery } from './queries'
 
 const schema = z
@@ -21,12 +32,14 @@ const schema = z
     ...loginValues,
   })
   .superRefine((values, context) => {
-    if (values.url !== '' && !/^https?:\/\/\S+$/i.test(values.url)) {
-      context.addIssue({ code: 'custom', path: ['url'], message: 'Enter the full address, starting with https://.' })
-    } else if ((values.login === 'password' || values.login === 'header') && /^http:/i.test(values.url)) {
-      context.addIssue({ code: 'custom', path: ['url'], message: HTTPS_ONLY })
+    if (values.url !== '' && !isFeedAddress(values.url)) {
+      context.addIssue({ code: 'custom', path: ['url'], message: NOT_AN_ADDRESS })
     }
     if (values.login === 'password' || values.login === 'header') {
+      const issue = addressIssue(values.login, values.url)
+      if (issue !== undefined && isFeedAddress(values.url)) {
+        context.addIssue({ code: 'custom', path: ['url'], message: issue })
+      }
       for (const [field, message] of loginIssues(values.login, values)) {
         context.addIssue({ code: 'custom', path: [field], message })
       }
@@ -45,6 +58,7 @@ export function EditSourceDialog({ feed, onClose }: { feed: Feed; onClose: () =>
   })
   const { errors, isSubmitting } = form.formState
   const login = useWatch({ control: form.control, name: 'login' })
+  const url = useWatch({ control: form.control, name: 'url' })
   const saved = feed.auth !== null
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -138,6 +152,7 @@ export function EditSourceDialog({ feed, onClose }: { feed: Feed; onClose: () =>
             }}
           />
         )}
+        {login === 'password' && /^ftp:/i.test(url.trim()) && <PlainFtpWarning />}
 
         {errors.root?.server !== undefined && <Notice tone="error">{errors.root.server.message}</Notice>}
 

@@ -8,9 +8,9 @@ use DateTimeImmutable;
 use RuntimeException;
 
 /**
- * Fetches a feed URL without letting it reach anything but the public internet (SSRF):
+ * Fetches a web address without letting it reach anything but the public internet (SSRF):
  *
- * 1. the URL passes UrlGuard (scheme, host form, port);
+ * 1. the address passes UrlGuard (scheme, host form, port), and stays on the web;
  * 2. the host is resolved once, every address must be public (AddressPolicy), and the connection
  *    is pinned to the first one, so DNS rebinding cannot switch it to an internal address;
  * 3. redirects are followed by hand, up to the limit, and every hop goes through 1 and 2 again;
@@ -36,16 +36,17 @@ final readonly class HttpFetcher implements Fetcher
     public function fetch(string $url, string $destination, ?string $etag = null, ?string $lastModified = null, ?int $maxBytes = null, ?Credentials $credentials = null): FetchResult
     {
         $maxBytes = min($maxBytes ?? PHP_INT_MAX, $this->settings->maxBytes);
-        $origin = UrlGuard::check($url);
+        $origin = UrlGuard::checkWeb($url);
         $refusal = $credentials?->refusalFor($origin);
         if ($refusal !== null) {
             throw FetchFailed::because(FetchFailure::InvalidUrl, $refusal);
         }
 
+        $pin = new AddressPin($this->resolver, $this->settings->allowPrivateNetworks);
         $current = $url;
         for ($hop = 0; ; $hop++) {
-            $target = UrlGuard::check($current);
-            $address = $this->pin($target);
+            $target = UrlGuard::checkWeb($current);
+            $address = $pin->for($target);
 
             $headers = ['Accept' => '*/*', 'Accept-Encoding' => 'gzip, identity'];
             if ($etag !== null) {
@@ -100,25 +101,6 @@ final readonly class HttpFetcher implements Fetcher
                 lastModified: $response->header('last-modified'),
             );
         }
-    }
-
-    /** Resolves the host once; every address must be public; the first one is used. */
-    private function pin(Target $target): string
-    {
-        $addresses = $this->resolver->resolve($target->host);
-        if ($addresses === []) {
-            throw FetchFailed::because(FetchFailure::DnsFailed, "The host {$target->host} does not exist.");
-        }
-
-        if (! $this->settings->allowPrivateNetworks) {
-            foreach ($addresses as $address) {
-                if (! AddressPolicy::isPublic($address)) {
-                    throw FetchFailed::because(FetchFailure::BlockedAddress, "{$target->host} points to a private or reserved network address, which FeedGenix never fetches from.");
-                }
-            }
-        }
-
-        return $addresses[0];
     }
 
     private function assertSuccess(int $status, TransportResponse $response, bool $hasLogin, bool $loginSent): void

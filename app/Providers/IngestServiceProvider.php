@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Domain\Ingest\Fetch\Fetcher;
-use App\Domain\Ingest\Fetch\HttpFetcher;
+use App\Domain\Ingest\Fetch\SourceFetcher;
 use App\Domain\Ingest\IngestLimits;
 use App\Domain\Ingest\Profile\ColumnProfiler;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -17,7 +17,7 @@ final class IngestServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(Fetcher::class, static fn (): Fetcher => HttpFetcher::make());
+        $this->app->bind(Fetcher::class, static fn (): Fetcher => SourceFetcher::make());
         $this->app->bind(IngestLimits::class, static fn (): IngestLimits => IngestLimits::fromConfig());
         $this->app->bind(ColumnProfiler::class, static fn (): ColumnProfiler => ColumnProfiler::fromConfig());
     }

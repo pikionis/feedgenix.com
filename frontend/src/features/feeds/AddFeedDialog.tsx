@@ -13,7 +13,18 @@ import { api } from '~/lib/api/client'
 import { applyServerErrors, zodResolver } from '~/lib/forms'
 import { feedErrorMessage } from './errors'
 import { FileField, UploadProgressBar } from './FileField'
-import { ChoiceOption, EMPTY_LOGIN, HTTPS_ONLY, LoginFields, loginBody, loginIssues, loginValues } from './LoginFields'
+import {
+  addressIssue,
+  ChoiceOption,
+  EMPTY_LOGIN,
+  isFeedAddress,
+  LoginFields,
+  loginBody,
+  loginIssues,
+  loginValues,
+  NOT_AN_ADDRESS,
+  PlainFtpWarning,
+} from './LoginFields'
 import { feedsQuery } from './queries'
 import { useFileUpload } from './useFileUpload'
 
@@ -27,12 +38,14 @@ const schema = z
   })
   .superRefine((values, context) => {
     if (values.source !== 'url') return
-    if (!/^https?:\/\/\S+$/i.test(values.url)) {
-      context.addIssue({ code: 'custom', path: ['url'], message: 'Enter the full address, starting with https://.' })
-    } else if (values.login !== 'none' && !/^https:/i.test(values.url)) {
-      context.addIssue({ code: 'custom', path: ['url'], message: HTTPS_ONLY })
+    if (!isFeedAddress(values.url)) {
+      context.addIssue({ code: 'custom', path: ['url'], message: NOT_AN_ADDRESS })
     }
     if (values.login !== 'none') {
+      const issue = addressIssue(values.login, values.url)
+      if (issue !== undefined && isFeedAddress(values.url)) {
+        context.addIssue({ code: 'custom', path: ['url'], message: issue })
+      }
       for (const [field, message] of loginIssues(values.login, values)) {
         context.addIssue({ code: 'custom', path: [field], message })
       }
@@ -58,6 +71,7 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
   const { errors, isSubmitting } = form.formState
   const source = useWatch({ control: form.control, name: 'source' })
   const login = useWatch({ control: form.control, name: 'login' })
+  const url = useWatch({ control: form.control, name: 'url' })
 
   const open = async (feedId: number) => {
     await Promise.all([
@@ -155,7 +169,7 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
           <>
             <Field
               label="Feed URL"
-              hint="Fetched now and whenever you ask. It stays private: only its host is shown."
+              hint="An https:// or ftp:// address. Fetched now and whenever you ask. It stays private: only its host is shown."
               error={errors.url?.message}
             >
               {(control) => (
@@ -197,6 +211,7 @@ export function AddFeedDialog({ onClose }: { onClose: () => void }) {
                 }}
               />
             )}
+            {login === 'password' && /^ftp:/i.test(url.trim()) && <PlainFtpWarning />}
           </>
         ) : (
           <FileField

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Ingest\Fetch;
 
 use InvalidArgumentException;
+use LogicException;
 use SensitiveParameter;
 
 /**
@@ -97,10 +98,33 @@ final readonly class Credentials
         return ['type' => $this->type, ...$this->values];
     }
 
-    /** Why this login may not be used on this address; null when it may. */
+    /**
+     * Why this login may not be used on this address; null when it may. Plain FTP is allowed, with a
+     * warning on the form: many shops' hosts offer nothing else (ADR 0031).
+     */
     public function refusalFor(Target $target): ?string
     {
-        return $target->scheme === 'https' ? null : 'A login is only ever sent over https. Use an https:// address.';
+        return match (true) {
+            $target->scheme === 'http' => 'A login is only ever sent over https. Use an https:// address.',
+            $this->type === self::TYPE_HEADER && ! $target->isWeb() => 'A header only works on an https:// address. Use a username and password here.',
+            default => null,
+        };
+    }
+
+    /**
+     * What a file server is told; only for a username and password.
+     *
+     * @return array{0: non-empty-string, 1: non-empty-string}
+     */
+    public function usernameAndPassword(): array
+    {
+        $username = $this->values['username'] ?? '';
+        $password = $this->values['password'] ?? '';
+        if ($username === '' || $password === '') {
+            throw new LogicException('This login has no username and password.');
+        }
+
+        return [$username, $password];
     }
 
     /** @return array<string, string> the request headers that carry this login */

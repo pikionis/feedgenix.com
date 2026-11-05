@@ -301,6 +301,70 @@ it('lets only owners and admins change a login, and only in their workspace', fu
     expect(storedSource($tenant)->auth_type)->toBeNull();
 });
 
+it('reads a feed from an FTP server with a login', function (): void {
+    [$tenant, $owner, $network] = shopWithLogin();
+    $network->dns('files.example', ['93.184.215.77'])->file('ftp://files.example/out/feed.csv', LOGIN_CSV);
+
+    $response = createFeed($owner, ['name' => 'FTP', 'url' => 'ftp://files.example/out/feed.csv', 'auth' => passwordLogin()])
+        ->assertCreated()
+        ->assertJsonPath('feed.source', 'url')
+        ->assertJsonPath('feed.host', 'files.example')
+        ->assertJsonPath('feed.auth', 'password')
+        ->assertJsonPath('feed.latest_import.status', 'profiled')
+        ->assertJsonPath('feed.latest_import.row_count', 1);
+
+    expect((string) $response->getContent())->not->toContain('out/feed.csv')->not->toContain(PASSWORD)
+        ->and($network->fileRequests[0]['login']?->usernameAndPassword())->toBe(['shop-user', PASSWORD])
+        ->and(storedSource($tenant)->etag)->toBe(strlen(LOGIN_CSV).':1790000000');
+});
+
+it('does not read an unchanged FTP file again', function (): void {
+    [, $owner, $network] = shopWithLogin();
+    $network->dns('files.example', ['93.184.215.77'])->file('ftp://files.example/feed.csv', LOGIN_CSV);
+    $id = (int) createFeed($owner, ['name' => 'FTP', 'url' => 'ftp://files.example/feed.csv'])->assertCreated()->json('feed.id');
+
+    $this->actingAs($owner)->postJson("/api/v1/feeds/{$id}/fetch")
+        ->assertStatus(202)
+        ->assertJsonPath('import.status', 'unchanged');
+
+    expect(array_column($network->fileRequests, 'call'))->toBe(['info', 'download', 'info']);
+});
+
+it('refuses a header login on an FTP address', function (): void {
+    [, $owner, $network] = shopWithLogin();
+
+    createFeed($owner, ['name' => 'FTP', 'url' => 'ftp://files.example/feed.csv', 'auth' => ['type' => 'header', 'name' => 'X-Key', 'value' => 'v']])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['auth' => 'https://']);
+
+    expect($network->fileRequests)->toBe([]);
+});
+
+it('never lets a stored login move between web and FTP, or from FTP to plain FTP', function (string $from, string $to): void {
+    [$tenant, $owner, $network] = shopWithLogin();
+    $network->dns('files.example', ['93.184.215.77'])->file($from, LOGIN_CSV)->file($to, LOGIN_CSV)->respond($from, 200, LOGIN_CSV);
+    $id = (int) createFeed($owner, ['name' => 'Moves', 'url' => $from, 'auth' => passwordLogin()])->assertCreated()->json('feed.id');
+
+    $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['url' => $to])->assertOk()->assertJsonPath('feed.auth', null);
+
+    expect(storedSource($tenant)->auth_type)->toBeNull();
+})->with([
+    'https to ftp on one host' => ['https://shop.example/feed.csv', 'ftp://shop.example/feed.csv'],
+    'ftps down to ftp' => ['ftps://files.example/feed.csv', 'ftp://files.example/feed.csv'],
+    'one FTP server to another' => ['ftp://files.example/feed.csv', 'ftp://shop.example/feed.csv'],
+    'another FTP port' => ['ftp://files.example/feed.csv', 'ftp://files.example:2121/feed.csv'],
+]);
+
+it('keeps the login when the file changes on the same FTP server', function (): void {
+    [$tenant, $owner, $network] = shopWithLogin();
+    $network->dns('files.example', ['93.184.215.77'])->file('ftp://files.example/a.csv', LOGIN_CSV);
+    $id = (int) createFeed($owner, ['name' => 'FTP', 'url' => 'ftp://files.example/a.csv', 'auth' => passwordLogin()])->assertCreated()->json('feed.id');
+
+    $this->actingAs($owner)->patchJson("/api/v1/feeds/{$id}", ['url' => 'ftp://files.example/b.csv'])->assertOk()->assertJsonPath('feed.auth', 'password');
+
+    expect(storedSource($tenant)->etag)->toBeNull();
+});
+
 it('has a database rule: no login without its kind, no kind without its login', function (): void {
     [$tenant, $owner] = shopWithLogin();
     feedWithLogin($owner);

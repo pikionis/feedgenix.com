@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Ingest\Fetch;
 
-/** A feed URL taken apart after it passed the guard. */
+/** A feed address taken apart after it passed the guard. */
 final readonly class Target
 {
     public function __construct(
@@ -17,6 +17,11 @@ final readonly class Target
     public function isIpLiteral(): bool
     {
         return filter_var($this->host, FILTER_VALIDATE_IP) !== false;
+    }
+
+    public function isWeb(): bool
+    {
+        return $this->scheme === 'http' || $this->scheme === 'https';
     }
 
     /** Scheme, host and port: what a login belongs to. */

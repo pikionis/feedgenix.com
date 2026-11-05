@@ -190,7 +190,60 @@ it('checks the address before sending anything', async () => {
   const user = await fill('Main shop', 'shop.example/feed.xml')
   await user.click(screen.getByRole('button', { name: 'Add feed' }))
 
-  expect(await screen.findByText('Enter the full address, starting with https://.')).toBeInTheDocument()
+  expect(await screen.findByText('Enter the full address, starting with https:// or ftp://.')).toBeInTheDocument()
+  expect(created).toEqual([])
+})
+
+it('adds a feed from an FTP server, and warns that plain FTP sends the password unencrypted', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('FTP shop', 'ftp://files.example/feed.csv')
+  expect(screen.queryByText(/sends the password unencrypted/)).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('radio', { name: 'Password' }))
+  expect(await screen.findByText(/sends the password unencrypted/)).toBeInTheDocument()
+
+  await user.type(screen.getByLabelText('Username'), 'someone')
+  await user.type(screen.getByLabelText('Password', { selector: 'input[type=password]' }), 'secret')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
+  expect(created).toEqual([
+    {
+      name: 'FTP shop',
+      url: 'ftp://files.example/feed.csv',
+      auth: { type: 'password', username: 'someone', password: 'secret' },
+    },
+  ])
+})
+
+it('does not warn on ftps, and takes an address without a login', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('FTPS shop', 'ftps://files.example/feed.csv')
+  await user.click(screen.getByRole('radio', { name: 'Password' }))
+  expect(screen.queryByText(/sends the password unencrypted/)).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('radio', { name: 'No' }))
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText('Feed page 7')).toBeInTheDocument()
+  expect(created).toEqual([{ name: 'FTPS shop', url: 'ftps://files.example/feed.csv' }])
+})
+
+it('refuses a header login on an FTP address before sending anything', async () => {
+  acceptFeeds()
+  renderDialog()
+
+  const user = await fill('FTP shop', 'ftp://files.example/feed.csv')
+  await user.click(screen.getByRole('radio', { name: 'Header' }))
+  await user.type(screen.getByLabelText('Header name'), 'X-Key')
+  await user.type(screen.getByLabelText('Header value'), 'v')
+  await user.click(screen.getByRole('button', { name: 'Add feed' }))
+
+  expect(await screen.findByText(/A header only works on an https:\/\/ address/)).toBeInTheDocument()
   expect(created).toEqual([])
 })
 

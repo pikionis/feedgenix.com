@@ -3,6 +3,7 @@ import type { UseFormRegisterReturn } from 'react-hook-form'
 import { z } from 'zod'
 import { Field } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
+import { Notice } from '~/components/ui/notice'
 import { cn } from '~/lib/utils'
 
 /** The login's values, never trimmed: they reach the source's server exactly as typed. */
@@ -18,7 +19,32 @@ export type LoginValues = { username: string; password: string; headerName: stri
 
 export const EMPTY_LOGIN: LoginValues = { username: '', password: '', headerName: '', headerValue: '' }
 
-export const HTTPS_ONLY = 'A login is only ever sent over https. Use an https:// address.'
+const ADDRESS = /^(?:https?|ftps?):\/\/\S+$/i
+
+export const NOT_AN_ADDRESS = 'Enter the full address, starting with https:// or ftp://.'
+
+export function isFeedAddress(url: string): boolean {
+  return ADDRESS.test(url)
+}
+
+/** Why this kind of login cannot be used on this address. The server checks it again. */
+export function addressIssue(kind: LoginKind, url: string): string | undefined {
+  if (/^http:/i.test(url)) return 'A login is only ever sent over https. Use an https:// address.'
+  if (kind === 'header' && /^ftps?:/i.test(url)) {
+    return 'A header only works on an https:// address. Use a username and password here.'
+  }
+
+  return undefined
+}
+
+/** A plain FTP address with a password: allowed, because many hosts offer nothing else, but said out loud. */
+export function PlainFtpWarning() {
+  return (
+    <Notice tone="warn">
+      Plain FTP sends the password unencrypted. Use an ftps:// address if the server offers it.
+    </Notice>
+  )
+}
 
 /** What is missing or cannot be sent, field by field. The server checks all of it again. */
 export function loginIssues(kind: LoginKind, values: LoginValues): [keyof LoginValues, string][] {

@@ -521,3 +521,14 @@ the scan, so a file it could not read had no record of its own.
   - A login could go over plain `http`, and could follow the address to any server; now https only, and one origin only, on redirects and on a changed address alike.
 - **New:** a request header as a login (`X-Api-Key`); the page says whether a login is missing or refused, and offers the source settings.
 - **Proof:** `tests/Feature/Ingest/SourceLoginTest.php`, the logins in `tests/Unit/Ingest/FetchTest.php`, the source settings on the feed page; 30 of 30 guard mutants caught (2 of them only after new tests: a final line break in a username, and a missing `#[SensitiveParameter]` hidden by `zend.exception_ignore_args`).
+
+### M8 · `FeedDownloadService::downloadFtp` → `Domain/Ingest/Fetch/{SourceFetcher,FileFetcher,FileServer,CurlFtpServer,AddressPin}` (ADR 0031)
+- **Kept:** a feed fetched from an FTP server, with a login or anonymously, in passive mode.
+- **Fixed:**
+  - No address check: `ftp_connect` reached whatever the host named; now the same SSRF rules as the web, pinned to a checked public address.
+  - The `PASV` reply was trusted, so a server could aim the data connection at an internal address; now it is ignored.
+  - No TLS at all; `ftps://` now demands it before the login, with the certificate verified.
+  - No size cap and no integrity check on FTP: a short transfer looked like a feed; now the plan's cap applies and a body short of the announced size is a cut-off download.
+- **New:** an unchanged file (same size and time) is not downloaded again; `not_found` as a failure of its own.
+- **Dropped:** `ftp_*`; curl does the transfer, as on the web.
+- **Proof:** `tests/Unit/Ingest/{FileFetchTest,FtpServerTest}.php` (the real curl client against a fixture FTP server on `127.0.0.1`), the addresses in `FetchTest.php`, FTP feeds in `SourceLoginTest.php`; 24 of 25 guard mutants caught. The survivor is equivalent: curl's own `CURLOPT_MAXFILESIZE_LARGE` also stops a download past the cap, before the write callback does.

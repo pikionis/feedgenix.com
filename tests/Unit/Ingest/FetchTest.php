@@ -67,15 +67,60 @@ describe('URLs', function (): void {
         ['https://[2606:2800:21f:cb07:6820:80da:af6b:8b2c]/f', '2606:2800:21f:cb07:6820:80da:af6b:8b2c', 443],
     ]);
 
-    it('refuses what is not an http(s) feed address', function (string $url): void {
+    it('refuses what is not a feed address', function (string $url): void {
         expect(fetchFailure(fn (): Target => UrlGuard::check($url))->reason)->toBe(FetchFailure::InvalidUrl);
     })->with([
-        'file' => 'file:///etc/passwd', 'ftp' => 'ftp://example.com/f.csv', 'gopher' => 'gopher://example.com/',
+        'file' => 'file:///etc/passwd', 'gopher' => 'gopher://example.com/', 'scp' => 'scp://example.com/f.csv', 'dict' => 'dict://example.com/',
         'no scheme' => 'example.com/feed.csv', 'credentials' => 'https://user:pass@example.com/f', 'mail port' => 'http://example.com:25/',
         'ssh port' => 'http://example.com:22/', 'decimal IP' => 'http://2130706433/', 'hex IP' => 'http://0x7f000001/',
         'short IP' => 'http://127.1/', 'octal IP' => 'http://0177.0.0.1/', 'spaces' => 'https://exa mple.com/',
         'empty' => '', 'bad host' => 'https://-bad-.example/',
     ]);
+
+    it('accepts FTP addresses of one file, with the ports of the service', function (string $url, string $scheme, int $port): void {
+        $target = UrlGuard::check($url);
+
+        expect([$target->scheme, $target->port])->toBe([$scheme, $port])
+            ->and($target->isWeb())->toBeFalse();
+    })->with([
+        ['ftp://files.example.com/out/feed.csv', 'ftp', 21],
+        ['FTP://files.example.com/feed.csv', 'ftp', 21],
+        ['ftp://files.example.com:2121/feed.csv', 'ftp', 2121],
+        ['ftps://files.example.com/feed.csv', 'ftps', 21],
+        ['ftps://files.example.com:990/feed.csv', 'ftps', 990],
+        ['ftp://files.example.com/a%20file.csv', 'ftp', 21],
+    ]);
+
+    it('refuses FTP addresses that are not one file, or that smuggle something in', function (string $url, string $says): void {
+        $failure = fetchFailure(fn (): Target => UrlGuard::check($url));
+
+        expect($failure->reason)->toBe(FetchFailure::InvalidUrl)
+            ->and($failure->getMessage())->toContain($says);
+    })->with([
+        'a folder' => ['ftp://files.example.com/out/', 'not a folder'],
+        'no path' => ['ftp://files.example.com', 'not a folder'],
+        'a query' => ['ftp://files.example.com/f.csv?x=1', '%3F'],
+        'a fragment' => ['ftp://files.example.com/f.csv#x', '%3F'],
+        'a command in an encoded line break' => ['ftp://files.example.com/f.csv%0d%0aDELE%20f.csv', 'cannot be used'],
+        'an encoded line feed' => ['ftp://files.example.com/f%0A.csv', 'cannot be used'],
+        'an encoded NUL' => ['ftp://files.example.com/f%00.csv', 'cannot be used'],
+        'an encoded DEL' => ['ftp://files.example.com/f%7F.csv', 'cannot be used'],
+        'a text-mode transfer' => ['ftp://files.example.com/f.csv;type=a', 'cannot be used'],
+        'a text-mode transfer, in capitals' => ['ftp://files.example.com/f.csv;TYPE=A', 'cannot be used'],
+        'credentials' => ['ftp://user:pass@files.example.com/f.csv', 'login'],
+        'the SSH port' => ['ftp://files.example.com:22/f.csv', 'Port 22'],
+        'the mail port' => ['ftps://files.example.com:25/f.csv', 'Port 25'],
+        'the implicit TLS port without TLS' => ['ftp://files.example.com:990/f.csv', 'Port 990'],
+        'the web port' => ['ftp://files.example.com:80/f.csv', 'Port 80'],
+    ]);
+
+    it('keeps the web to its own ports', function (string $url): void {
+        expect(fetchFailure(fn (): Target => UrlGuard::check($url))->getMessage())->toContain('cannot be used');
+    })->with(['http://example.com:21/', 'https://example.com:990/']);
+
+    it('takes a line break in a web address’s query as the site’s business', function (): void {
+        expect(UrlGuard::check('https://shop.example/f.csv?a=%0A')->scheme)->toBe('https');
+    });
 });
 
 describe('fetching', function (): void {
@@ -211,6 +256,18 @@ describe('fetching', function (): void {
         expect($failure->reason)->toBe(FetchFailure::LoginNeeded)
             ->and($failure->status)->toBe(401);
     });
+
+    it('never lets a redirect move a fetch off the web', function (string $location): void {
+        $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->dns('files.example', ['93.184.215.15'])
+            ->respond('https://shop.example/a', 302, '', ['Location' => $location])
+            ->file($location, 'sku');
+
+        $failure = fetchFailure(fn (): FetchResult => fetcher($network)->fetch('https://shop.example/a', download()));
+
+        expect($failure->reason)->toBe(FetchFailure::InvalidUrl)
+            ->and($network->requests)->toHaveCount(1)
+            ->and($network->fileRequests)->toBe([]);
+    })->with(['ftp://files.example/f.csv', 'ftps://files.example/f.csv']);
 
     it('sends no login when the feed has none', function (): void {
         $network = (new FakeFetchNetwork)->dns('shop.example', ['93.184.215.14'])->respond('https://shop.example/f.csv', 200, 'sku');

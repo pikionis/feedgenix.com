@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use App\Domain\Ingest\FeedPreparer;
+use App\Domain\Ingest\Fetch\AddressPin;
 use App\Domain\Ingest\Fetch\Fetcher;
 use App\Domain\Ingest\Fetch\FetchSettings;
+use App\Domain\Ingest\Fetch\FileFetcher;
 use App\Domain\Ingest\Fetch\HttpFetcher;
+use App\Domain\Ingest\Fetch\SourceFetcher;
 use App\Domain\Ingest\IngestLimits;
 use App\Domain\Ingest\ParseOptions;
 use App\Domain\Ingest\PreparedFeed;
@@ -109,10 +112,10 @@ function xlsxFile(array $rows, ?callable $configure = null): string
 function network(): FakeFetchNetwork
 {
     $network = new FakeFetchNetwork;
-    app()->instance(Fetcher::class, new HttpFetcher(
-        $network,
-        $network,
-        new FetchSettings(maxBytes: (int) config('ingest.limits.max_bytes')),
+    $settings = new FetchSettings(maxBytes: (int) config('ingest.limits.max_bytes'));
+    app()->instance(Fetcher::class, new SourceFetcher(
+        new HttpFetcher($network, $network, $settings),
+        new FileFetcher(new AddressPin($network, false), $network, $settings),
     ));
 
     return $network;
