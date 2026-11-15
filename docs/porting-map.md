@@ -68,7 +68,7 @@ code in its module, with its tests. Nothing is copied blindly.
 | D24 | the translation-memory key lacked field class, style and prompt version | M4 |
 
 ## Never ported
-- Filament and Livewire; the Commission/Galaxus module.
+- Filament and Livewire; the Commission/marketplace module.
 - Supplier-specific code: `titre_*` / `categorie_*` columns, `_meta_*`, `id_type_produit`, fixed
   `fr/de/en/it`, supplier-id special cases, the Swiss "ss" rule as a universal rule.
 - The frozen-archive machinery and the four overlapping healer crons (replaced by ADR 0006).
@@ -212,7 +212,7 @@ code in its module, with its tests. Nothing is copied blindly.
   - Mixed-content HTML in XML is kept as markup.
   - Caps: bytes, inflated bytes, inflate ratio, rows, columns, bytes per cell and nesting depth. Each refusal names its cap.
   - NUL bytes are removed and counted (PostgreSQL text cannot hold them).
-- **Dropped:** the Competec-specific joiners (`Categories.joined3`, `attributes.flat`, `Dimensions.formatted`, `LongTextBullets.*`). Composing columns belongs to mapping (M3), for every feed.
+- **Dropped:** the supplier-specific joiners (`Categories.joined3`, `attributes.flat`, `Dimensions.formatted`, `LongTextBullets.*`). Composing columns belongs to mapping (M3), for every feed.
 - **Proof:** 22 mutants, one per guard, each made its test fail. The mutation run also found a test whose emoji did not actually straddle the chunk boundary; it was fixed.
 
 ### M2 · `AnalysisService` → `Domain/Ingest/Profile/ColumnProfiler`
@@ -393,7 +393,7 @@ the scan, so a file it could not read had no record of its own.
   - The prompts sent the first three raw rows, prices and barcodes included: protected columns' values are withheld, by name and by value kind.
   - Compositions could take protected columns when the post-parse guard missed them: the pipeline drops them, and numeric measurements stay golden.
   - Two columns claiming one field: the legacy kept whichever came last; close calls now stay empty for the reviewer.
-- **Changed:** one AI call per batch of 40 columns, with an id per column (the gateway's misalignment check applies), instead of one free-form JSON object per feed; Swiss/DeinDeal prompts and the four fixed languages are gone.
+- **Changed:** one AI call per batch of 40 columns, with an id per column (the gateway's misalignment check applies), instead of one free-form JSON object per feed; customer-specific Swiss prompts and the four fixed languages are gone.
 - **Dropped:** the forced `categorie_*` translation for every language; the "translation fields" toggles (they come back as the field selection in M4).
 - **Proof:** 129 tests (columns and languages 47, validator 34, drafts 4, suggestions 22 including a 12-seed property test over random feeds, edits and approval 14, API 8) and 15 of 15 guard mutants caught.
 
@@ -460,7 +460,7 @@ the scan, so a file it could not read had no record of its own.
   - A request for a missing file started a build: requests never build (ADR 0007; serving is the next step).
   - The short description knew only Latin sentence ends and could not cut a text without spaces: CJK, Arabic and Devanagari sentence ends, and a cut at the limit.
   - The formatter ran on every description of every feed: a column transform a preset asks for.
-- **Dropped:** supplier-specific columns and normalisers (colour, composition, size, gender, the category dictionary, Title Case, four category levels, `_intel` headers, the canonical Competec description), the new-products feed, the global cache kill switch.
+- **Dropped:** supplier-specific columns and normalisers (colour, composition, size, gender, the category dictionary, Title Case, four category levels, `_intel` headers, the canonical supplier description), the new-products feed, the global cache kill switch.
 - **Proof:** 28 tests (dialects 3, transforms and formatters 6, file checks 8, builds 11); 17 of 17 guard mutants caught.
 
 ### M5 · `ExportDownloadController` (publicFeed, publicFeedGz, the kill switch), `BuildSupplierFeed` (shouldRebuild, the lock, the last-known-good copy) → `Http/Controllers/Public/FeedFileController`, `Domain/Export/{Jobs/BuildExportJob,Actions/*}`, `ops:reconcile` (ADR 0023)
