@@ -5,7 +5,7 @@
 
 ## Context
 FeedGenix replaces the evolution of the legacy Feed Intelligence app (Laravel 11 + Filament + a
-separate React SPA, MySQL, built around one customer's DeinDeal/Channable/Galaxus feeds). The owner
+separate React SPA, MySQL, built around one customer's Channable and marketplace feeds). The owner
 chose to start from scratch with no legacy dependencies, PostgreSQL + pgvector, and the admin inside
 the same React app. One developer works on it with Claude Code, so the layout must keep the SPA and
 the API easy to change together and deploy atomically.

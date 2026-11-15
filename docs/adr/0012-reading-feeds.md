@@ -71,6 +71,6 @@ A profile is built in one pass:
 
 ## Consequences
 - Customers with `.xls` files must re-save them. The message says so.
-- Composing columns (the legacy Competec joiners) moves to mapping (M3), where every feed benefits.
+- Composing columns (the legacy supplier-specific joiners) moves to mapping (M3), where every feed benefits.
 - Reading is strict. A feed that was "mostly readable" before now fails with a reason, which the
   import screen shows along with the fix.
