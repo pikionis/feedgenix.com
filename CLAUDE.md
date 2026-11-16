@@ -16,9 +16,10 @@ the legacy Feed Intelligence app. The decisions behind it are in `docs/adr/`; th
 4. **All AI goes through the AI gateway** (`App\Domain\AI`). No other code talks to a model host.
 5. **Reserve before paid work.** Credits are reserved before any AI call; the actual cost is settled
    after and the rest released. No reservation, no call.
-6. **Pricing rule (owner):** every AI call, on every model, is charged at exactly provider cost × 1.1
-   (billed tokens including thinking tokens, every billed attempt, current FX). **Cost, the markup and
-   provider prices never appear in any response, page or email.**
+6. **Pricing rule (owner):** every AI call is charged a little above what the provider charges for
+   it, so the charge depends on the call that was made (billed tokens including thinking tokens,
+   every billed attempt, current FX). The exact rule lives in `App\Domain\AI\Pricing`. **Cost, the
+   margin and provider prices never appear in any response, page or email.**
 7. **Tests never reach the network.** Backend: `Http::preventStrayRequests()`. Frontend: MSW with
    `onUnhandledFrame: 'error'`. AI is always the fake provider in tests and e2e.
 
